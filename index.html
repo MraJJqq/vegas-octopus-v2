@@ -1393,3 +1393,41 @@ body{position:fixed;inset:0}
   .market-table .market-placeholder i{width:3px}
 }
 </style>
+
+
+<style>
+/* Asset cards: hover-focus lift and scale, without changing market data or row structure. */
+.market-panel .market-table tbody#marketRows tr{
+  z-index:0;
+  transform:scale(1)!important;
+  transform-origin:center center;
+  border:1px solid transparent!important;
+  border-radius:10px!important;
+  transition:transform .2s cubic-bezier(.2,.8,.2,1),background .2s ease,border-color .2s ease,box-shadow .2s ease!important;
+  will-change:transform;
+}
+@media (hover:hover) and (pointer:fine){
+  .market-panel .market-table tbody#marketRows tr:hover{
+    z-index:3;
+    transform:scale(1.035)!important;
+    border-color:rgba(62,204,255,.52)!important;
+    background:linear-gradient(105deg,rgba(22,139,218,.2),rgba(11,43,72,.46))!important;
+    box-shadow:0 0 0 1px rgba(36,173,255,.08),0 7px 22px rgba(0,0,0,.28),inset 0 0 18px rgba(36,173,255,.07)!important;
+  }
+  .market-panel .market-table tbody#marketRows tr:hover:before{
+    top:7px;bottom:7px;width:3px;background:#48dcff;
+    box-shadow:0 0 10px rgba(52,212,255,.65);
+  }
+  .market-panel .market-table tbody#marketRows tr:hover .asset-icon{
+    border-color:rgba(78,210,255,.65)!important;
+    box-shadow:0 0 13px rgba(38,171,255,.22),inset 0 0 10px rgba(35,166,238,.12)!important;
+  }
+  .market-panel .market-table tbody#marketRows tr:hover .symbol b{
+    color:#fff!important;
+    text-shadow:0 0 10px rgba(87,208,255,.28);
+  }
+}
+@media (prefers-reduced-motion:reduce){
+  .market-panel .market-table tbody#marketRows tr{transition:none!important}
+}
+</style>
