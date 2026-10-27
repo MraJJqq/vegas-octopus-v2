@@ -1213,6 +1213,24 @@ window.addEventListener('resize',updateScrollDepth,{passive:true});
 })();
 </script>
 
+
+
+<style id="market-dynamics-title-cleanup">
+/* Market dynamics: remove section headings and helper labels while preserving asset cards. */
+.market-panel > .panel-head,
+.market-panel > .tabs,
+.market-panel > .us-pool-foot,
+.market-panel .market-count,
+.market-panel .market-table thead,
+.market-panel .market-placeholder:before {
+  display:none!important;
+}
+.market-panel .table-wrap,
+#octopusMarketCardGrid {
+  margin-top:0!important;
+}
+</style>
+
 </body>
 </html>
 
