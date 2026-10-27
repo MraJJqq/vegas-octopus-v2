@@ -1163,12 +1163,13 @@ const pool=document.querySelector('#marketRows'),panel=document.querySelector('.
 if(!pool||!panel)return;
 const rows=Array.from(pool.querySelectorAll('tr'));
 const assets=rows.map((row,i)=>({symbol:row.querySelector('.symbol b')?.textContent?.trim(),type:row.dataset.type||'其他',i,bars:Array.from(row.querySelectorAll('.market-placeholder i')).map(el=>parseFloat((el.getAttribute('style')||'').match(/--h:\\s*([\\d.]+)px/)?.[1]||'6'))})).filter(a=>a.symbol);
-const streamAssets=['AAPL','NVDA','TSLA','MSFT','BTC','XAUUSD','USOIL'];
-const streamColors=['#39d9ff','#ff9c52','#ffe36e','#8c83ff','#39e6b0','#ff70c8','#ff5c72'];
-const streamLabels=['数据流 01','数据流 02','数据流 03','数据流 04','数据流 05','数据流 06','数据流 07'];
+const streamAssets=['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','QCOM','AMD','TSM','AVGO','ORCL','ARM','MU','ASML','SNDK','SKHYNIX','MRVL','GLW','HOOD','CBRS','SPCX','BTC','HYPE','XAUUSD','USOIL'];
+const streamPalette=['#39d9ff','#ff9c52','#ffe36e','#8c83ff','#39e6b0','#ff70c8','#ff5c72'];
+const streamColors=streamAssets.map((_,i)=>streamPalette[i%streamPalette.length]);
+const streamLabels=streamAssets.map((_,i)=>'资金池 '+String(i+1).padStart(2,'0'));
 const selected=streamAssets.map((symbol,i)=>{const asset=assets.find(a=>a.symbol===symbol);return asset?{...asset,i,streamIndex:i,streamLabel:streamLabels[i],streamColor:streamColors[i]}:null}).filter(Boolean);
 assets.splice(0,assets.length,...selected);
-const grid=document.createElement('div');grid.id='octopusMarketCardGrid';grid.setAttribute('aria-label','七根发光数据流对应的七张品种卡片');
+const grid=document.createElement('div');grid.id='octopusMarketCardGrid';grid.setAttribute('aria-label','27个资金池品种行情卡片');
 const orbStage=document.querySelector('.center-stage.orb-original-stage');
 if(!orbStage)return;
 orbStage.append(grid);
