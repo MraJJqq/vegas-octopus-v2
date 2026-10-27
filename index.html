@@ -904,6 +904,12 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 @media(max-width:1100px){.market-panel .market-table tbody{grid-template-columns:repeat(2,minmax(0,1fr))}.market-panel .table-wrap{max-height:500px}}
 @media(max-width:560px){.market-panel .market-table tbody{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.market-panel .table-wrap{padding:0 9px 10px;max-height:490px}.market-panel .market-table tr{min-height:124px;padding:10px 9px;gap:10px 4px}.market-panel .symbol{gap:6px}.market-panel .symbol b{font-size:11px}.market-panel .asset-icon{width:23px;height:23px;flex-basis:23px}.market-panel .market-placeholder{min-width:55px;gap:2px}.market-panel .market-placeholder i{width:4px}}
 
+
+/* Pull-down-to-refresh: mouse drag or touch gesture while the page is at the top. */
+#pullRefreshIndicator{position:fixed;z-index:9999;top:0;left:50%;transform:translate(-50%,-110%);padding:9px 16px;border:1px solid rgba(75,204,255,.45);border-radius:0 0 12px 12px;background:rgba(4,17,35,.96);color:#b8efff;font-size:12px;letter-spacing:.04em;box-shadow:0 5px 24px rgba(0,0,0,.3);transition:transform .16s ease;pointer-events:none;white-space:nowrap}
+#pullRefreshIndicator.visible{transform:translate(-50%,0)}
+#pullRefreshIndicator .refresh-dot{display:inline-block;margin-right:7px;color:#35dfff}
+
 </style>
 </head>
 <body>
@@ -1017,6 +1023,46 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 </div>
 <script>
 (function(){
+
+  // Pull down at the top edge to reload the page; regular wheel scrolling remains unchanged.
+  const refreshIndicator=document.createElement('div');
+  refreshIndicator.id='pullRefreshIndicator';
+  refreshIndicator.innerHTML='<span class="refresh-dot">↻</span><span>下拉刷新页面</span>';
+  document.body.appendChild(refreshIndicator);
+  let pullStartY=null, pullActive=false, pullDistance=0, refreshTriggered=false;
+  const pullThreshold=86;
+  function updatePullIndicator(distance){
+    pullDistance=Math.max(0,Math.min(distance,120));
+    refreshIndicator.classList.toggle('visible',pullDistance>8);
+    refreshIndicator.style.opacity=String(Math.min(1,pullDistance/45));
+    const label=refreshIndicator.querySelector('span:last-child');
+    if(label) label.textContent=pullDistance>=pullThreshold?'松开即可刷新':'下拉刷新页面';
+  }
+  document.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='mouse' && e.button!==0)return;
+    if(window.scrollY<=0){pullStartY=e.clientY;pullActive=true;refreshTriggered=false;}
+  },{passive:true});
+  document.addEventListener('pointermove',e=>{
+    if(!pullActive||pullStartY===null||window.scrollY>0)return;
+    const delta=e.clientY-pullStartY;
+    if(delta>0){updatePullIndicator(delta*.72);}
+    else if(delta<0){pullActive=false;pullStartY=null;updatePullIndicator(0);}
+  },{passive:true});
+  function finishPull(){
+    if(!pullActive)return;
+    const shouldRefresh=pullDistance>=pullThreshold&&!refreshTriggered;
+    pullActive=false;pullStartY=null;
+    if(shouldRefresh){
+      refreshTriggered=true;
+      const label=refreshIndicator.querySelector('span:last-child');
+      if(label)label.textContent='正在刷新…';
+      refreshIndicator.classList.add('visible');
+      setTimeout(()=>window.location.reload(),120);
+    }else{updatePullIndicator(0);}
+  }
+  document.addEventListener('pointerup',finishPull,{passive:true});
+  document.addEventListener('pointercancel',finishPull,{passive:true});
+
   const marketTabs=document.querySelectorAll('#marketTabs [data-market]');
   marketTabs.forEach(btn=>btn.addEventListener('click',()=>{
     marketTabs.forEach(b=>b.classList.toggle('active',b===btn));
