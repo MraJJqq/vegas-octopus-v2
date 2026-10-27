@@ -416,29 +416,36 @@ body:before{
 .us-pool-foot{padding:5px 12px 10px;color:#527594;font-size:9px}
 @media(max-width:760px){.us-pool-grid{grid-template-columns:1fr 1fr;gap:0 8px}.us-pool-item{grid-template-columns:20px minmax(0,1fr);gap:5px}.us-pool-item em{display:none}}
 
-/* Market Dynamics redesign */
-.market-panel{background:linear-gradient(155deg,rgba(5,17,35,.54),rgba(2,8,20,.26))!important;border-color:rgba(72,153,220,.16)!important;box-shadow:inset 0 1px 0 rgba(153,220,255,.035)!important}
-.market-panel:after{opacity:.32!important}
-.market-panel .panel-head{padding:13px 14px 10px}
-.market-panel .panel-title .icon{border-radius:7px;background:linear-gradient(145deg,rgba(36,205,255,.13),rgba(68,92,255,.07));border-color:rgba(65,200,255,.23);box-shadow:0 0 16px rgba(30,170,255,.06)}
-.market-count{font-size:9px!important;letter-spacing:.08em;color:#6486a7!important}
-#marketTabs{padding:0 14px 10px;gap:5px}
-#marketTabs .tab{border:0;border-radius:5px;background:rgba(23,47,76,.26);padding:5px 11px;color:#7798b7;font-size:10px}
-#marketTabs .tab.active{background:rgba(22,152,210,.13);color:#8de9ff;box-shadow:inset 0 -1px 0 rgba(66,220,255,.7)}
-.market-panel .table-wrap{padding:0 13px 8px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(48,137,190,.28) transparent}
-.market-table{table-layout:fixed;border-collapse:separate;border-spacing:0;width:100%;font-size:11px;white-space:nowrap}
-.market-table th{padding:8px 6px;border-bottom:1px solid rgba(92,153,201,.12);font-size:9px;letter-spacing:.1em;color:#587c9d}
-.market-table th:first-child{width:38%;text-align:left}.market-table th:nth-child(2){width:26%;text-align:right}.market-table th:nth-child(3){width:36%;text-align:right}
-.market-table td{height:31px;padding:5px 6px;border-bottom:1px solid rgba(83,137,181,.075);text-align:right;transition:background .18s ease}
-.market-table tbody tr:hover td{background:rgba(24,115,174,.075)}.market-table tbody tr:last-child td{border-bottom:0}
-.market-table td:first-child{text-align:left;min-width:0}.market-table .symbol{display:flex;align-items:center;gap:0;min-width:0}.market-table .asset-icon{display:none!important}
-.market-table .symbol b{font-size:10px;font-weight:650;letter-spacing:.055em;color:#c6e2f6;font-variant-numeric:tabular-nums}
-.market-table .muted{font-size:9px;color:#5f7c98}
-.market-placeholder{display:inline-flex;align-items:center;justify-content:flex-end;gap:2px;width:66px;height:18px;opacity:.28;vertical-align:middle;letter-spacing:0}
-.market-placeholder i{display:block;position:relative;width:4px;border-radius:1px;background:rgba(97,157,197,.48);height:var(--h)}
-.market-placeholder i:before{content:"";position:absolute;left:1px;top:-3px;height:calc(var(--h) + 6px);width:1px;background:rgba(115,187,225,.55)}
-.us-pool-foot{margin:0 13px;padding:8px 0 10px;border-top:1px solid rgba(83,137,181,.09);color:#506f8b;font-size:9px;letter-spacing:.015em;line-height:1.5}
-@media(max-width:760px){.market-panel .table-wrap{padding-left:12px;padding-right:12px}.market-table th:first-child{width:38%}.market-table th:nth-child(2){width:26%}.market-table th:nth-child(3){width:36%}.market-table td{padding:5px 4px}.market-placeholder{width:56px}}
+/* TradingView-inspired watchlist layout: compact, neutral, data-first */
+.market-panel{background:rgba(10,16,25,.66)!important;border:1px solid rgba(116,139,166,.15)!important;box-shadow:none!important;border-radius:9px!important}
+.market-panel:after{display:none!important}
+.market-panel .panel-head{padding:12px 14px 10px}
+.market-panel .panel-title{font-size:13px;font-weight:600;letter-spacing:0;color:#dce5ef}
+.market-panel .panel-title .icon{display:none!important}
+.market-count{font-size:10px!important;color:#718096!important;letter-spacing:0}
+#marketTabs{padding:0 14px 9px;gap:3px;border-bottom:1px solid rgba(132,151,174,.13)}
+#marketTabs .tab{border:0;border-radius:4px;background:transparent;padding:5px 9px;color:#8998aa;font-size:10px}
+#marketTabs .tab.active{background:rgba(67,116,164,.17);color:#d5e7f7;box-shadow:inset 0 -2px 0 #5796d1}
+.market-panel .table-wrap{padding:0 8px 4px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(125,146,169,.3) transparent}
+.market-table{table-layout:fixed;border-collapse:collapse;border-spacing:0;width:100%;font-size:11px;white-space:nowrap}
+.market-table th{padding:9px 7px 8px;border-bottom:1px solid rgba(132,151,174,.14);font-size:9px;font-weight:500;letter-spacing:.015em;text-transform:none;color:#7f8da0}
+.market-table th:first-child{width:37%;text-align:left}
+.market-table th:nth-child(2){width:27%;text-align:right}
+.market-table th:nth-child(3){width:36%;text-align:right}
+.market-table td{height:32px;padding:5px 7px;border-bottom:1px solid rgba(132,151,174,.075);text-align:right;transition:background .12s ease}
+.market-table tbody tr:hover td{background:rgba(93,132,172,.09)}
+.market-table tbody tr:last-child td{border-bottom:0}
+.market-table td:first-child{text-align:left;min-width:0}
+.market-table .symbol{display:flex;align-items:center;gap:0;min-width:0}
+.market-table .asset-icon{display:none!important}
+.market-table .symbol b{font-size:11px;font-weight:550;letter-spacing:0;color:#d8e0e9;font-variant-numeric:tabular-nums}
+.market-table .muted{font-size:10px;color:#8a98a9}
+.market-placeholder{display:inline-flex;align-items:center;justify-content:flex-end;gap:2px;width:68px;height:19px;opacity:.7;vertical-align:middle;letter-spacing:0}
+.market-placeholder i{display:block;position:relative;width:4px;border-radius:0;background:rgba(104,173,143,.85);height:var(--h)}
+.market-placeholder i:nth-child(2n){background:rgba(211,103,111,.85)}
+.market-placeholder i:before{content:"";position:absolute;left:1px;top:-3px;height:calc(var(--h) + 6px);width:1px;background:currentColor;opacity:.8}
+.us-pool-foot{margin:0 12px;padding:8px 0 10px;border-top:1px solid rgba(132,151,174,.09);color:#738196;font-size:9px;letter-spacing:0;line-height:1.5}
+@media(max-width:760px){.market-panel .table-wrap{padding-left:8px;padding-right:8px}.market-table th:first-child{width:37%}.market-table th:nth-child(2){width:27%}.market-table th:nth-child(3){width:36%}.market-table td{padding:5px 5px}.market-placeholder{width:58px}}
 /* V9 stock-pool market overview and reference indices. */
 .market-table td:first-child{min-width:102px}
 .market-company{display:block;font-size:9px;color:var(--muted);font-weight:400;margin-top:1px}
