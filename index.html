@@ -1280,7 +1280,7 @@ window.addEventListener('resize',updateScrollDepth,{passive:true});
 
 /* Seven enlarged cards: each row aligns with one stream origin at the canvas' left edge. */
 .center-stage.orb-original-stage{overflow:visible!important}
-#octopusMarketCardGrid.orb-stream-card-overlay{position:absolute;z-index:5;left:0;right:auto;top:0;bottom:0;width:clamp(230px,25vw,320px);height:100%;max-height:100%;overflow-y:auto;overflow-x:hidden;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:8px 10px 18px 0;pointer-events:auto;perspective:1200px;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(49,217,255,.35) transparent}
+#octopusMarketCardGrid.orb-stream-card-overlay{position:absolute;z-index:5;left:0;right:auto;top:0;bottom:0;width:clamp(280px,30vw,380px);height:100%;max-height:100%;overflow-y:auto;overflow-x:hidden;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:8px 2px 18px 0;pointer-events:auto;perspective:1200px;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(49,217,255,.35) transparent}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{position:relative;left:auto;right:auto;top:auto;min-width:0;padding:18px 16px 34px;transform:none;perspective:900px;pointer-events:auto}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-float{animation:octBob 5.5s ease-in-out infinite alternate}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-shadow{display:block}
@@ -1295,12 +1295,12 @@ window.addEventListener('resize',updateScrollDepth,{passive:true});
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-l3{transform:translateZ(60px)}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-pct{font-size:14px;padding:3px 10px;line-height:normal;border:0;background:var(--c);color:#07101f}
 @media(max-width:760px){
- #octopusMarketCardGrid.orb-stream-card-overlay{width:clamp(230px,44vw,300px);padding-right:6px}
+ #octopusMarketCardGrid.orb-stream-card-overlay{width:clamp(260px,44vw,340px);padding-right:2px}
  #octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{padding:14px 8px 28px}
  #octopusMarketCardGrid.orb-stream-card-overlay .oct-card{height:auto;min-height:200px;padding:20px;border-radius:22px}
 }
 @media(max-width:460px){
- #octopusMarketCardGrid.orb-stream-card-overlay{width:min(76vw,280px);padding:6px 4px 12px 0;gap:8px}
+ #octopusMarketCardGrid.orb-stream-card-overlay{width:min(82vw,320px);padding:6px 2px 12px 0;gap:8px}
  #octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{padding:14px 8px 28px}
 }
  
