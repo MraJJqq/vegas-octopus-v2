@@ -334,6 +334,74 @@ body{position:fixed;inset:0}
   .universe{transform:scale(1.08)}
 }
 
+
+/* Deep-space visual pass: remove hard panel frames and unify the dashboard in near-black. */
+:root{
+  --bg:#02040a;
+  --panel:rgba(5,9,19,.52);
+  --panel-2:rgba(7,13,27,.44);
+}
+html,body{
+  background:#02040a!important;
+  background-image:radial-gradient(ellipse at 50% 43%,rgba(10,28,55,.28) 0%,rgba(3,7,16,.18) 42%,#02040a 78%)!important;
+}
+body:before{
+  background:
+    radial-gradient(ellipse at 50% 45%,rgba(0,126,255,.075),transparent 56%),
+    radial-gradient(ellipse at 12% 18%,rgba(18,55,112,.09),transparent 34%),
+    radial-gradient(ellipse at 88% 76%,rgba(33,18,90,.08),transparent 36%)!important;
+}
+.panel,.top-card,.status-card,.market-card,.settings{
+  border:1px solid transparent!important;
+  background:linear-gradient(145deg,rgba(8,14,28,.48),rgba(3,7,16,.28))!important;
+  box-shadow:inset 0 1px 0 rgba(91,174,255,.035),0 10px 30px rgba(0,0,0,.16)!important;
+  backdrop-filter:blur(10px);
+}
+.panel:before,.panel:after,.top-card:before,.top-card:after{
+  border-color:transparent!important;
+  opacity:0!important;
+  box-shadow:none!important;
+}
+.panel-head{
+  border-bottom:1px solid rgba(83,144,205,.07)!important;
+}
+.main-grid,.bottom-grid,.left-col,.right-col{
+  background:transparent!important;
+}
+.center-stage{
+  border:0!important;
+  background:radial-gradient(ellipse at 50% 48%,rgba(5,23,47,.26),rgba(2,4,10,0) 72%)!important;
+  box-shadow:none!important;
+}
+.center-stage:before,.center-stage:after{
+  border-color:transparent!important;
+  opacity:0!important;
+}
+.market-table tbody tr{
+  border-color:rgba(80,145,208,.055)!important;
+}
+.market-table tbody tr:hover{
+  background:rgba(32,104,175,.075)!important;
+}
+.tab{
+  border-color:transparent!important;
+  background:rgba(9,17,32,.34)!important;
+}
+.tab.active{
+  border-color:rgba(58,199,255,.12)!important;
+  background:rgba(23,109,164,.17)!important;
+  box-shadow:0 0 18px rgba(0,164,255,.055)!important;
+}
+.news-calendar,.calendar-row,.event-item{
+  border-color:rgba(82,143,202,.065)!important;
+}
+.core-orb{
+  box-shadow:0 0 28px rgba(52,226,255,.76),0 0 76px rgba(40,111,255,.48),0 0 140px rgba(36,92,255,.15),inset 0 0 22px rgba(255,255,255,.48)!important;
+}
+@media(prefers-reduced-transparency:reduce){
+  .panel,.top-card,.status-card,.market-card,.settings{backdrop-filter:none}
+}
+
 </style>
 </head>
 <body>
