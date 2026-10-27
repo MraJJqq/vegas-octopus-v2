@@ -1261,7 +1261,7 @@ window.addEventListener('resize',updateScrollDepth,{passive:true});
 <style>
 
 /* Seven cards align with the seven stream entry heights on the orb canvas. */
-#octopusMarketCardGrid.orb-stream-card-overlay{position:absolute;z-index:3;left:0;top:0;bottom:0;width:clamp(132px,19%,220px);max-height:none;height:100%;overflow:visible;display:block;padding:0;pointer-events:none;perspective:none}
+#octopusMarketCardGrid.orb-stream-card-overlay{position:fixed;z-index:30;left:8px;top:0;bottom:0;width:clamp(132px,19vw,220px);max-height:none;height:100vh;height:100dvh;overflow:visible;display:block;padding:0;pointer-events:none;perspective:none}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{position:absolute;left:7px;right:5px;top:calc(12% + var(--stream-index)*12%);padding:0;transform:translateY(-50%);perspective:700px;pointer-events:auto}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-float{animation:none}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-shadow{display:none}
@@ -1274,7 +1274,7 @@ window.addEventListener('resize',updateScrollDepth,{passive:true});
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-l3{transform:none}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-pct{font-size:7px;padding:1px 4px;line-height:1.1;border:0;background:transparent;color:#8caac4}
 @media(max-width:760px){
- #octopusMarketCardGrid.orb-stream-card-overlay{width:clamp(104px,29%,142px)}
+ #octopusMarketCardGrid.orb-stream-card-overlay{left:4px;width:clamp(104px,29vw,142px)}
  #octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{left:4px;right:2px}
  #octopusMarketCardGrid.orb-stream-card-overlay .oct-card{height:clamp(34px,8vh,46px);padding:4px 5px}
  #octopusMarketCardGrid.orb-stream-card-overlay .oct-coin{display:none}
