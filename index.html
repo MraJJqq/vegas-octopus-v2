@@ -1763,9 +1763,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 
 <script>
-/* Mirror the latest daily formal-signal report produced by VEGAS V9. */
+/* Mirror the daily formal-signal list from VEGAS V9's persisted state. */
 (function(){
-  const REPORT_URL="https://raw.githubusercontent.com/MraJJqq/vegas-signal-system/main/v9/scan-report.json";
+  const STATE_URL="https://raw.githubusercontent.com/MraJJqq/vegas-signal-system/main/v9/.signal-state.json";
   const CORE_ORDER=["BTC","HYPE","XAU","CL"];
   const STOCK_ORDER=["AAPL","MSFT","GOOGL","AMZN","NVDA","TSLA","META","INTC","QCOM","AMD","TSM","AVGO","ORCL","ARM","MU","ASML","SNDK","SKHYNIX","MRVL","GLW","HOOD","CBRS","SPCX"];
   const ALLOWED=new Set(CORE_ORDER.concat(STOCK_ORDER));
@@ -1776,7 +1776,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(s==="CLU")s="CL";
     return s;
   }
-  function renderSymbols(targetId, symbols){
+  function todayBeijing(){
+    const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Shanghai",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+    const p={};parts.forEach(x=>{p[x.type]=x.value});
+    return p.year+"-"+p.month+"-"+p.day;
+  }
+  function renderSymbols(targetId,symbols){
     const target=$(targetId);
     if(!target)return;
     target.replaceChildren();
@@ -1794,40 +1799,38 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       target.appendChild(item);
     });
   }
-  function formatBeijing(iso){
-    if(!iso)return "";
-    const d=new Date(iso);
-    if(Number.isNaN(d.getTime()))return "";
-    return new Intl.DateTimeFormat("zh-CN",{timeZone:"Asia/Shanghai",hour:"2-digit",minute:"2-digit",hour12:false}).format(d);
-  }
-  async function refreshV9Report(){
+  async function refreshV9State(){
     const status=$("v9SyncStatus");
     try{
-      const response=await fetch(REPORT_URL+"?t="+Date.now(),{cache:"no-store"});
+      const response=await fetch(STATE_URL+"?t="+Date.now(),{cache:"no-store"});
       if(!response.ok)throw new Error("HTTP "+response.status);
-      const report=await response.json();
-      if(!report||!Array.isArray(report.signals)||!report.started_at_utc)throw new Error("报告格式无效");
+      const state=await response.json();
+      const daily=state&&state.__daily_formal_signals__;
+      if(!daily||!Array.isArray(daily.signals))throw new Error("状态格式无效");
+      if(daily.date!==todayBeijing()){
+        renderSymbols("v9Stocks",[]);
+        renderSymbols("v9Core",[]);
+        if(status)status.textContent="V9 · 等待今日扫描";
+        return;
+      }
       const seen=new Set();
-      for(const signal of report.signals){
+      for(const signal of daily.signals){
         if(!signal||signal.formal_signal!==true)continue;
         const s=symbolName(signal.symbol);
         if(ALLOWED.has(s))seen.add(s);
       }
-      const stocks=STOCK_ORDER.filter(s=>seen.has(s));
-      const core=CORE_ORDER.filter(s=>seen.has(s));
-      renderSymbols("v9Stocks",stocks);
-      renderSymbols("v9Core",core);
-      const stamp=formatBeijing(report.started_at_utc);
-      if(status)status.textContent=stamp?"V9 · "+stamp+" 更新":"V9 · 已同步";
+      renderSymbols("v9Stocks",STOCK_ORDER.filter(s=>seen.has(s)));
+      renderSymbols("v9Core",CORE_ORDER.filter(s=>seen.has(s)));
+      if(status)status.textContent="V9 · 每2小时扫描";
     }catch(error){
-      if(status)status.textContent="V9 · 等待扫描数据";
+      if(status)status.textContent="V9 · 数据暂不可用";
       renderSymbols("v9Stocks",[]);
       renderSymbols("v9Core",[]);
-      console.warn("V9 latest-events report unavailable:",error);
+      console.warn("V9 latest-events state unavailable:",error);
     }
   }
-  refreshV9Report();
-  window.setInterval(refreshV9Report,15*60*1000);
+  refreshV9State();
+  window.setInterval(refreshV9State,15*60*1000);
 })();
 </script>
 </body>
