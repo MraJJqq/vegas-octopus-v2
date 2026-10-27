@@ -1215,3 +1215,9 @@ requestAnimationFrame(frame);
 .center-stage.orb-original-stage{position:relative;overflow:hidden;isolation:isolate;background:transparent!important;min-width:0;min-height:0}
 .center-stage.orb-original-stage .orb-original-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:transparent}
 </style>
+
+<style>
+/* Hide the original module parameter panel from the page without modifying the fixed asset file. */
+.center-stage.orb-original-stage{position:relative}
+.center-stage.orb-original-stage::after{content:"";position:absolute;z-index:5;left:0;right:0;bottom:0;height:116px;background:linear-gradient(to bottom,rgba(2,5,12,.96),#02050c 28%);pointer-events:none}
+</style>
