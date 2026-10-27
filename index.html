@@ -700,6 +700,48 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 .market-table .asset-icon{flex-shrink:0}
 .market-table .market-placeholder{display:inline-block;min-width:38px;text-align:center}
 
+
+/* Layout revision: remove the lower analytics block; events follow the watchlist,
+   the 3D core shifts right, and news becomes a bottom horizontal ticker. */
+.main-grid{
+  grid-template-columns:minmax(260px,.82fr) minmax(0,2.18fr)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+  align-items:stretch!important;
+}
+.left-col{grid-column:1!important;grid-row:1!important;min-height:0!important;overflow:hidden!important}
+.center-stage{grid-column:2!important;grid-row:1!important;min-height:0!important;height:100%!important}
+.left-col .market-panel{flex:1 1 58%;min-height:0}
+.left-col .event-panel{flex:0 1 42%;min-height:130px}
+.event-panel .event-list{overflow-y:auto;min-height:0}
+.news-ticker{
+  flex:0 0 auto;min-width:0;height:38px;display:flex;align-items:center;gap:14px;
+  padding:0 12px;border-top:1px solid rgba(104,145,190,.15);
+  border-bottom:1px solid rgba(104,145,190,.08);background:rgba(5,10,19,.38);overflow:hidden;
+}
+.ticker-label{display:flex;align-items:center;gap:7px;flex:0 0 auto;color:#a9bfd5;font-size:10px;letter-spacing:.08em;white-space:nowrap}
+.ticker-pulse{width:6px;height:6px;border-radius:50%;background:#6fc9ff;box-shadow:0 0 8px rgba(80,190,255,.6)}
+.ticker-viewport{flex:1;min-width:0;overflow:hidden;white-space:nowrap;mask-image:linear-gradient(90deg,transparent,#000 2%,#000 98%,transparent)}
+.ticker-track{display:flex;align-items:center;gap:22px;width:max-content;animation:newsTickerScroll 58s linear infinite}
+.ticker-track span{font-size:11px;color:#aebed0;white-space:nowrap}
+.ticker-track i{font-style:normal;font-size:7px;color:#4e83ad}
+.news-ticker:hover .ticker-track{animation-play-state:paused}
+@keyframes newsTickerScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.bottom-grid{display:none!important}
+@media(max-width:1180px){
+ .main-grid{grid-template-columns:minmax(235px,.9fr) minmax(0,1.8fr)!important}
+ .left-col .market-panel{flex:1 1 60%}
+ .left-col .event-panel{flex:0 1 40%}
+}
+@media(max-width:760px){
+ .app{height:100dvh}
+ .main-grid{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important}
+ .left-col{display:none!important}
+ .center-stage{grid-column:1!important;grid-row:1!important;height:100%!important;min-height:0!important}
+ .news-ticker{height:34px;padding:0 8px;gap:9px}
+ .ticker-track{gap:14px;animation-duration:42s}
+ .ticker-track span{font-size:10px}
+ .footer{display:none!important}
+}
 </style>
 </head>
 <body>
@@ -748,6 +790,16 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
         </tbody></table></div>
         <div class="us-pool-foot">品种与 V9 扫描池代码保持一致；涨跌幅与 K 线走势尚未接入实时数据。</div>
       </section>
+<section class="panel event-panel">
+        <div class="panel-head"><div class="panel-title"><span class="icon">⌁</span>最新事件</div><span class="muted" style="font-size:10px">仅信号期 / 观察期</span></div>
+        <div class="tabs" id="eventTabs"><button class="tab active" data-stage="全部">全部</button><button class="tab" data-stage="信号期">信号期</button><button class="tab" data-stage="观察期">观察期</button></div>
+        <div class="event-list" id="eventList">
+          <div class="event-item" data-stage="信号期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">₿ BTC</span><span class="pill">信号期 · 2H</span></div><div class="event-detail">正式信号已触发</div></div><span class="event-time">12:34</span></div>
+          <div class="event-item" data-stage="观察期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">◆ ETH</span><span class="pill watch">观察期 · 1H</span></div><div class="event-detail">观察状态更新</div></div><span class="event-time">12:15</span></div>
+          <div class="event-item" data-stage="观察期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">≋ SOL</span><span class="pill watch">观察期 · 2H</span></div><div class="event-detail">观察记录更新</div></div><span class="event-time">10:58</span></div>
+          <div class="event-item" data-stage="信号期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">T TSLA</span><span class="pill">信号期 · 1H</span></div><div class="event-detail">正式信号状态更新</div></div><span class="event-time">09:37</span></div>
+        </div>
+      </section>
     </section>
 
     <section class="center-stage" aria-label="中央 3D 数据宇宙">
@@ -774,37 +826,25 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
       <div class="stage-caption"><strong>Vegas 章鱼</strong><span>连接全球市场 · 洞察交易机会</span></div>
     </section>
 
-    <section class="right-col">
-      <section class="panel news-panel">
-        <div class="panel-head"><div class="panel-title"><span class="icon">▤</span>新闻</div><button class="panel-action" type="button">更多 ↗</button></div>
-        <div class="tabs" id="newsTabs"><button class="tab active" data-news="全部">全部</button><button class="tab" data-news="宏观">宏观</button><button class="tab" data-news="美股">美股</button><button class="tab" data-news="加密">加密</button><button class="tab" data-news="商品">商品</button></div>
-        <div class="news-list" id="newsList">
-          <article class="news-item" data-category="宏观"><div class="news-time">12:28</div><div><div class="news-title">美联储官员：通胀仍有回落空间，政策路径取决于后续数据</div><div class="news-meta"><span>公开资讯 · 演示条目</span></div></div><span class="tag important">宏观</span></article>
-          <article class="news-item" data-category="美股"><div class="news-time">11:56</div><div><div class="news-title">科技股财报季临近，市场关注大型科技公司指引</div><div class="news-meta"><span>公司动态 · 演示条目</span></div></div><span class="tag">美股</span></article>
-          <article class="news-item" data-category="加密"><div class="news-time">10:42</div><div><div class="news-title">比特币围绕关键价位震荡，市场等待新的成交量变化</div><div class="news-meta"><span>市场快讯 · 演示条目</span></div></div><span class="tag">加密</span></article>
-          <article class="news-item" data-category="商品"><div class="news-time">09:37</div><div><div class="news-title">黄金维持强势，交易员关注美元与利率预期变化</div><div class="news-meta"><span>大宗商品 · 演示条目</span></div></div><span class="tag">黄金</span></article>
-          <article class="news-item" data-category="宏观"><div class="news-time">08:15</div><div><div class="news-title">本周经济数据日程密集，波动风险需结合实际数据观察</div><div class="news-meta"><span>日程提示 · 演示条目</span></div></div><span class="tag">日程</span></article>
-          <article class="news-item" data-category="商品"><div class="news-time">07:52</div><div><div class="news-title">原油市场关注供给变化与需求预期，价格波动仍可能加大</div><div class="news-meta"><span>大宗商品 · 演示条目</span></div></div><span class="tag">原油</span></article>
-          <article class="news-item" data-category="美股"><div class="news-time">06:20</div><div><div class="news-title">美股市场聚焦主要指数表现及大型公司后续公告</div><div class="news-meta"><span>市场综述 · 演示条目</span></div></div><span class="tag">美股</span></article>
-        </div>
-        <div class="news-calendar"><div class="calendar-head"><b>重要日程</b><span class="muted">演示提醒 · 本地时间</span></div><div class="calendar-row"><span class="calendar-time">20:30</span><span>宏观经济数据公布</span><span class="calendar-kind">待确认</span></div><div class="calendar-row"><span class="calendar-time">22:00</span><span>政策讲话 / 市场关注事件</span><span class="calendar-kind">待确认</span></div></div>
-      </section>
-      <section class="panel event-panel">
-        <div class="panel-head"><div class="panel-title"><span class="icon">⌁</span>最新事件</div><span class="muted" style="font-size:10px">仅信号期 / 观察期</span></div>
-        <div class="tabs" id="eventTabs"><button class="tab active" data-stage="全部">全部</button><button class="tab" data-stage="信号期">信号期</button><button class="tab" data-stage="观察期">观察期</button></div>
-        <div class="event-list" id="eventList">
-          <div class="event-item" data-stage="信号期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">₿ BTC</span><span class="pill">信号期 · 2H</span></div><div class="event-detail">正式信号已触发</div></div><span class="event-time">12:34</span></div>
-          <div class="event-item" data-stage="观察期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">◆ ETH</span><span class="pill watch">观察期 · 1H</span></div><div class="event-detail">观察状态更新</div></div><span class="event-time">12:15</span></div>
-          <div class="event-item" data-stage="观察期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">≋ SOL</span><span class="pill watch">观察期 · 2H</span></div><div class="event-detail">观察记录更新</div></div><span class="event-time">10:58</span></div>
-          <div class="event-item" data-stage="信号期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">T TSLA</span><span class="pill">信号期 · 1H</span></div><div class="event-detail">正式信号状态更新</div></div><span class="event-time">09:37</span></div>
-        </div>
-      </section>
-    </section>
+    
   </main>
 
-  <section class="bottom-grid">
-    <section class="panel"><div class="panel-head"><div class="panel-title"><span class="icon">⌘</span>系统健康度</div><span class="pill">演示状态</span></div><div class="health-grid"><div class="health-item"><div class="health-ring">⌁</div><div class="health-name">数据连接</div><div class="health-value">待接入</div><div class="health-state">未连接真实源</div></div><div class="health-item"><div class="health-ring">▤</div><div class="health-name">交易所连接</div><div class="health-value">待接入</div><div class="health-state">未连接真实源</div></div><div class="health-item"><div class="health-ring">◎</div><div class="health-name">扫描进度</div><div class="health-value">演示</div><div class="health-state">非实时任务</div></div><div class="health-item"><div class="health-ring">♧</div><div class="health-name">推送通道</div><div class="health-value">待接入</div><div class="health-state">未发送通知</div></div></div></section>
-    <section class="panel sentiment-panel"><div class="panel-head"><div class="panel-title"><span class="icon">◉</span>市场情绪</div><span class="muted" style="font-size:10px">指标占位</span></div><div class="sentiment-content"><div class="sentiment-gauge"><div>68<small>中性偏多</small></div></div><div class="sentiment-metrics"><div class="metric-row"><span>上涨 / 下跌家数</span><b>4128 : 2184</b></div><div class="metric-row"><span>情绪指数</span><b>68 / 100</b></div><div class="metric-row"><span>恐慌贪婪</span><b>62</b></div><div class="metric-row"><span>波动率指数 VIX</span><b>18.7</b></div></div></div></section>
+  <section class="news-ticker" aria-label="新闻横向滚动播报">
+    <div class="ticker-label"><span class="ticker-pulse"></span>新闻快讯</div>
+    <div class="ticker-viewport"><div class="ticker-track">
+      <span>美联储官员：通胀与后续数据仍是政策关注重点</span><i>◆</i>
+      <span>科技股财报季临近，市场关注大型科技公司指引</span><i>◆</i>
+      <span>比特币围绕关键价位震荡，市场等待成交量变化</span><i>◆</i>
+      <span>黄金走势关注美元与利率预期变化</span><i>◆</i>
+      <span>原油市场关注供给变化与需求预期</span><i>◆</i>
+      <span>本周经济数据日程密集，关注潜在波动</span><i>◆</i>
+      <span>美联储官员：通胀与后续数据仍是政策关注重点</span><i>◆</i>
+      <span>科技股财报季临近，市场关注大型科技公司指引</span><i>◆</i>
+      <span>比特币围绕关键价位震荡，市场等待成交量变化</span><i>◆</i>
+      <span>黄金走势关注美元与利率预期变化</span><i>◆</i>
+      <span>原油市场关注供给变化与需求预期</span><i>◆</i>
+      <span>本周经济数据日程密集，关注潜在波动</span><i>◆</i>
+    </div></div>
   </section>
   <footer class="footer"><div class="footer-brand">◉ Vegas 章鱼 <span>│ Aether · 3D 数据宇宙</span></div><div>让数据连接市场 · 让交易更简单</div><div class="disclaimer">当前版本为 UI 原型，所有数值与新闻均为演示内容</div></footer>
 </div>
