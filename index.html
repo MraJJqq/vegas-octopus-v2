@@ -1428,18 +1428,55 @@ fourHourLayer.addEventListener('wheel',e=>{
 const fourHourSvg=fourHourLayer.querySelector('.o4-chart');
 fourHourSvg.style.cursor='grab';
 fourHourSvg.style.touchAction='none';
+const fourHourPointers=new Map();
+let fourHourPinch=null;
+function fourHourPointerDistance(a,b){return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)}
+function fourHourPointerMidpoint(a,b){return {x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2}}
 fourHourSvg.addEventListener('pointerdown',e=>{
-  if(!activeFourHourCard||e.button!==0)return;
+  if(!activeFourHourCard||(e.pointerType==='mouse'&&e.button!==0))return;
   const cache=fourHourCache.get(activeFourHourCard),allRows=cache?.values||[];
   if(allRows.length<2)return;
-  const count=Math.min(allRows.length,fourHourViewCount);
-  const start=Math.max(0,Math.min(allRows.length-count,fourHourViewStart??(allRows.length-count)));
-  fourHourDrag={pointerId:e.pointerId,startX:e.clientX,startIndex:start,count,width:Math.max(1,fourHourSvg.getBoundingClientRect().width),length:allRows.length,moved:false};
-  fourHourSvg.style.cursor='grabbing';
-  fourHourSvg.setPointerCapture(e.pointerId);
+  fourHourPointers.set(e.pointerId,{clientX:e.clientX,clientY:e.clientY,pointerType:e.pointerType});
+  try{fourHourSvg.setPointerCapture(e.pointerId)}catch(_){}
+  if(fourHourPointers.size>=2){
+    const pts=[...fourHourPointers.values()].slice(0,2),count=Math.min(allRows.length,fourHourViewCount);
+    const start=Math.max(0,Math.min(allRows.length-count,fourHourViewStart??(allRows.length-count)));
+    const rect=fourHourSvg.getBoundingClientRect(),mid=fourHourPointerMidpoint(pts[0],pts[1]);
+    fourHourPinch={
+      distance:Math.max(1,fourHourPointerDistance(pts[0],pts[1])),
+      count,start,length:allRows.length,width:Math.max(1,rect.width),
+      anchor:start+Math.max(0,Math.min(1,(mid.x-rect.left)/Math.max(1,rect.width)))*count,
+      ratio:Math.max(0,Math.min(1,(mid.x-rect.left)/Math.max(1,rect.width)))
+    };
+    fourHourDrag=null;
+    fourHourSvg.style.cursor='grabbing';
+  }else if(e.pointerType==='mouse'){
+    const count=Math.min(allRows.length,fourHourViewCount);
+    const start=Math.max(0,Math.min(allRows.length-count,fourHourViewStart??(allRows.length-count)));
+    fourHourDrag={pointerId:e.pointerId,startX:e.clientX,startIndex:start,count,width:Math.max(1,fourHourSvg.getBoundingClientRect().width),length:allRows.length,moved:false};
+    fourHourSvg.style.cursor='grabbing';
+  }else{
+    const count=Math.min(allRows.length,fourHourViewCount);
+    const start=Math.max(0,Math.min(allRows.length-count,fourHourViewStart??(allRows.length-count)));
+    fourHourDrag={pointerId:e.pointerId,startX:e.clientX,startIndex:start,count,width:Math.max(1,fourHourSvg.getBoundingClientRect().width),length:allRows.length,moved:false};
+  }
   e.preventDefault();
 });
 fourHourSvg.addEventListener('pointermove',e=>{
+  if(fourHourPointers.has(e.pointerId))fourHourPointers.set(e.pointerId,{clientX:e.clientX,clientY:e.clientY,pointerType:e.pointerType});
+  if(fourHourPinch&&fourHourPointers.size>=2){
+    const cache=fourHourCache.get(activeFourHourCard),allRows=cache?.values||[];
+    if(allRows.length<2)return;
+    const pts=[...fourHourPointers.values()].slice(0,2);
+    const distance=Math.max(1,fourHourPointerDistance(pts[0],pts[1]));
+    const nextCount=Math.max(Math.min(20,allRows.length),Math.min(Math.min(500,allRows.length),Math.round(fourHourPinch.count*fourHourPinch.distance/distance)));
+    fourHourViewCount=nextCount;
+    fourHourViewStart=Math.max(0,Math.min(allRows.length-nextCount,Math.round(fourHourPinch.anchor-fourHourPinch.ratio*nextCount)));
+    fourHourUserNavigated=true;
+    redrawActiveFourHour();
+    e.preventDefault();
+    return;
+  }
   if(!fourHourDrag||fourHourDrag.pointerId!==e.pointerId)return;
   const delta=e.clientX-fourHourDrag.startX;
   if(Math.abs(delta)>2)fourHourDrag.moved=true;
@@ -1450,11 +1487,26 @@ fourHourSvg.addEventListener('pointermove',e=>{
   redrawActiveFourHour();
 });
 function finishFourHourDrag(e){
-  if(!fourHourDrag||e.pointerId!==fourHourDrag.pointerId)return;
-  fourHourDrag=null;fourHourSvg.style.cursor='grab';
+  fourHourPointers.delete(e.pointerId);
+  if(fourHourPinch){
+    fourHourPinch=null;
+    fourHourDrag=null;
+    // If one finger remains, allow it to continue panning from its current position.
+    const remaining=[...fourHourPointers.entries()][0];
+    if(remaining){
+      const [pointerId,point]=remaining,cache=fourHourCache.get(activeFourHourCard),allRows=cache?.values||[];
+      const count=Math.min(allRows.length,fourHourViewCount);
+      const start=Math.max(0,Math.min(allRows.length-count,fourHourViewStart??(allRows.length-count)));
+      fourHourDrag={pointerId,startX:point.clientX,startIndex:start,count,width:Math.max(1,fourHourSvg.getBoundingClientRect().width),length:allRows.length,moved:false};
+    }
+  }else if(fourHourDrag?.pointerId===e.pointerId){
+    fourHourDrag=null;
+  }
+  if(fourHourPointers.size===0)fourHourSvg.style.cursor='grab';
 }
 fourHourSvg.addEventListener('pointerup',finishFourHourDrag);
 fourHourSvg.addEventListener('pointercancel',finishFourHourDrag);
+fourHourSvg.addEventListener('lostpointercapture',finishFourHourDrag);
 fourHourLayer.addEventListener('click',e=>{
   if(e.target===fourHourLayer)hideFourHour();
 });
