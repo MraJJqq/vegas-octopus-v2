@@ -1261,3 +1261,135 @@ requestAnimationFrame(frame);
 }
 </style>
 
+
+
+<style>
+/* Responsive layout normalization: distribute both viewport axes without fixed panel sizing. */
+:root{
+  --layout-gap:clamp(4px,.55vw,10px);
+  --layout-pad:clamp(5px,.65vw,12px);
+  --layout-text:clamp(9px,.68vw,13px);
+}
+html,body{width:100%;height:100%;min-width:0;min-height:0;margin:0}
+body{position:fixed;inset:0}
+.app{
+  width:100%!important;max-width:none!important;height:100vh;height:100dvh;
+  min-width:0;min-height:0;margin:0;padding:var(--layout-pad);
+  display:flex;flex-direction:column;gap:var(--layout-gap);overflow:hidden;
+}
+.topbar{
+  flex:0 1 auto;min-width:0;min-height:clamp(64px,17vh,150px);
+  grid-template-columns:minmax(0,1.3fr) minmax(0,.55fr) minmax(0,1.35fr) minmax(0,.75fr)!important;
+  grid-template-rows:minmax(0,1fr)!important;gap:var(--layout-gap)!important;
+}
+.topbar>.fund-overview-top{grid-column:1!important;grid-row:1!important}
+.topbar>.top-card:not(.fund-overview-top):not(.event-top-card):not(.status-card):not(.settings){grid-column:2!important;grid-row:1!important}
+.topbar>.event-top-card{grid-column:3!important;grid-row:1!important;min-width:0;min-height:0;height:100%;overflow:hidden}
+.topbar>.status-card{grid-column:4!important;grid-row:1!important;min-width:0}
+.topbar>.settings{display:none!important}
+.top-card,.panel{min-width:0;min-height:0}
+.main-grid{
+  flex:1 1 0;min-width:0;min-height:0;width:100%;height:auto;overflow:hidden;
+  display:grid!important;grid-template-columns:minmax(0,.82fr) minmax(0,2.18fr)!important;
+  grid-template-rows:minmax(0,1fr)!important;gap:var(--layout-gap)!important;
+  align-items:stretch!important;
+}
+.left-col{
+  display:flex!important;flex-direction:column;grid-column:1!important;grid-row:1!important;
+  min-width:0!important;min-height:0!important;height:100%;max-height:none;overflow:hidden!important;
+}
+.center-stage,.center-stage.orb-original-stage{
+  grid-column:2!important;grid-row:1!important;order:initial!important;
+  width:100%;height:100%!important;min-width:0!important;min-height:0!important;
+  max-height:none;overflow:hidden;
+}
+.left-col .market-panel{
+  flex:1 1 0!important;min-width:0;min-height:0!important;height:100%;max-height:none!important;
+}
+.market-panel .table-wrap{
+  flex:1 1 0;min-height:0;max-height:none!important;height:auto;overflow-y:auto!important;
+}
+.market-table tbody#marketRows{grid-template-columns:repeat(2,minmax(0,1fr))}
+.market-table tr{min-width:0;min-height:clamp(48px,8vh,76px);padding:clamp(4px,.55vw,10px)}
+.news-ticker{
+  flex:0 1 auto;min-width:0;height:clamp(26px,4.5vh,42px)!important;
+  min-height:0;padding-inline:clamp(6px,.8vw,14px);
+}
+.bottom-system-status{
+  flex:0 1 auto;min-width:0;min-height:0;padding:clamp(3px,.6vh,8px) 10px;
+  font-size:clamp(8px,.62vw,11px);gap:clamp(6px,1vw,18px);
+}
+.orb-original-stage #orb-core-canvas{width:100%;height:100%}
+.fund-overview-top,.event-top-card,.topbar>.top-card{padding:clamp(5px,.7vw,12px)!important}
+.fund-total-wrap strong{font-size:clamp(17px,2vw,34px)!important}
+.fund-top-sub{gap:clamp(4px,.7vw,12px)!important}
+.panel-head{gap:6px;min-width:0}
+.panel-title{font-size:clamp(10px,.75vw,14px)}
+.event-top-card .event-list{min-width:0;min-height:0;overflow:hidden}
+@media (min-width:1500px){
+  .main-grid{grid-template-columns:minmax(0,.78fr) minmax(0,2.22fr)!important}
+}
+@media (max-width:1180px){
+  .topbar{grid-template-columns:minmax(0,1.2fr) minmax(0,.55fr) minmax(0,1.25fr)!important;min-height:clamp(68px,16vh,132px)}
+  .topbar>.status-card{display:none!important}
+  .topbar>.event-top-card{grid-column:3!important}
+  .main-grid{grid-template-columns:minmax(0,.9fr) minmax(0,1.8fr)!important}
+  .market-table tr{min-height:clamp(44px,7.5vh,68px)}
+}
+@media (max-height:800px) and (min-width:761px){
+  .app{--layout-gap:clamp(3px,.4vw,7px);--layout-pad:clamp(4px,.45vw,8px)}
+  .topbar{min-height:clamp(58px,15vh,112px)}
+  .news-ticker{height:clamp(22px,3.8vh,32px)!important}
+  .bottom-system-status{padding-block:2px}
+  .market-table tr{min-height:clamp(38px,6.8vh,58px);padding:4px}
+  .panel-head{padding-block:clamp(4px,.5vh,7px)}
+}
+@media (max-width:760px){
+  .app{padding:5px;gap:5px}
+  .topbar{
+    flex:0 0 auto;min-height:0;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    grid-template-rows:auto auto!important;gap:5px!important;
+  }
+  .topbar>.fund-overview-top{grid-column:1/-1!important;grid-row:1!important}
+  .topbar>.top-card:not(.fund-overview-top):not(.event-top-card){display:none!important}
+  .topbar>.event-top-card{
+    display:flex!important;grid-column:1/-1!important;grid-row:2!important;
+    height:auto;min-height:clamp(54px,10vh,84px);max-height:clamp(54px,12vh,90px);
+  }
+  .topbar .event-list{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .main-grid{
+    flex:1 1 0;grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:minmax(0,.82fr) minmax(0,1.18fr)!important;gap:5px!important;
+  }
+  .left-col{
+    display:flex!important;grid-column:1!important;grid-row:1!important;
+    height:auto;max-height:none;min-height:0!important;
+  }
+  .left-col .market-panel{max-height:none!important}
+  .market-panel .table-wrap{max-height:none!important;padding:0 6px 5px}
+  .market-table tbody#marketRows{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+  .market-table tr{min-height:clamp(34px,5.6vh,54px);padding:4px}
+  .market-table .asset-icon{width:clamp(15px,4vw,21px);height:clamp(15px,4vw,21px);flex-basis:clamp(15px,4vw,21px)}
+  .market-table .symbol b{font-size:clamp(8px,2.4vw,11px)!important}
+  .market-table td:nth-child(2){font-size:clamp(7px,2vw,10px)!important}
+  .center-stage,.center-stage.orb-original-stage{
+    display:block!important;grid-column:1!important;grid-row:2!important;
+    height:100%!important;min-height:0!important;max-height:none;order:initial!important;
+  }
+  .orb-stage-label{left:8px!important;top:7px!important}
+  .news-ticker{height:clamp(22px,3.8vh,30px)!important;gap:7px;padding-inline:6px}
+  .ticker-label{font-size:8px}
+  .ticker-track span{font-size:9px}
+  .bottom-system-status{gap:6px;padding:3px 5px;font-size:8px}
+  .bottom-system-status .status-row{gap:8px}
+}
+@media (max-width:390px){
+  .fund-overview-top{padding:5px!important}
+  .fund-top-sub{font-size:9px}
+  .market-panel .panel-head{padding:5px 6px!important}
+  .market-table tbody#marketRows{gap:3px}
+  .market-table tr{padding:3px}
+  .market-table .market-placeholder{gap:2px}
+  .market-table .market-placeholder i{width:3px}
+}
+</style>
