@@ -1322,7 +1322,7 @@ async function loadMarketData(){
         if(!(last>0&&open>0)){d.ready=false;d.card.querySelector('.price').textContent='行情无效';d.card.querySelector('.pct').textContent='--';return}
         d.p=last;d.o=open;
         try{
-          const url=API+'/api/v2/mix/market/candles?'+new URLSearchParams({symbol:d.api,productType:'USDT-FUTURES',granularity:'2H',limit:'40'});
+          const url=API+'/api/v2/mix/market/candles?'+new URLSearchParams({symbol:d.api,productType:'USDT-FUTURES',granularity:'1H',limit:'40'});
           const cr=await fetch(url,{cache:'no-store'});
           if(cr.ok){
             const cp=await cr.json();
