@@ -1124,9 +1124,7 @@ function hrgb(h){h/=360;var q=.62+1-.62,p2=2*.62-q;function f(t){t=((t%1)+1)%1;r
 var PAL=[0,28,52,150,190,245,320,280,170],PR=PAL.map(hrgb),N=900,P=[],HT=new Float32Array(N).fill(-9),HH=new Float32Array(N);
 for(i=0;i<N;i++){var y=1-2*(i+.5)/N,r=Math.sqrt(1-y*y),th=i*2.399963;P.push({x:r*Math.cos(th),y:y,z:r*Math.sin(th),k:R(),c:Math.floor(R()*PAL.length),m:R()<.2?0:.5+R()*.4})}
 function pj(v,cs,sn,cp,spp,cx,cy,Rr){var x1=v[0]*cs+v[2]*sn,z1=-v[0]*sn+v[2]*cs,y2=v[1]*cp-z1*spp,z2=v[1]*spp+z1*cp,f=1+z2*.12;return[cx+x1*Rr*f,cy+y2*Rr*f,z2]}
-/* seven coloured fibre streams (orb-lab v1 pulses) */
-var SH=[0,28,52,150,190,245,320],F=[];
-for(i=0;i<150;i++)F.push({s:i%7,t:Math.floor(R()*N),o:R(),v:.18+R()*.25});
+/* 七根数据流已独立保存至章鱼素材库；网页暂时停用。 */
 function bz(a,b,c,s){var q=1-s;return[q*q*a[0]+2*q*s*b[0]+s*s*c[0],q*q*a[1]+2*q*s*b[1]+s*s*c[1]]}
 /* drag */
 var rot=0,pitB=.32,dn=false,lx=0,ly=0;
@@ -1142,9 +1140,7 @@ x.globalCompositeOperation="lighter";x.globalAlpha=1;
 var g=x.createRadialGradient(cx,cy,0,cx,cy,Rr*.22);g.addColorStop(0,"rgba(255,225,160,.45)");g.addColorStop(1,"rgba(255,200,100,0)");x.fillStyle=g;x.fillRect(cx-Rr*.22,cy-Rr*.22,Rr*.44,Rr*.44);
 x.lineWidth=.6;
 pr.forEach(function(q,k){var gw=q[3],tw=Math.pow(Math.sin(t*1.1+k*13.7)*.5+.5,3),a=(.012+.11*tw)*(.35+.65*q[4])*(.45+.55*gw)*V.ln;if(a<.012)return;x.strokeStyle="rgba("+(140+115*gw|0)+","+(185+5*gw|0)+","+(255-185*gw|0)+","+Math.min(a,.5)+")";x.beginPath();x.moveTo(cx+(q[0]-cx)*.1,cy+(q[1]-cy)*.1);x.lineTo(q[0],q[1]);x.stroke()});
-/* streams */
-x.lineWidth=.8;
-F.forEach(function(f){var q=pr[f.t],fa=q[3];if(fa<.05)return;var y0=H*(.12+f.s*.12),col="hsl("+SH[f.s]+",100%,62%)",c1x=cx*.5;x.strokeStyle=col;x.globalAlpha=.26*fa;x.beginPath();x.moveTo(0,y0);x.quadraticCurveTo(c1x,y0,q[0],q[1]);x.stroke();var u=(t*f.v+f.o)%1,v=1-u,px=2*v*u*c1x+u*u*q[0],py=v*v*y0+2*v*u*y0+u*u*q[1];x.globalAlpha=.95*fa;x.fillStyle=col;x.shadowColor=col;x.shadowBlur=8;x.beginPath();x.arc(px,py,1.6,0,PI*2);x.fill();x.shadowBlur=0});x.globalAlpha=1;
+/* 七根数据流暂时不在网页绘制；其独立模块保存在章鱼素材库。 */
 /* dots */
 x.globalAlpha=1;
 pr.forEach(function(q,n){var p=P[n],gw=q[3],k=p.k,a=(.25+.5*gw)*(.5+.5*q[4]),b0=140+115*gw,b1=185+5*gw+k*50*gw,b2=255-185*gw,pc=PR[p.c],m=p.m,hb=Math.max(0,1-(t-HT[n])/.7);
