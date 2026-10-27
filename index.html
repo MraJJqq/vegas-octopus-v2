@@ -591,14 +591,38 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
  .market-table th,.market-table td{padding-left:2px!important;padding-right:2px!important}
 }
 
+
+/* Capital overview — minimal English terminal layout (Option D). */
+.fund-overview-top{background:transparent!important;border-color:transparent!important;box-shadow:none!important;border-radius:0!important;padding:8px 12px!important;gap:7px!important}
+.fund-overview-top:after{display:none!important}
+.fund-top-main{align-items:flex-end!important;gap:8px!important}
+.fund-total-wrap{gap:4px!important}
+.fund-total-wrap small,.fund-top-change small,.fund-top-sub small{font-size:9px!important;letter-spacing:.13em!important;color:#7292b1!important}
+.fund-total-wrap strong{font-size:clamp(21px,1.7vw,30px)!important;font-weight:650!important;letter-spacing:-.035em!important;color:#eaf8ff!important}
+.fund-top-change{font-size:clamp(12px,.9vw,15px)!important;font-weight:700!important;color:#5ff0b7!important}
+.fund-top-change small{margin-top:4px!important}
+.fund-top-sub{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;padding-top:7px!important;border-top:1px solid rgba(104,183,229,.18)!important}
+.fund-top-sub>span{min-width:0!important;gap:4px!important}
+.fund-top-sub b{font-size:clamp(10px,.72vw,12px)!important;white-space:nowrap!important;font-variant-numeric:tabular-nums!important}
+@media(max-width:1180px){
+ .fund-top-sub{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+ .fund-top-sub>span:last-child{display:flex!important}
+ .fund-overview-top{padding:7px 9px!important}
+ .fund-top-sub b{font-size:clamp(9px,1vw,11px)!important}
+}
+@media(max-width:760px){
+ .fund-overview-top{grid-column:1/-1;min-height:0;padding:9px 11px!important}
+ .fund-top-sub{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+ .fund-top-sub b{font-size:clamp(9px,2.5vw,11px)!important}
+}
 </style>
 </head>
 <body>
 <div class="app">
   <header class="topbar">
     <div class="top-card brand fund-overview-top">
-      <div class="fund-top-main"><div class="fund-total-wrap"><small>账户总资金</small><strong>$8,642,381</strong></div><span class="fund-top-change">+3.24%<small>累计收益率</small></span></div>
-      <div class="fund-top-sub"><span><small>今日盈亏</small><b class="positive">+$2,386,402</b></span><span><small>可用资金</small><b>$6,255,979</b></span><span><small>占用资金</small><b>$2,386,402</b></span></div>
+      <div class="fund-top-main"><div class="fund-total-wrap"><small>TOTAL ASSETS</small><strong>$8,642,381</strong></div><span class="fund-top-change">+3.24%<small>TOTAL RETURN</small></span></div>
+      <div class="fund-top-sub"><span><small>TODAY P&amp;L</small><b class="positive">+$2,386,402</b></span><span><small>AVAILABLE</small><b>$6,255,979</b></span><span><small>IN USE</small><b>$2,386,402</b></span></div>
     </div>
     <div class="top-card"><div class="eyebrow">今日信号</div><div class="top-line"><span class="big-number">12</span><span class="muted">正式 <b class="positive">8</b> · 观察 <b style="color:#73baff">4</b></span></div></div>
     <div class="top-card market-card"><div class="eyebrow">市场表现 · 演示数据</div><div class="market-strip"><div class="market-chip"><span>🇺🇸</span><span>美股<small>+2.31%</small></span></div><div class="market-chip"><span>₿</span><span>加密<small>+3.42%</small></span></div><div class="market-chip"><span>▰</span><span>黄金<small>+1.87%</small></span></div><div class="market-chip"><span>◉</span><span>原油<small>+0.76%</small></span></div></div></div>
