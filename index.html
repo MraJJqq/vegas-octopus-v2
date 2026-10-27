@@ -1199,6 +1199,20 @@ slot.addEventListener('pointermove',e=>{const r=slot.getBoundingClientRect();if(
 ['pointerleave','pointerup','pointercancel'].forEach(t=>slot.addEventListener(t,off));
 }
 assets.forEach(makeCard);
+// Keep all 27 cards scrollable; scrolling gently emphasizes cards nearest the viewport center.
+let scrollFrame=0;
+function updateScrollDepth(){
+  scrollFrame=0;
+  const box=grid.getBoundingClientRect(),center=box.top+box.height/2,span=Math.max(1,box.height/2);
+  grid.querySelectorAll('.oct-slot:not([hidden])').forEach(slot=>{
+    const r=slot.getBoundingClientRect(),distance=Math.min(1,Math.abs((r.top+r.height/2-center)/span));
+    const card=slot.querySelector('.oct-card');
+    card.style.setProperty('--scroll-scale',(1.015-distance*.035).toFixed(3));
+    slot.style.setProperty('--scroll-shift',((center-(r.top+r.height/2))/span*1.5).toFixed(1)+'px');
+  });
+}
+grid.addEventListener('scroll',()=>{if(!scrollFrame)scrollFrame=requestAnimationFrame(updateScrollDepth)},{passive:true});
+window.addEventListener('resize',updateScrollDepth,{passive:true});
 function filter(type){grid.querySelectorAll('.oct-slot').forEach(c=>{c.hidden=type!=='全部'&&c.dataset.type!==type})}
 if(tabs)tabs.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>filter(t.dataset.market||'全部')));
 })();
@@ -1470,31 +1484,36 @@ body{position:fixed;inset:0}
 
 
 <style id="octopus-market-card-import">
+/* Compact 27-card pool: each asset stream owns one independently floating card. */
 .market-panel .table-wrap{display:none!important}
-#octopusMarketCardGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px;width:100%;padding:18px 14px 24px;align-items:stretch}
-#octopusMarketCardGrid .oct-slot{position:relative;perspective:900px;padding:18px 16px 34px;min-width:0}
+#octopusMarketCardGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;width:100%;padding:8px 8px 14px;align-items:stretch;max-height:clamp(300px,54vh,620px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:rgba(49,217,255,.45) rgba(5,18,39,.25);perspective:1200px}
+#octopusMarketCardGrid::-webkit-scrollbar{width:7px}
+#octopusMarketCardGrid::-webkit-scrollbar-track{background:rgba(5,18,39,.25);border-radius:8px}
+#octopusMarketCardGrid::-webkit-scrollbar-thumb{background:rgba(49,217,255,.4);border-radius:8px}
+#octopusMarketCardGrid .oct-slot{position:relative;perspective:900px;padding:10px 8px 23px;min-width:0;transform:translateY(var(--scroll-shift,0px));transition:transform .18s ease-out}
 #octopusMarketCardGrid .oct-float{transform-style:preserve-3d;animation:octBob 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
-@keyframes octBob{0%{transform:translateY(0) rotateY(-5deg) rotateX(2deg)}100%{transform:translateY(-12px) rotateY(5deg) rotateX(-2deg)}}
-#octopusMarketCardGrid .oct-shadow{position:absolute;left:14%;right:14%;bottom:8px;height:22px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.65),transparent);filter:blur(6px);animation:octSh 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
+@keyframes octBob{0%{transform:translateY(0) rotateY(-5deg) rotateX(2deg)}100%{transform:translateY(-7px) rotateY(5deg) rotateX(-2deg)}}
+#octopusMarketCardGrid .oct-shadow{position:absolute;left:14%;right:14%;bottom:4px;height:15px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.65),transparent);filter:blur(5px);animation:octSh 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
 @keyframes octSh{0%{transform:scale(1);opacity:.9}100%{transform:scale(.82);opacity:.5}}
-#octopusMarketCardGrid .oct-card{--c:#39d9ff;position:relative;transform-style:preserve-3d;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .14s ease-out;border-radius:22px;padding:20px;min-height:200px;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:default;isolation:isolate}
-#octopusMarketCardGrid .oct-bg{position:absolute;inset:0;z-index:-1;border-radius:inherit;background:linear-gradient(145deg,rgba(255,255,255,.13),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 30px 50px -24px rgba(0,0,0,.8)}
-#octopusMarketCardGrid .oct-gl{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transform:translateZ(80px);background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.28),transparent 55%);transition:opacity .2s}
+#octopusMarketCardGrid .oct-card{--c:#39d9ff;position:relative;transform-style:preserve-3d;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) scale(var(--scroll-scale,1));transition:transform .14s ease-out,border-color .2s; border-radius:17px;padding:13px;min-height:154px;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:default;isolation:isolate}
+#octopusMarketCardGrid .oct-bg{position:absolute;inset:0;z-index:-1;border-radius:inherit;background:linear-gradient(145deg,rgba(255,255,255,.13),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 20px 34px -22px rgba(0,0,0,.8)}
+#octopusMarketCardGrid .oct-gl{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transform:translateZ(55px);background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.28),transparent 55%);transition:opacity .2s}
 #octopusMarketCardGrid .oct-card.hot .oct-gl{opacity:1}
 #octopusMarketCardGrid .oct-l1,#octopusMarketCardGrid .oct-l2,#octopusMarketCardGrid .oct-l3,#octopusMarketCardGrid .oct-l4{position:relative}
-#octopusMarketCardGrid .oct-l1{transform:translateZ(24px)}#octopusMarketCardGrid .oct-l2{transform:translateZ(46px)}#octopusMarketCardGrid .oct-l3{transform:translateZ(60px)}#octopusMarketCardGrid .oct-l4{transform:translateZ(78px)}
-#octopusMarketCardGrid .oct-row{display:flex;align-items:center;gap:10px;min-width:0}
-#octopusMarketCardGrid .oct-coin{width:34px;height:34px;flex:0 0 34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:15px;color:#07101f;background:var(--c);box-shadow:0 0 16px -2px var(--c)}
-#octopusMarketCardGrid .oct-sym{font-size:18px;font-weight:700;min-width:0;overflow-wrap:anywhere}
-#octopusMarketCardGrid .oct-sym small{display:block;font-size:11px;color:#7f8db0;font-weight:500;margin-top:2px}
-#octopusMarketCardGrid .oct-price{font-size:clamp(25px,2.2vw,34px);font-weight:700;margin:14px 0 4px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-#octopusMarketCardGrid .oct-pct{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;color:#bdefff;background:rgba(35,177,225,.16);border:1px solid rgba(68,204,255,.22)}
-#octopusMarketCardGrid .oct-spark{display:block;width:100%;height:50px;margin-top:12px;overflow:visible}
+#octopusMarketCardGrid .oct-l1{transform:translateZ(12px)}#octopusMarketCardGrid .oct-l2{transform:translateZ(20px)}#octopusMarketCardGrid .oct-l3{transform:translateZ(27px)}#octopusMarketCardGrid .oct-l4{transform:translateZ(34px)}
+#octopusMarketCardGrid .oct-row{display:flex;align-items:center;gap:7px;min-width:0}
+#octopusMarketCardGrid .oct-coin{width:27px;height:27px;flex:0 0 27px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;color:#07101f;background:var(--c);box-shadow:0 0 12px -2px var(--c)}
+#octopusMarketCardGrid .oct-sym{font-size:15px;font-weight:700;min-width:0;overflow-wrap:anywhere}
+#octopusMarketCardGrid .oct-sym small{display:block;font-size:9px;color:#7f8db0;font-weight:500;margin-top:2px}
+#octopusMarketCardGrid .oct-price{font-size:clamp(19px,1.6vw,25px);font-weight:700;margin:9px 0 3px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+#octopusMarketCardGrid .oct-pct{display:inline-block;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:700;color:#bdefff;background:rgba(35,177,225,.16);border:1px solid rgba(68,204,255,.22)}
+#octopusMarketCardGrid .oct-spark{display:block;width:100%;height:32px;margin-top:6px;overflow:visible}
 #octopusMarketCardGrid .oct-spark .oct-ln{fill:none;stroke:var(--c);stroke-width:2;vector-effect:non-scaling-stroke}
 #octopusMarketCardGrid .oct-spark .oct-ar{fill:var(--c);opacity:.14}
-#octopusMarketCardGrid .oct-hl{margin-top:8px;font-size:12px;color:#7f8db0;font-variant-numeric:tabular-nums}
-#octopusMarketCardGrid .oct-hl span{color:#e8f0ff;margin:0 10px 0 4px}
-@media(max-width:760px){#octopusMarketCardGrid{grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:6px;padding:12px 8px 20px}#octopusMarketCardGrid .oct-slot{padding:14px 10px 28px}#octopusMarketCardGrid .oct-card{padding:16px;min-height:190px}}
-@media(max-width:460px){#octopusMarketCardGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;padding:8px 5px 16px}#octopusMarketCardGrid .oct-slot{padding:12px 5px 24px}#octopusMarketCardGrid .oct-card{padding:12px 10px;min-height:176px;border-radius:17px}#octopusMarketCardGrid .oct-coin{width:28px;height:28px;flex-basis:28px;font-size:12px}#octopusMarketCardGrid .oct-sym{font-size:14px}#octopusMarketCardGrid .oct-sym small{font-size:9px}#octopusMarketCardGrid .oct-price{font-size:21px;margin-top:12px}#octopusMarketCardGrid .oct-pct{font-size:10px;padding:3px 6px}#octopusMarketCardGrid .oct-hl{font-size:10px}#octopusMarketCardGrid .oct-hl span{margin-right:4px}}
-@media(prefers-reduced-motion:reduce){#octopusMarketCardGrid .oct-float,#octopusMarketCardGrid .oct-shadow{animation:none}}
+#octopusMarketCardGrid .oct-hl{margin-top:5px;font-size:10px;color:#7f8db0;font-variant-numeric:tabular-nums}
+#octopusMarketCardGrid .oct-hl span{color:#e8f0ff;margin:0 5px 0 3px}
+#octopusMarketCardGrid .oct-slot[hidden]{display:none!important}
+@media(max-width:900px){#octopusMarketCardGrid{grid-template-columns:repeat(2,minmax(0,1fr));max-height:clamp(300px,52vh,560px)}}
+@media(max-width:460px){#octopusMarketCardGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:2px;padding:6px 4px 10px;max-height:52vh}#octopusMarketCardGrid .oct-slot{padding:8px 4px 20px}#octopusMarketCardGrid .oct-card{padding:10px 9px;min-height:142px;border-radius:15px}#octopusMarketCardGrid .oct-coin{width:23px;height:23px;flex-basis:23px;font-size:11px}#octopusMarketCardGrid .oct-sym{font-size:13px}#octopusMarketCardGrid .oct-sym small{font-size:8px}#octopusMarketCardGrid .oct-price{font-size:18px;margin-top:8px}#octopusMarketCardGrid .oct-pct{font-size:9px;padding:2px 5px}#octopusMarketCardGrid .oct-spark{height:27px;margin-top:4px}#octopusMarketCardGrid .oct-hl{font-size:9px}#octopusMarketCardGrid .oct-hl span{margin-right:3px}}
+@media(prefers-reduced-motion:reduce){#octopusMarketCardGrid .oct-float,#octopusMarketCardGrid .oct-shadow{animation:none}#octopusMarketCardGrid .oct-slot,#octopusMarketCardGrid .oct-card{transition:none}}
 </style>
