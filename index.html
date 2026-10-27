@@ -1024,44 +1024,76 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 <script>
 (function(){
 
-  // Pull down at the top edge to reload the page; regular wheel scrolling remains unchanged.
+  // Pull-to-refresh: explicit touch handling for iOS/iPadOS plus mouse drag support.
   const refreshIndicator=document.createElement('div');
   refreshIndicator.id='pullRefreshIndicator';
   refreshIndicator.innerHTML='<span class="refresh-dot">↻</span><span>下拉刷新页面</span>';
   document.body.appendChild(refreshIndicator);
-  let pullStartY=null, pullActive=false, pullDistance=0, refreshTriggered=false;
-  const pullThreshold=86;
+  let pullStartY=null, pullActive=false, pullDistance=0, refreshTriggered=false, activePointerId=null;
+  const pullThreshold=72;
   function updatePullIndicator(distance){
-    pullDistance=Math.max(0,Math.min(distance,120));
-    refreshIndicator.classList.toggle('visible',pullDistance>8);
-    refreshIndicator.style.opacity=String(Math.min(1,pullDistance/45));
+    pullDistance=Math.max(0,Math.min(distance,140));
+    refreshIndicator.classList.toggle('visible',pullDistance>5);
+    refreshIndicator.style.opacity=String(Math.min(1,pullDistance/42));
     const label=refreshIndicator.querySelector('span:last-child');
     if(label) label.textContent=pullDistance>=pullThreshold?'松开即可刷新':'下拉刷新页面';
   }
-  document.addEventListener('pointerdown',e=>{
-    if(e.pointerType==='mouse' && e.button!==0)return;
-    if(window.scrollY<=0){pullStartY=e.clientY;pullActive=true;refreshTriggered=false;}
-  },{passive:true});
-  document.addEventListener('pointermove',e=>{
-    if(!pullActive||pullStartY===null||window.scrollY>0)return;
-    const delta=e.clientY-pullStartY;
-    if(delta>0){updatePullIndicator(delta*.72);}
-    else if(delta<0){pullActive=false;pullStartY=null;updatePullIndicator(0);}
-  },{passive:true});
+  function beginPull(y, pointerId=null){
+    pullStartY=y;pullActive=true;pullDistance=0;refreshTriggered=false;activePointerId=pointerId;
+    updatePullIndicator(0);
+  }
+  function movePull(y, event, isTouch=false){
+    if(!pullActive||pullStartY===null)return;
+    const delta=y-pullStartY;
+    if(delta<0){pullActive=false;pullStartY=null;activePointerId=null;updatePullIndicator(0);return;}
+    if(delta>0){
+      if(isTouch && event && event.cancelable) event.preventDefault();
+      updatePullIndicator(delta*.9);
+    }
+  }
   function finishPull(){
     if(!pullActive)return;
     const shouldRefresh=pullDistance>=pullThreshold&&!refreshTriggered;
-    pullActive=false;pullStartY=null;
+    pullActive=false;pullStartY=null;activePointerId=null;
     if(shouldRefresh){
       refreshTriggered=true;
       const label=refreshIndicator.querySelector('span:last-child');
       if(label)label.textContent='正在刷新…';
       refreshIndicator.classList.add('visible');
-      setTimeout(()=>window.location.reload(),120);
-    }else{updatePullIndicator(0);}
+      window.location.reload();
+    }else updatePullIndicator(0);
   }
-  document.addEventListener('pointerup',finishPull,{passive:true});
-  document.addEventListener('pointercancel',finishPull,{passive:true});
+  // Mouse/trackpad users can drag from the very top of the page.
+  document.addEventListener('pointerdown',e=>{
+    if(e.pointerType!=='mouse'||e.button!==0||e.clientY>100)return;
+    beginPull(e.clientY,e.pointerId);
+  },{passive:true});
+  document.addEventListener('pointermove',e=>{
+    if(!pullActive||e.pointerType!=='mouse'||(activePointerId!==null&&e.pointerId!==activePointerId))return;
+    movePull(e.clientY,e,false);
+  },{passive:true});
+  document.addEventListener('pointerup',e=>{
+    if(activePointerId!==null&&e.pointerId!==activePointerId)return;
+    finishPull();
+  },{passive:true});
+  document.addEventListener('pointercancel',()=>{
+    if(pullActive){pullActive=false;pullStartY=null;activePointerId=null;updatePullIndicator(0);}
+  },{passive:true});
+  // iOS Safari may cancel pointer events while processing a native vertical gesture.
+  // Handle touch events directly and prevent the native gesture only after a downward drag starts.
+  document.addEventListener('touchstart',e=>{
+    if(pullActive||!e.touches||e.touches.length!==1)return;
+    const t=e.touches[0];
+    if(t.clientY<=120)beginPull(t.clientY);
+  },{passive:true});
+  document.addEventListener('touchmove',e=>{
+    if(!pullActive||!e.touches||e.touches.length!==1)return;
+    movePull(e.touches[0].clientY,e,true);
+  },{passive:false});
+  document.addEventListener('touchend',finishPull,{passive:true});
+  document.addEventListener('touchcancel',()=>{
+    if(pullActive){pullActive=false;pullStartY=null;updatePullIndicator(0);}
+  },{passive:true});
 
   const marketTabs=document.querySelectorAll('#marketTabs [data-market]');
   marketTabs.forEach(btn=>btn.addEventListener('click',()=>{
