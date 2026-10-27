@@ -1229,7 +1229,7 @@ function drawFourHour(candles){
   candleGroup.replaceChildren();emaGroup.replaceChildren();
   const allRows=candles.filter(c=>c&&[c.o,c.h,c.l,c.c].every(v=>Number.isFinite(v)&&v>0));
   if(allRows.length<2)return;
-  // Calculate EMA over the full fetched history for warm-up, but display only the latest ~2 months.
+  // Calculate EMA over the full fetched history for warm-up, but display about one month of 4H candles.
   const periods=[12,36,43,144,169,576,676];
   const alpha=p=>2/(p+1);
   const emaSeries={};
@@ -1237,7 +1237,7 @@ function drawFourHour(candles){
     let value=allRows[0].c;
     emaSeries[p]=allRows.map((c,i)=>{if(i===0)return value;value=c.c*alpha(p)+value*(1-alpha(p));return value;});
   });
-  const rows=allRows.slice(-400),offset=allRows.length-rows.length;
+  const rows=allRows.slice(-180),offset=allRows.length-rows.length;
   if(rows.length<2)return;
   const visibleEmas=periods.map(p=>emaSeries[p].slice(offset));
   const scaleValues=[...rows.flatMap(c=>[c.l,c.h]),...visibleEmas.flat()];
@@ -1245,7 +1245,7 @@ function drawFourHour(candles){
   const range=max-min||Math.max(Math.abs(max)*.001,1),y=v=>285-(v-min)/range*260;
   const slot=1000/rows.length,bodyW=Math.max(1,Math.min(12,slot*.58));
   const ns='http://www.w3.org/2000/svg';
-  const emaColors={12:'#f5d547',36:'#00d7c2',43:'#4de3a2',144:'#4da3ff',169:'#b48cff',576:'#ff9f43',676:'#f06bd8'};
+  const emaColors={12:'#f5d547',36:'#ffffff',43:'#ffffff',144:'#f5d547',169:'#f5d547',576:'#f6465d',676:'#f6465d'};
   periods.forEach(p=>{
     const values=emaSeries[p].slice(offset);
     if(values.length<2)return;
