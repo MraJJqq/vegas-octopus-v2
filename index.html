@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#030916">
+<title>Vegas 章鱼 · AETHER 3D 数据宇宙</title>
+<style>
+:root{color-scheme:dark;--bg:#030815;--panel:rgba(5,18,39,.88);--panel2:rgba(5,24,49,.78);--line:rgba(31,157,255,.48);--cyan:#31d9ff;--blue:#2787ff;--violet:#a45dff;--green:#00e0bd;--red:#ff547b;--gold:#ffbd5a;--text:#e8f5ff;--muted:#7e9dbd;--dim:#466784;--radius:16px}
+*{box-sizing:border-box}
+html{min-height:100%;background:var(--bg);scroll-behavior:smooth}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 35%,rgba(0,98,255,.15),transparent 42%),radial-gradient(ellipse at 85% 85%,rgba(63,25,160,.13),transparent 38%),#020612;color:var(--text);font:13px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.3;background-image:radial-gradient(1px 1px at 12% 18%,#9ceaff 99%,transparent),radial-gradient(1px 1px at 78% 12%,#8f9dff 99%,transparent),radial-gradient(1px 1px at 64% 68%,#6cecff 99%,transparent),radial-gradient(1px 1px at 28% 82%,#9a79ff 99%,transparent),radial-gradient(1px 1px at 92% 44%,#8ae5ff 99%,transparent);background-size:260px 220px;z-index:-1}
+button{font:inherit;color:inherit;cursor:pointer}
+.app{width:min(1920px,100%);min-height:100vh;margin:0 auto;padding:10px;display:flex;flex-direction:column;gap:10px}
+.panel,.top-card{background:linear-gradient(145deg,rgba(7,25,52,.94),rgba(3,12,29,.9));border:1px solid var(--line);border-radius:var(--radius);box-shadow:inset 0 0 22px rgba(0,131,255,.06),0 0 20px rgba(0,98,255,.06);min-width:0;position:relative;overflow:hidden}
+.panel:after,.top-card:after{content:"";position:absolute;left:16px;right:16px;top:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.7;pointer-events:none}
+.topbar{display:grid;grid-template-columns:1.35fr 1.25fr .9fr 1.45fr 1.25fr auto;gap:8px;align-items:stretch}
+.brand{display:flex;align-items:center;gap:10px;padding:8px 12px;min-width:0}
+.logo{width:52px;height:52px;flex:0 0 auto;filter:drop-shadow(0 0 9px rgba(35,202,255,.65))}
+.brand-name{font-size:clamp(18px,1.7vw,28px);font-weight:800;letter-spacing:.03em;white-space:nowrap;background:linear-gradient(100deg,#fff,#64dfff 65%,#a5a8ff);-webkit-background-clip:text;color:transparent}
+.brand-sub{font-size:10px;color:#64dfff;letter-spacing:.13em;white-space:nowrap}
+.top-card{padding:10px 13px;display:flex;flex-direction:column;justify-content:center;gap:4px}
+.eyebrow{color:var(--muted);font-size:11px;letter-spacing:.04em}
+.big-number{font-size:clamp(18px,1.55vw,25px);font-weight:750;letter-spacing:.015em;white-space:nowrap}
+.positive{color:var(--green)}.negative{color:var(--red)}.gold{color:var(--gold)}.muted{color:var(--muted)}
+.top-line{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.market-strip{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.market-chip{display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:11px}
+.market-chip b{display:block;font-size:12px;font-weight:700}
+.market-chip small{display:block;color:var(--green);font-size:10px}
+.status-row{display:flex;justify-content:space-between;gap:9px}
+.status-item{display:flex;gap:5px;align-items:center;white-space:nowrap;font-size:10px;color:var(--muted)}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 9px currentColor;color:var(--green)}
+.settings{width:44px;display:grid;place-items:center;color:var(--cyan);font-size:20px}
+.main-grid{display:grid;grid-template-columns:minmax(260px,1.02fr) minmax(400px,1.62fr) minmax(300px,1.08fr);gap:10px;align-items:stretch}
+.left-col,.right-col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:13px 14px 9px}
+.panel-title{font-size:15px;font-weight:750;letter-spacing:.03em;display:flex;align-items:center;gap:8px}
+.panel-title .icon{display:inline-grid;place-items:center;width:27px;height:27px;border-radius:9px;background:linear-gradient(135deg,rgba(35,200,255,.23),rgba(52,104,255,.13));border:1px solid rgba(51,206,255,.4);color:var(--cyan)}
+.panel-action{border:0;background:none;color:var(--cyan);font-size:11px;padding:4px}
+.tabs{display:flex;gap:4px;padding:0 12px 9px;overflow:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{border:1px solid rgba(52,112,173,.35);background:rgba(5,21,44,.72);border-radius:8px;padding:6px 10px;font-size:11px;color:#9eb9d5;white-space:nowrap}
+.tab.active{background:linear-gradient(135deg,#0878f9,#0a4cc3);border-color:#42d7ff;color:white;box-shadow:0 0 12px rgba(0,137,255,.35)}
+.market-panel{flex:1}
+.table-wrap{padding:0 10px 11px;overflow:auto}
+.market-table{width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap}
+.market-table th{font-size:10px;color:var(--muted);font-weight:500;text-align:right;padding:7px 3px;border-bottom:1px solid rgba(63,131,190,.25)}
+.market-table th:first-child,.market-table td:first-child{text-align:left}
+.market-table td{padding:8px 3px;border-bottom:1px solid rgba(46,91,135,.2);text-align:right}
+.market-table tr:last-child td{border-bottom:0}
+.symbol{display:flex;align-items:center;gap:6px}
+.asset-icon{width:21px;height:21px;flex:0 0 21px;border-radius:50%;display:inline-grid;place-items:center;font-size:12px;font-weight:800;color:#fff;background:linear-gradient(135deg,#0b94ff,#5a49d7);box-shadow:0 0 8px rgba(43,159,255,.25)}
+.asset-icon.orange{background:linear-gradient(135deg,#ffb441,#e97516)}.asset-icon.purple{background:linear-gradient(135deg,#bb8aff,#6244d6)}.asset-icon.red{background:linear-gradient(135deg,#ff6b89,#d82155)}.asset-icon.green{background:linear-gradient(135deg,#51e5a5,#139b7e)}.asset-icon.goldicon{background:linear-gradient(135deg,#ffe6a0,#bd791c);color:#3a2605}.asset-icon.aqua{background:linear-gradient(135deg,#5feaff,#1578d4)}
+.spark{width:36px;height:14px;vertical-align:middle}
+.dual-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.compact-panel{min-height:170px}
+.donut-row{display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 10px 14px}
+.donut{width:91px;height:91px;border-radius:50%;background:conic-gradient(#1cbcff 0 34%,#18d8c4 34% 60%,#4769ff 60% 78%,#a16bff 78% 90%,#ff70b5 90%);position:relative;display:grid;place-items:center;flex:0 0 auto;box-shadow:0 0 18px rgba(0,171,255,.15)}
+.donut:before{content:"";position:absolute;inset:19px;background:#07152d;border:1px solid rgba(57,183,255,.25);border-radius:50%}
+.donut-label{position:relative;text-align:center;font-size:16px;font-weight:800}.donut-label small{display:block;font-size:9px;color:var(--muted);font-weight:500}
+.legend{display:grid;gap:5px;font-size:10px;color:#b7d2ed}.legend-row{display:flex;align-items:center;justify-content:space-between;gap:8px;white-space:nowrap}.legend-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px}
+.ranking{padding:0 12px 10px;display:grid;gap:7px}
+.rank-row{display:grid;grid-template-columns:16px 1fr auto;align-items:center;gap:5px;font-size:11px}.rank-num{color:var(--muted)}.rank-name{display:flex;align-items:center;gap:5px}
+.center-stage{min-height:540px;position:relative;border:1px solid rgba(36,139,255,.52);border-radius:18px;overflow:hidden;background:radial-gradient(ellipse at 50% 52%,rgba(0,102,255,.22),transparent 42%),radial-gradient(ellipse at 50% 100%,rgba(110,40,255,.18),transparent 50%),linear-gradient(180deg,rgba(2,9,26,.6),rgba(2,8,23,.95));box-shadow:inset 0 0 55px rgba(0,113,255,.14),0 0 24px rgba(0,102,255,.08)}
+.center-stage:before{content:"";position:absolute;inset:-30%;background:repeating-radial-gradient(ellipse at 50% 55%,transparent 0 30px,rgba(36,155,255,.08) 31px 32px,transparent 33px 57px);transform:perspective(420px) rotateX(58deg) translateY(24%);animation:orbit 35s linear infinite}
+.center-stage:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(1,9,24,.6),transparent 25%,transparent 75%,rgba(1,9,24,.6));pointer-events:none}
+.stage-label{position:absolute;top:16px;left:18px;z-index:3;font-size:10px;letter-spacing:.16em;color:#5ddcff}.stage-label strong{display:block;font-size:13px;color:#dff9ff;letter-spacing:.05em;margin-bottom:3px}
+.stage-live{position:absolute;right:16px;top:17px;z-index:3;font-size:10px;color:var(--green);display:flex;align-items:center;gap:6px}
+.universe{position:absolute;inset:0;z-index:1}
+.orbit{position:absolute;left:50%;top:52%;width:72%;height:39%;border:1px solid rgba(42,176,255,.25);border-radius:50%;transform:translate(-50%,-50%) rotate(-12deg);box-shadow:0 0 20px rgba(0,153,255,.08),inset 0 0 20px rgba(0,153,255,.04)}
+.orbit.o2{width:83%;height:51%;transform:translate(-50%,-50%) rotate(23deg);border-color:rgba(150,91,255,.22)}
+.orbit.o3{width:56%;height:65%;transform:translate(-50%,-50%) rotate(70deg);border-color:rgba(28,205,255,.18)}
+.asset-node{position:absolute;z-index:2;width:70px;height:70px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:radial-gradient(circle at 50% 35%,rgba(22,112,220,.38),rgba(3,15,40,.93) 68%);border:1px solid rgba(64,190,255,.75);box-shadow:0 0 12px rgba(0,157,255,.3),inset 0 0 13px rgba(0,166,255,.2);animation:float 5s ease-in-out infinite}
+.asset-node b{font-size:11px;letter-spacing:.04em}.asset-node small{font-size:9px;color:#8bb9df}
+.asset-node .node-glyph{font-size:22px;font-weight:800;color:#9eeaff;text-shadow:0 0 12px #16aaff}
+.node-btc{left:12%;top:15%;border-color:#ffbd62;box-shadow:0 0 17px rgba(255,159,45,.3),inset 0 0 12px rgba(255,159,45,.2)}.node-btc .node-glyph,.node-xau .node-glyph{color:#ffc46a}
+.node-eth{right:11%;top:14%;animation-delay:-1.5s}.node-tsla{right:7%;top:42%;border-color:#df7dff;animation-delay:-2.5s}.node-aapl{right:15%;bottom:22%;animation-delay:-.8s}.node-sol{left:7%;top:40%;animation-delay:-3s}.node-xau{left:14%;bottom:20%;border-color:#ffbd62;animation-delay:-1.9s}.node-oil{right:28%;bottom:12%;animation-delay:-3.5s}
+.jelly-wrap{position:absolute;left:50%;top:42%;width:min(62%,390px);height:55%;transform:translate(-50%,-50%);z-index:2;filter:drop-shadow(0 0 15px rgba(39,169,255,.6))}
+.jelly-svg{width:100%;height:100%;overflow:visible}
+.tentacle{fill:none;stroke-linecap:round;stroke-width:5;stroke:url(#tentacleGlow);stroke-dasharray:9 7;animation:flow 7s linear infinite}.tentacle.thin{stroke-width:2;opacity:.8;stroke-dasharray:3 7;animation-duration:5s}
+.jelly-bell{fill:url(#bellFill);stroke:#8ceaff;stroke-width:2;filter:url(#glow)}
+.core-orb{position:absolute;left:50%;top:68%;transform:translate(-50%,-50%);width:80px;height:80px;border-radius:50%;display:grid;place-items:center;font-size:42px;font-weight:800;color:#b9ffff;background:radial-gradient(circle,rgba(31,241,255,.42),rgba(9,67,180,.35) 48%,rgba(3,11,40,.8));border:1px solid #65eaff;box-shadow:0 0 22px #087dff,inset 0 0 20px rgba(0,255,255,.35);text-shadow:0 0 14px #26efff}
+.platform{position:absolute;left:50%;bottom:8%;width:64%;height:12%;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse,rgba(32,209,255,.5),rgba(23,64,255,.14) 45%,transparent 72%);border:1px solid rgba(60,202,255,.42);box-shadow:0 0 32px rgba(0,145,255,.28);z-index:1}
+.platform:after{content:"";position:absolute;inset:25% 12%;border:1px solid rgba(115,112,255,.6);border-radius:50%;animation:pulse 3s ease-in-out infinite}
+.stage-caption{position:absolute;z-index:3;bottom:4%;left:50%;transform:translateX(-50%);text-align:center;white-space:nowrap;text-shadow:0 0 12px rgba(44,191,255,.5)}
+.stage-caption strong{display:block;font-size:clamp(17px,1.8vw,25px);letter-spacing:.06em}.stage-caption span{font-size:10px;color:#a8d6f6}
+.news-panel{flex:1;min-height:360px}
+.news-list{padding:0 12px 12px;display:grid;gap:0}
+.news-item{display:grid;grid-template-columns:45px minmax(0,1fr) auto;gap:8px;align-items:start;padding:10px 0;border-bottom:1px solid rgba(55,103,151,.24)}
+.news-item:last-child{border-bottom:0}
+.news-time{font-size:10px;color:#78a9d6;padding-top:2px}
+.news-title{font-size:11px;line-height:1.55;color:#dcecff}
+.news-meta{display:flex;gap:6px;align-items:center;margin-top:4px;font-size:9px;color:var(--muted)}
+.tag{border-radius:5px;padding:2px 5px;background:rgba(31,124,255,.16);border:1px solid rgba(49,158,255,.3);color:#83c8ff;font-size:9px;white-space:nowrap}
+.tag.important{color:#ff8fa9;background:rgba(255,64,112,.1);border-color:rgba(255,64,112,.25)}
+.news-calendar{margin:0 12px 12px;padding:10px;border:1px solid rgba(54,137,201,.25);border-radius:10px;background:rgba(9,31,61,.55)}
+.calendar-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:11px;color:#a6c8e7}.calendar-row{display:grid;grid-template-columns:48px 1fr auto;gap:7px;padding:5px 0;font-size:10px}.calendar-time{color:var(--cyan)}.calendar-kind{color:var(--muted)}
+.event-panel{min-height:205px}
+.event-list{padding:0 13px 12px}
+.event-item{display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(54,103,149,.22)}
+.event-item:last-child{border-bottom:0}
+.timeline{width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 9px rgba(49,217,255,.65);position:relative}
+.event-item:not(:last-child) .timeline:after{content:"";position:absolute;top:8px;left:3px;height:31px;width:1px;background:rgba(44,154,221,.4)}
+.event-main{min-width:0}.event-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.event-symbol{font-size:11px;font-weight:700}.event-detail{font-size:10px;color:var(--muted);margin-top:2px}.event-time{font-size:10px;color:#8fb5d8;white-space:nowrap}
+.pill{font-size:9px;border-radius:5px;padding:2px 6px;color:#68ffe0;background:rgba(0,207,171,.12);border:1px solid rgba(0,222,186,.26);white-space:nowrap}.pill.watch{color:#79baff;background:rgba(34,126,255,.13);border-color:rgba(57,151,255,.3)}
+.bottom-grid{display:grid;grid-template-columns:minmax(280px,1.5fr) minmax(270px,1.05fr) minmax(250px,1fr);gap:10px}
+.fund-content{display:grid;grid-template-columns:110px 1fr minmax(100px,.9fr);gap:12px;align-items:center;padding:4px 14px 14px}
+.gauge{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--cyan) 0 72%,rgba(31,85,139,.32) 72%);position:relative;box-shadow:0 0 17px rgba(0,196,255,.12)}
+.gauge:before{content:"";position:absolute;inset:9px;border-radius:50%;background:#06152d;border:1px solid rgba(50,195,255,.26)}
+.gauge-label{position:relative;text-align:center;font-size:20px;font-weight:800}.gauge-label small{display:block;font-size:9px;color:var(--muted);font-weight:500}
+.fund-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat-label{font-size:10px;color:var(--muted)}.stat-value{font-size:15px;font-weight:750;margin:3px 0;white-space:nowrap}.stat-change{font-size:10px}
+.chart{width:100%;height:80px;display:block}
+.health-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px 10px 14px}
+.health-item{text-align:center;padding:7px 2px;border-right:1px solid rgba(51,106,153,.24)}.health-item:last-child{border-right:0}
+.health-ring{width:43px;height:43px;border-radius:50%;border:3px solid rgba(31,216,255,.75);border-right-color:rgba(41,91,168,.3);display:grid;place-items:center;margin:0 auto 7px;color:var(--cyan);font-size:17px;box-shadow:0 0 12px rgba(0,181,255,.13)}
+.health-name{font-size:10px;color:#c9e5fa}.health-value{font-size:11px;margin-top:3px;color:var(--cyan)}.health-state{font-size:9px;color:var(--green)}
+.sentiment-content{padding:2px 14px 14px;display:grid;grid-template-columns:94px 1fr;gap:12px;align-items:center}
+.sentiment-gauge{width:90px;height:90px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#00dfaa 0 24%,#28b8ff 24% 48%,#2465db 48% 68%,rgba(38,77,127,.35) 68%);position:relative}
+.sentiment-gauge:before{content:"";position:absolute;inset:10px;border-radius:50%;background:#06152c}
+.sentiment-gauge div{z-index:1;text-align:center;font-size:22px;font-weight:800}.sentiment-gauge small{display:block;font-size:9px;color:var(--muted);font-weight:500}
+.sentiment-metrics{display:grid;gap:8px}.metric-row{display:flex;justify-content:space-between;gap:10px;font-size:10px}.metric-row span{color:var(--muted)}.metric-row b{font-size:11px;color:#bdeaff}
+.footer{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;color:#7195b7;font-size:10px;letter-spacing:.08em;border-top:1px solid rgba(42,140,211,.28)}
+.footer-brand{display:flex;align-items:center;gap:8px;color:#dff4ff;font-size:12px;font-weight:700}.footer-brand span{color:var(--cyan);font-weight:500}
+.disclaimer{color:#527594;font-size:9px}
+@keyframes orbit{to{transform:perspective(420px) rotateX(58deg) translateY(24%) rotate(360deg)}}
+@keyframes float{0%,100%{margin-top:0}50%{margin-top:-8px}}
+@keyframes flow{to{stroke-dashoffset:-160}}
+@keyframes pulse{0%,100%{transform:scale(.94);opacity:.5}50%{transform:scale(1.04);opacity:1}}
+@media(min-width:1500px){.app{padding:14px;gap:12px}.main-grid,.bottom-grid{gap:12px}.center-stage{min-height:660px}.market-table td{padding:10px 4px}.news-item{padding:13px 0}.event-item{padding:10px 0}}
+@media(max-width:1180px){.topbar{grid-template-columns:1.2fr 1fr 1fr 1.25fr}.status-card{display:none}.main-grid{grid-template-columns:minmax(240px,.9fr) minmax(360px,1.4fr)}.right-col{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}.center-stage{min-height:520px}.bottom-grid{grid-template-columns:1fr 1fr}.sentiment-panel{grid-column:1/-1}.sentiment-content{grid-template-columns:100px 1fr}.news-panel{min-height:0}}
+@media(max-width:760px){.app{padding:7px;gap:8px}.topbar{grid-template-columns:1fr 1fr;gap:7px}.brand{grid-column:1/-1}.market-card{grid-column:1/-1}.settings{display:none}.main-grid{grid-template-columns:1fr}.left-col,.right-col{display:flex;grid-column:auto}.center-stage{order:-1;min-height:440px}.asset-node{width:55px;height:55px}.asset-node .node-glyph{font-size:18px}.jelly-wrap{width:74%;height:52%}.core-orb{width:62px;height:62px;font-size:32px}.stage-caption{bottom:3%}.stage-caption strong{font-size:18px}.dual-grid{grid-template-columns:1fr 1fr}.right-col{display:flex}.news-panel{min-height:0}.bottom-grid{grid-template-columns:1fr}.sentiment-panel{grid-column:auto}.fund-content{grid-template-columns:86px 1fr}.gauge{width:78px;height:78px}.fund-chart{grid-column:1/-1}.chart{height:68px}.footer{gap:8px;align-items:flex-start;flex-direction:column}.disclaimer{line-height:1.5}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="top-card brand">
+      <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="lg"><stop stop-color="#b9ffff"/><stop offset=".48" stop-color="#21cfff"/><stop offset="1" stop-color="#174dff" stop-opacity=".15"/></radialGradient></defs><circle cx="32" cy="22" r="18" fill="url(#lg)" stroke="#62e8ff"/><circle cx="26" cy="21" r="3" fill="#fff"/><circle cx="38" cy="21" r="3" fill="#fff"/><g fill="none" stroke="#43dfff" stroke-width="2.4" stroke-linecap="round"><path d="M22 34 Q8 43 12 55 Q16 59 20 48"/><path d="M27 37 Q18 48 27 59 Q33 61 32 48"/><path d="M33 37 Q42 48 39 59 Q34 62 34 49"/><path d="M39 34 Q54 42 51 53 Q47 58 44 47"/><path d="M17 30 Q8 31 7 39"/><path d="M47 30 Q56 30 58 38"/></g></svg>
+      <div><div class="brand-name">Vegas 章鱼</div><div class="brand-sub">AETHER · 3D 数据宇宙</div></div>
+    </div>
+    <div class="top-card"><div class="eyebrow">总览资金（演示）</div><div class="top-line"><span class="big-number">$8,642,381</span><span class="positive">+3.24%</span></div></div>
+    <div class="top-card"><div class="eyebrow">今日信号</div><div class="top-line"><span class="big-number">12</span><span class="muted">正式 <b class="positive">8</b> · 观察 <b style="color:#73baff">4</b></span></div></div>
+    <div class="top-card market-card"><div class="eyebrow">市场表现 · 演示数据</div><div class="market-strip"><div class="market-chip"><span>🇺🇸</span><span>美股<small>+2.31%</small></span></div><div class="market-chip"><span>₿</span><span>加密<small>+3.42%</small></span></div><div class="market-chip"><span>▰</span><span>黄金<small>+1.87%</small></span></div><div class="market-chip"><span>◉</span><span>原油<small>+0.76%</small></span></div></div></div>
+    <div class="top-card status-card"><div class="eyebrow">系统连接</div><div class="status-row"><span class="status-item"><i class="dot"></i>数据正常</span><span class="status-item"><i class="dot"></i>交易所</span><span class="status-item"><i class="dot"></i>推送</span></div></div>
+    <div class="top-card settings" aria-label="设置">⚙</div>
+  </header>
+
+  <main class="main-grid">
+    <section class="left-col">
+      <section class="panel market-panel">
+        <div class="panel-head"><div class="panel-title"><span class="icon">◈</span>市场概览</div><button class="panel-action" type="button">详情 ↗</button></div>
+        <div class="tabs" id="marketTabs"><button class="tab active" data-market="全部">全部</button><button class="tab" data-market="美股">美股</button><button class="tab" data-market="加密">加密</button><button class="tab" data-market="外汇">外汇</button><button class="tab" data-market="黄金">黄金</button><button class="tab" data-market="原油">原油</button></div>
+        <div class="table-wrap"><table class="market-table"><thead><tr><th>品种</th><th>价格</th><th>涨跌幅</th><th>成交量</th><th>走势</th></tr></thead><tbody id="marketRows">
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon">S</span>S&amp;P 500</span></td><td>6,735.28</td><td class="positive">+2.31%</td><td>48.7B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 12 L7 8 L11 10 L16 4 L21 7 L27 2 L35 1" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon">N</span>纳斯达克</span></td><td>22,872.01</td><td class="positive">+3.42%</td><td>32.1B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 13 L7 10 L11 11 L17 5 L22 7 L29 2 L35 1" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
+          <tr data-type="加密"><td><span class="symbol"><span class="asset-icon orange">₿</span>BTC</span></td><td>$67,432</td><td class="positive">+2.13%</td><td>12.6B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 12 L6 9 L12 11 L17 5 L23 7 L29 2 L35 3" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
+          <tr data-type="加密"><td><span class="symbol"><span class="asset-icon purple">◆</span>ETH</span></td><td>$2,498.76</td><td class="positive">+3.24%</td><td>8.3B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 12 L7 9 L12 10 L17 4 L22 7 L29 2 L35 1" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
+          <tr data-type="加密"><td><span class="symbol"><span class="asset-icon purple">S</span>SOL</span></td><td>$178.32</td><td class="positive">+2.17%</td><td>5.8B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 11 L7 8 L12 10 L18 4 L24 6 L30 2 L35 3" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon red">T</span>TSLA</span></td><td>$251.34</td><td class="positive">+1.92%</td><td>6.4B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 13 L8 9 L13 11 L19 6 L24 7 L30 3 L35 2" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon green">N</span>NVDA</span></td><td>$138.76</td><td class="positive">+1.36%</td><td>5.2B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 12 L7 10 L12 11 L18 5 L24 7 L29 3 L35 1" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon aqua">A</span>AAPL</span></td><td>$228.54</td><td class="positive">+1.28%</td><td>4.8B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 13 L7 8 L12 10 L18 5 L24 7 L30 2 L35 3" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
+          <tr data-type="黄金"><td><span class="symbol"><span class="asset-icon goldicon">Au</span>XAUUSD</span></td><td>$2,734.21</td><td class="positive">+0.78%</td><td>2.8B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 12 L7 11 L12 7 L18 8 L24 4 L30 5 L35 1" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
+          <tr data-type="原油"><td><span class="symbol"><span class="asset-icon aqua">◉</span>USOIL</span></td><td>$71.36</td><td class="positive">+0.62%</td><td>2.3B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 11 L7 8 L12 10 L18 5 L24 7 L30 4 L35 2" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
+        </tbody></table></div>
+      </section>
+      <div class="dual-grid">
+        <section class="panel compact-panel"><div class="panel-head"><div class="panel-title"><span class="icon">◉</span>市场分布</div></div><div class="donut-row"><div class="donut"><div class="donut-label">34%<small>市场占比</small></div></div><div class="legend"><div class="legend-row"><span><i class="legend-dot" style="background:#1cbcff"></i>美股</span><b>34%</b></div><div class="legend-row"><span><i class="legend-dot" style="background:#18d8c4"></i>加密</span><b>26%</b></div><div class="legend-row"><span><i class="legend-dot" style="background:#4769ff"></i>外汇</span><b>18%</b></div><div class="legend-row"><span><i class="legend-dot" style="background:#a16bff"></i>黄金</span><b>12%</b></div><div class="legend-row"><span><i class="legend-dot" style="background:#ff70b5"></i>原油</span><b>10%</b></div></div></div></section>
+        <section class="panel compact-panel"><div class="panel-head"><div class="panel-title"><span class="icon">✦</span>热门品种</div><span class="muted" style="font-size:10px">TOP 5</span></div><div class="ranking"><div class="rank-row"><span class="rank-num">1</span><span class="rank-name"><i class="asset-icon orange">₿</i>BTC</span><b class="positive">+3.42%</b></div><div class="rank-row"><span class="rank-num">2</span><span class="rank-name"><i class="asset-icon purple">◆</i>ETH</span><b class="positive">+3.12%</b></div><div class="rank-row"><span class="rank-num">3</span><span class="rank-name"><i class="asset-icon red">T</i>TSLA</span><b class="positive">+2.17%</b></div><div class="rank-row"><span class="rank-num">4</span><span class="rank-name"><i class="asset-icon green">N</i>NVDA</span><b class="positive">+1.92%</b></div><div class="rank-row"><span class="rank-num">5</span><span class="rank-name"><i class="asset-icon purple">S</i>SOL</span><b class="positive">+1.87%</b></div></div></section>
+      </div>
+    </section>
+
+    <section class="center-stage" aria-label="中央 3D 数据宇宙">
+      <div class="stage-label"><strong>AETHER / DATA UNIVERSE</strong>MARKET CONNECTION · LIVE VISUALIZATION</div><div class="stage-live"><i class="dot"></i>演示场景运行中</div>
+      <div class="universe"><div class="orbit"></div><div class="orbit o2"></div><div class="orbit o3"></div>
+        <div class="asset-node node-btc"><span class="node-glyph">₿</span><b>BTC</b><small>CRYPTO</small></div>
+        <div class="asset-node node-eth"><span class="node-glyph">◆</span><b>ETH</b><small>CRYPTO</small></div>
+        <div class="asset-node node-tsla"><span class="node-glyph">T</span><b>TSLA</b><small>EQUITY</small></div>
+        <div class="asset-node node-aapl"><span class="node-glyph">●</span><b>AAPL</b><small>EQUITY</small></div>
+        <div class="asset-node node-sol"><span class="node-glyph">≋</span><b>SOL</b><small>CRYPTO</small></div>
+        <div class="asset-node node-xau"><span class="node-glyph">▰</span><b>XAU</b><small>GOLD</small></div>
+        <div class="asset-node node-oil"><span class="node-glyph">◉</span><b>USOIL</b><small>ENERGY</small></div>
+        <div class="jelly-wrap"><svg class="jelly-svg" viewBox="0 0 400 420" role="img" aria-label="机械水母风格的中央章鱼视觉"><defs><linearGradient id="tentacleGlow" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f19aff"/><stop offset=".48" stop-color="#37dcff"/><stop offset="1" stop-color="#526bff"/></linearGradient><radialGradient id="bellFill" cx=".5" cy=".35" r=".7"><stop stop-color="#d7ffff" stop-opacity=".95"/><stop offset=".22" stop-color="#54e5ff" stop-opacity=".65"/><stop offset=".62" stop-color="#2368ff" stop-opacity=".25"/><stop offset="1" stop-color="#1a2dff" stop-opacity=".05"/></radialGradient><filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+          <g class="tentacle thin"><path d="M154 170 C120 212 62 190 48 255 S90 330 65 370"/><path d="M173 182 C153 230 112 236 122 287 S164 333 145 379"/><path d="M193 186 C187 238 195 254 185 297 S202 348 190 382"/><path d="M220 185 C243 234 275 241 260 290 S240 341 259 377"/><path d="M241 172 C285 209 326 211 316 269 S292 326 328 365"/><path d="M260 160 C314 179 355 198 350 244"/></g>
+          <g class="tentacle"><path d="M153 162 C126 204 77 217 91 264 S125 312 101 357"/><path d="M173 176 C157 222 132 253 151 291 S173 332 166 369"/><path d="M194 182 C190 228 218 252 207 298 S215 341 213 375"/><path d="M222 179 C248 221 284 243 270 282 S252 331 276 366"/><path d="M245 166 C281 195 325 216 312 263 S316 319 343 345"/></g>
+          <path class="jelly-bell" d="M126 150 C126 89 158 48 200 42 C245 45 277 91 274 151 C263 177 239 189 200 188 C162 188 137 176 126 150Z"/>
+          <path d="M143 139 Q200 170 257 139" fill="none" stroke="#b4ffff" stroke-width="3" opacity=".85"/><path d="M159 88 Q200 67 241 88" fill="none" stroke="#fff" stroke-width="1.5" opacity=".6"/>
+          <circle cx="178" cy="127" r="12" fill="#fff" opacity=".92" filter="url(#glow)"/><circle cx="222" cy="127" r="12" fill="#fff" opacity=".92" filter="url(#glow)"/><circle cx="178" cy="127" r="5" fill="#2beaff"/><circle cx="222" cy="127" r="5" fill="#2beaff"/>
+          <g fill="none" stroke="#8df6ff" stroke-width="2" opacity=".8"><path d="M153 105 L166 97 L173 107"/><path d="M247 105 L234 97 L227 107"/><path d="M184 151 Q200 160 216 151"/></g>
+          <g fill="#d2ffff" opacity=".85"><circle cx="143" cy="157" r="3"/><circle cx="257" cy="157" r="3"/><circle cx="200" cy="197" r="3"/><circle cx="143" cy="224" r="2"/><circle cx="270" cy="245" r="2"/><circle cx="101" cy="284" r="2"/><circle cx="310" cy="294" r="2"/></g>
+        </svg></div>
+        <div class="core-orb">$</div><div class="platform"></div>
+      </div>
+      <div class="stage-caption"><strong>Vegas 章鱼</strong><span>连接全球市场 · 洞察交易机会</span></div>
+    </section>
+
+    <section class="right-col">
+      <section class="panel news-panel">
+        <div class="panel-head"><div class="panel-title"><span class="icon">▤</span>新闻</div><button class="panel-action" type="button">更多 ↗</button></div>
+        <div class="tabs" id="newsTabs"><button class="tab active" data-news="全部">全部</button><button class="tab" data-news="宏观">宏观</button><button class="tab" data-news="美股">美股</button><button class="tab" data-news="加密">加密</button><button class="tab" data-news="商品">商品</button></div>
+        <div class="news-list" id="newsList">
+          <article class="news-item" data-category="宏观"><div class="news-time">12:28</div><div><div class="news-title">美联储官员：通胀仍有回落空间，政策路径取决于后续数据</div><div class="news-meta"><span>公开资讯 · 演示条目</span></div></div><span class="tag important">宏观</span></article>
+          <article class="news-item" data-category="美股"><div class="news-time">11:56</div><div><div class="news-title">科技股财报季临近，市场关注大型科技公司指引</div><div class="news-meta"><span>公司动态 · 演示条目</span></div></div><span class="tag">美股</span></article>
+          <article class="news-item" data-category="加密"><div class="news-time">10:42</div><div><div class="news-title">比特币围绕关键价位震荡，市场等待新的成交量变化</div><div class="news-meta"><span>市场快讯 · 演示条目</span></div></div><span class="tag">加密</span></article>
+          <article class="news-item" data-category="商品"><div class="news-time">09:37</div><div><div class="news-title">黄金维持强势，交易员关注美元与利率预期变化</div><div class="news-meta"><span>大宗商品 · 演示条目</span></div></div><span class="tag">黄金</span></article>
+          <article class="news-item" data-category="宏观"><div class="news-time">08:15</div><div><div class="news-title">本周经济数据日程密集，波动风险需结合实际数据观察</div><div class="news-meta"><span>日程提示 · 演示条目</span></div></div><span class="tag">日程</span></article>
+          <article class="news-item" data-category="商品"><div class="news-time">07:52</div><div><div class="news-title">原油市场关注供给变化与需求预期，价格波动仍可能加大</div><div class="news-meta"><span>大宗商品 · 演示条目</span></div></div><span class="tag">原油</span></article>
+          <article class="news-item" data-category="美股"><div class="news-time">06:20</div><div><div class="news-title">美股市场聚焦主要指数表现及大型公司后续公告</div><div class="news-meta"><span>市场综述 · 演示条目</span></div></div><span class="tag">美股</span></article>
+        </div>
+        <div class="news-calendar"><div class="calendar-head"><b>重要日程</b><span class="muted">演示提醒 · 本地时间</span></div><div class="calendar-row"><span class="calendar-time">20:30</span><span>宏观经济数据公布</span><span class="calendar-kind">待确认</span></div><div class="calendar-row"><span class="calendar-time">22:00</span><span>政策讲话 / 市场关注事件</span><span class="calendar-kind">待确认</span></div></div>
+      </section>
+      <section class="panel event-panel">
+        <div class="panel-head"><div class="panel-title"><span class="icon">⌁</span>最新事件</div><span class="muted" style="font-size:10px">仅信号期 / 观察期</span></div>
+        <div class="tabs" id="eventTabs"><button class="tab active" data-stage="全部">全部</button><button class="tab" data-stage="信号期">信号期</button><button class="tab" data-stage="观察期">观察期</button></div>
+        <div class="event-list" id="eventList">
+          <div class="event-item" data-stage="信号期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">₿ BTC</span><span class="pill">信号期 · 2H</span></div><div class="event-detail">正式信号已触发</div></div><span class="event-time">12:34</span></div>
+          <div class="event-item" data-stage="观察期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">◆ ETH</span><span class="pill watch">观察期 · 1H</span></div><div class="event-detail">观察状态更新</div></div><span class="event-time">12:15</span></div>
+          <div class="event-item" data-stage="观察期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">≋ SOL</span><span class="pill watch">观察期 · 2H</span></div><div class="event-detail">观察记录更新</div></div><span class="event-time">10:58</span></div>
+          <div class="event-item" data-stage="信号期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">T TSLA</span><span class="pill">信号期 · 1H</span></div><div class="event-detail">正式信号状态更新</div></div><span class="event-time">09:37</span></div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <section class="bottom-grid">
+    <section class="panel"><div class="panel-head"><div class="panel-title"><span class="icon">▥</span>资金概览</div><div class="tabs" style="padding:0"><button class="tab active">资金总览</button><button class="tab">资金流向</button><button class="tab">持仓分布</button></div></div>
+      <div class="fund-content"><div class="gauge"><div class="gauge-label">72%<small>资金利用率</small></div></div><div class="fund-stats"><div><div class="stat-label">总资金（演示）</div><div class="stat-value">$8,642,381</div><div class="stat-change positive">+3.24%</div></div><div><div class="stat-label">今日盈亏（演示）</div><div class="stat-value">$2,386,402</div><div class="stat-change positive">+2.15%</div></div><div><div class="stat-label">可用资金（演示）</div><div class="stat-value">$6,255,979</div><div class="stat-change positive">+12.47%</div></div><div><div class="stat-label">统计周期</div><div class="stat-value">1D / 1W / 1M</div><div class="stat-change muted">交互待接入</div></div></div><div class="fund-chart"><svg class="chart" viewBox="0 0 180 80" preserveAspectRatio="none"><defs><linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0bbfff" stop-opacity=".35"/><stop offset="1" stop-color="#0bbfff" stop-opacity="0"/></linearGradient></defs><path d="M0 70 L12 61 L22 64 L34 48 L45 54 L56 43 L68 48 L79 32 L90 38 L103 27 L114 34 L126 19 L137 28 L148 15 L161 20 L174 5 L180 8 L180 80 L0 80Z" fill="url(#chartFill)"/><path d="M0 70 L12 61 L22 64 L34 48 L45 54 L56 43 L68 48 L79 32 L90 38 L103 27 L114 34 L126 19 L137 28 L148 15 L161 20 L174 5 L180 8" fill="none" stroke="#29d9ff" stroke-width="1.7"/></svg></div></div>
+    </section>
+    <section class="panel"><div class="panel-head"><div class="panel-title"><span class="icon">⌘</span>系统健康度</div><span class="pill">演示状态</span></div><div class="health-grid"><div class="health-item"><div class="health-ring">⌁</div><div class="health-name">数据连接</div><div class="health-value">待接入</div><div class="health-state">未连接真实源</div></div><div class="health-item"><div class="health-ring">▤</div><div class="health-name">交易所连接</div><div class="health-value">待接入</div><div class="health-state">未连接真实源</div></div><div class="health-item"><div class="health-ring">◎</div><div class="health-name">扫描进度</div><div class="health-value">演示</div><div class="health-state">非实时任务</div></div><div class="health-item"><div class="health-ring">♧</div><div class="health-name">推送通道</div><div class="health-value">待接入</div><div class="health-state">未发送通知</div></div></div></section>
+    <section class="panel sentiment-panel"><div class="panel-head"><div class="panel-title"><span class="icon">◉</span>市场情绪</div><span class="muted" style="font-size:10px">指标占位</span></div><div class="sentiment-content"><div class="sentiment-gauge"><div>68<small>中性偏多</small></div></div><div class="sentiment-metrics"><div class="metric-row"><span>上涨 / 下跌家数</span><b>4128 : 2184</b></div><div class="metric-row"><span>情绪指数</span><b>68 / 100</b></div><div class="metric-row"><span>恐慌贪婪</span><b>62</b></div><div class="metric-row"><span>波动率指数 VIX</span><b>18.7</b></div></div></div></section>
+  </section>
+  <footer class="footer"><div class="footer-brand">◉ Vegas 章鱼 <span>│ Aether · 3D 数据宇宙</span></div><div>让数据连接市场 · 让交易更简单</div><div class="disclaimer">当前版本为 UI 原型，所有数值与新闻均为演示内容</div></footer>
+</div>
+<script>
+(function(){
+  const marketTabs=document.querySelectorAll('#marketTabs [data-market]');
+  marketTabs.forEach(btn=>btn.addEventListener('click',()=>{
+    marketTabs.forEach(b=>b.classList.toggle('active',b===btn));
+    const chosen=btn.dataset.market;
+    document.querySelectorAll('#marketRows tr').forEach(row=>{
+      const type=row.dataset.type;
+      row.hidden=chosen!=='全部' && type!==chosen && !(chosen==='外汇' && type==='外汇');
+    });
+  }));
+  const newsTabs=document.querySelectorAll('#newsTabs [data-news]');
+  newsTabs.forEach(btn=>btn.addEventListener('click',()=>{
+    newsTabs.forEach(b=>b.classList.toggle('active',b===btn));
+    const chosen=btn.dataset.news;
+    document.querySelectorAll('#newsList [data-category]').forEach(item=>item.hidden=chosen!=='全部'&&item.dataset.category!==chosen);
+  }));
+  const eventTabs=document.querySelectorAll('#eventTabs [data-stage]');
+  eventTabs.forEach(btn=>btn.addEventListener('click',()=>{
+    eventTabs.forEach(b=>b.classList.toggle('active',b===btn));
+    const chosen=btn.dataset.stage;
+    document.querySelectorAll('#eventList [data-stage]').forEach(item=>item.hidden=chosen!=='全部'&&item.dataset.stage!==chosen);
+  }));
+})();
+</script>
+</body>
+</html>
