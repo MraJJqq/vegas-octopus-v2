@@ -1133,12 +1133,13 @@ window.addEventListener("pointerup",function(){dn=false});
 cv.addEventListener("pointermove",function(e){if(!dn)return;rot+=(e.clientX-lx)*.008;pitB=Math.max(-1.2,Math.min(1.2,pitB+(e.clientY-ly)*.006));lx=e.clientX;ly=e.clientY});
 var last=0;
 function frame(ms){var t=ms/1000,dt=Math.max(0,Math.min(.05,t-last));last=t;if(!dn)rot+=dt*V.spd;
-var orbRect=cv.getBoundingClientRect(),cx=W*.5,cy=H*.5,Rr=Math.min(W*.19,H*.30)*V.zm,pit=pitB+.1*Math.sin(t*.17),cp=Math.cos(pit),spp=Math.sin(pit);
+var cx=W*.5,cy=H*.49,Rr=Math.min(W*.38,H*.39)*V.zm,pit=pitB+.1*Math.sin(t*.17),cp=Math.cos(pit),spp=Math.sin(pit);
 x.clearRect(0,0,W,H);
 var pr=P.map(function(p){var yw=rot*(.8+.4*p.k),q=pj([p.x,p.y,p.z],Math.cos(yw),Math.sin(yw),cp,spp,cx,cy,Rr),u=(q[0]-(cx-Rr))/(2*Rr);q.push(Math.max(0,Math.min(1,(.6-u)/.22)),(q[2]+1)/2);return q});
 x.globalCompositeOperation="lighter";x.globalAlpha=1;
 var g=x.createRadialGradient(cx,cy,0,cx,cy,Rr*.22);g.addColorStop(0,"rgba(255,225,160,.45)");g.addColorStop(1,"rgba(255,200,100,0)");x.fillStyle=g;x.fillRect(cx-Rr*.22,cy-Rr*.22,Rr*.44,Rr*.44);
-/* 暂时停用球体放射线束；保留粒子点与发光效果。 */
+x.lineWidth=.6;
+pr.forEach(function(q,k){var gw=q[3],tw=Math.pow(Math.sin(t*1.1+k*13.7)*.5+.5,3),a=(.012+.11*tw)*(.35+.65*q[4])*(.45+.55*gw)*V.ln;if(a<.012)return;x.strokeStyle="rgba("+(140+115*gw|0)+","+(185+5*gw|0)+","+(255-185*gw|0)+","+Math.min(a,.5)+")";x.beginPath();x.moveTo(cx+(q[0]-cx)*.1,cy+(q[1]-cy)*.1);x.lineTo(q[0],q[1]);x.stroke()});
 /* 七根数据流暂时不在网页绘制；其独立模块保存在章鱼素材库。 */
 /* dots */
 x.globalAlpha=1;
@@ -1159,7 +1160,7 @@ requestAnimationFrame(frame);
 
 
 
-#octopusMarketCardGrid.orb-stream-card-overlay{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;display:block;padding:0;max-height:none;perspective:1400px;z-index:5} #octopusMarketCardGrid.orb-stream-card-overlay .pos{pointer-events:auto}
+#octopusMarketCardGrid.orb-stream-card-overlay{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;display:block;padding:0;max-height:none;perspective:1400px;z-index:5} #octopusMarketCardGrid.orb-stream-card-overlay #octopusMarketCardGrid .pos{pointer-events:auto}
 #octopusMarketCardGrid .pos{position:absolute;left:0;top:0;will-change:transform;cursor:pointer}
 #octopusMarketCardGrid .float{position:absolute;inset:0}
 #octopusMarketCardGrid .card{--c:var(--up);position:absolute;inset:0;border-radius:.9em;padding:.55em .75em;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:1fr auto;column-gap:.5em;row-gap:.2em;align-items:center}
@@ -1196,7 +1197,7 @@ const stage=document.getElementById('octopusMarketCardGrid');
 const SC=[.86,1,1.1],SPD=[.7,1,1.3],PAR=[-9,0,16],OP=[.8,.94,1];
 const SH=['0 10px 16px -12px rgba(0,0,0,.7)','0 18px 28px -12px rgba(0,0,0,.85)','0 32px 44px -14px rgba(0,0,0,.95)'];
 let W,H,zw,w,h,centerX,gap,leftMax,rightMin;
-function size(){W=Math.max(1,stage.clientWidth);H=Math.max(1,stage.clientHeight);zw=W*.35;w=zw*.4;h=w*.46;centerX=W*.5;gap=Math.max(W*.22,w*.25);leftMax=Math.max(0,centerX-gap-w);rightMin=Math.min(W-w,centerX+gap)}
+function size(){W=Math.max(1,stage.clientWidth);H=Math.max(1,stage.clientHeight);zw=W*.35;w=zw*.4;h=w*.46;const rect=stage.getBoundingClientRect();centerX=Math.max(w,Math.min(W-w,window.innerWidth*.5-rect.left));gap=Math.max(w*.65,W*.025);leftMax=Math.max(0,centerX-gap-w);rightMin=Math.min(W-w,centerX+gap)}
 size();
 sh(P);                                  // 随机组合
 const Ls=sh(Array.from({length:27},(_,i)=>i%3));
