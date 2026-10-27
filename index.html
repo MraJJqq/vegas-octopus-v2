@@ -1191,7 +1191,7 @@ requestAnimationFrame(frame);
   opacity:0;visibility:hidden;pointer-events:none;
   transform:none;transition:opacity .12s ease,visibility .12s;
 }
-#octopusFourHourHover.is-visible{opacity:1;visibility:visible}
+#octopusFourHourHover.is-visible{opacity:1;visibility:visible;pointer-events:auto}
 #octopusFourHourHover .o4-chart{display:block;width:100%;height:100%;min-height:100px;overflow:visible}
 #octopusFourHourHover .o4-candles line{stroke-width:1.5;vector-effect:non-scaling-stroke}
 #octopusFourHourHover .o4-candles rect{stroke-width:1.25;vector-effect:non-scaling-stroke;filter:none}
@@ -1215,6 +1215,7 @@ fourHourLayer.setAttribute('aria-hidden','true');
 fourHourLayer.innerHTML=`<svg class="o4-chart" viewBox="0 0 1000 300" preserveAspectRatio="none" role="img" aria-label="4小时K线与Vegas均线图"><g class="o4-emas"></g><g class="o4-candles"></g></svg>`;
 document.body.appendChild(fourHourLayer);
 let activeFourHourCard=null,fourHourHideTimer=null;
+let fourHourViewCount=180,fourHourViewStart=null,fourHourUserNavigated=false,fourHourDrag=null;
 const fourHourCache=new WeakMap();
 const setFourHourStatus=()=>{};
 function hideFourHour(o){
@@ -1264,9 +1265,13 @@ function drawFourHour(candles){
     }
     emaSeries[p]=values;
   });
-  const rows=allRows.slice(-180),offset=allRows.length-rows.length;
+  const maxCount=Math.min(500,allRows.length);
+  fourHourViewCount=Math.min(maxCount,Math.max(20,fourHourViewCount));
+  if(!fourHourUserNavigated)fourHourViewStart=Math.max(0,allRows.length-fourHourViewCount);
+  const offset=Math.max(0,Math.min(allRows.length-fourHourViewCount,fourHourViewStart??Math.max(0,allRows.length-fourHourViewCount)));
+  const rows=allRows.slice(offset,offset+fourHourViewCount);
   if(rows.length<2)return;
-  const visibleEmas=periods.flatMap(p=>emaSeries[p].slice(offset).filter(Number.isFinite));
+  const visibleEmas=periods.flatMap(p=>emaSeries[p].slice(offset,offset+rows.length).filter(Number.isFinite));
   const scaleValues=[...rows.flatMap(c=>[c.l,c.h]),...visibleEmas];
   const min=Math.min(...scaleValues),max=Math.max(...scaleValues);
   const range=max-min||Math.max(Math.abs(max)*.001,1),y=v=>285-(v-min)/range*260;
@@ -1388,13 +1393,71 @@ async function loadFourHourHistory(o){
 }
 function showFourHour(o){
   clearTimeout(fourHourHideTimer);
-  if(activeFourHourCard!==o){fourHourLayer.querySelector('.o4-candles').replaceChildren()}
+  if(activeFourHourCard!==o){
+    fourHourLayer.querySelector('.o4-candles').replaceChildren();
+    fourHourViewCount=180;fourHourViewStart=null;fourHourUserNavigated=false;fourHourDrag=null;
+  }
   activeFourHourCard=o;
   fourHourLayer.classList.add('is-visible');
   fourHourLayer.setAttribute('aria-hidden','false');
-  // The hover layer intentionally displays only the candlestick chart.
+  // The chart stays open while interacted with; clicking the outside margin closes it.
   if(o.ready)loadFourHourData(o).then(()=>{if(activeFourHourCard===o)loadFourHourHistory(o)});else setFourHourStatus('等待该品种实时行情加载');
 }
+function redrawActiveFourHour(){
+  if(!activeFourHourCard)return;
+  const cache=fourHourCache.get(activeFourHourCard);
+  if(cache?.values?.length)drawFourHour(cache.values);
+}
+fourHourLayer.addEventListener('pointerenter',()=>clearTimeout(fourHourHideTimer));
+fourHourLayer.addEventListener('wheel',e=>{
+  if(!activeFourHourCard||!fourHourLayer.classList.contains('is-visible'))return;
+  e.preventDefault();
+  const cache=fourHourCache.get(activeFourHourCard),allRows=cache?.values||[];
+  if(allRows.length<2)return;
+  const svg=fourHourLayer.querySelector('.o4-chart'),rect=svg.getBoundingClientRect();
+  const ratio=Math.max(0,Math.min(1,(e.clientX-rect.left)/Math.max(1,rect.width)));
+  const oldCount=Math.min(allRows.length,fourHourViewCount);
+  const oldStart=Math.max(0,Math.min(allRows.length-oldCount,fourHourViewStart??(allRows.length-oldCount)));
+  const anchor=oldStart+ratio*oldCount;
+  const nextCount=Math.max(Math.min(20,allRows.length),Math.min(Math.min(500,allRows.length),Math.round(oldCount*(e.deltaY<0?.82:1.22))));
+  fourHourViewCount=nextCount;
+  fourHourViewStart=Math.max(0,Math.min(allRows.length-nextCount,Math.round(anchor-ratio*nextCount)));
+  fourHourUserNavigated=true;
+  redrawActiveFourHour();
+},{passive:false});
+const fourHourSvg=fourHourLayer.querySelector('.o4-chart');
+fourHourSvg.style.cursor='grab';
+fourHourSvg.style.touchAction='none';
+fourHourSvg.addEventListener('pointerdown',e=>{
+  if(!activeFourHourCard||e.button!==0)return;
+  const cache=fourHourCache.get(activeFourHourCard),allRows=cache?.values||[];
+  if(allRows.length<2)return;
+  const count=Math.min(allRows.length,fourHourViewCount);
+  const start=Math.max(0,Math.min(allRows.length-count,fourHourViewStart??(allRows.length-count)));
+  fourHourDrag={pointerId:e.pointerId,startX:e.clientX,startIndex:start,count,width:Math.max(1,fourHourSvg.getBoundingClientRect().width),length:allRows.length,moved:false};
+  fourHourSvg.style.cursor='grabbing';
+  fourHourSvg.setPointerCapture(e.pointerId);
+  e.preventDefault();
+});
+fourHourSvg.addEventListener('pointermove',e=>{
+  if(!fourHourDrag||fourHourDrag.pointerId!==e.pointerId)return;
+  const delta=e.clientX-fourHourDrag.startX;
+  if(Math.abs(delta)>2)fourHourDrag.moved=true;
+  if(!fourHourDrag.moved)return;
+  const shift=Math.round(delta/fourHourDrag.width*fourHourDrag.count);
+  fourHourViewStart=Math.max(0,Math.min(fourHourDrag.length-fourHourDrag.count,fourHourDrag.startIndex-shift));
+  fourHourUserNavigated=true;
+  redrawActiveFourHour();
+});
+function finishFourHourDrag(e){
+  if(!fourHourDrag||e.pointerId!==fourHourDrag.pointerId)return;
+  fourHourDrag=null;fourHourSvg.style.cursor='grab';
+}
+fourHourSvg.addEventListener('pointerup',finishFourHourDrag);
+fourHourSvg.addEventListener('pointercancel',finishFourHourDrag);
+fourHourLayer.addEventListener('click',e=>{
+  if(e.target===fourHourLayer)hideFourHour();
+});
 const SC=[.86,1,1.1],SPD=[.7,1,1.3],PAR=[-9,0,16],OP=[.8,.94,1];
 const SH=['0 10px 16px -12px rgba(0,0,0,.7)','0 18px 28px -12px rgba(0,0,0,.85)','0 32px 44px -14px rgba(0,0,0,.95)'];
 let W,H,zw,w,h,centerX,gap,leftMax,rightMin;
