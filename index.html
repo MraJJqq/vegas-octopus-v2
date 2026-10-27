@@ -1190,7 +1190,7 @@ requestAnimationFrame(frame);
 function init(){
 const grid=document.getElementById('octopusMarketCardGrid');if(!grid)return;
 grid.replaceChildren();
-const P=[["BTC",67850],["ETH",2610],["SOL",172],["BNB",585],["XRP",.52],["DOGE",.158],["ADA",.38],["AVAX",36.4],["LINK",14.2],["DOT",7.1],["TON",5.9],["TRX",.121],["LTC",84],["BCH",472],["NEAR",6.2],["APT",8.9],["ARB",1.12],["OP",2.45],["SUI",1.68],["INJ",24.5],["ATOM",8.3],["FIL",5.4],["UNI",9.6],["AAVE",162],["PEPE",.000011],["WLD",2.7],["ENA",.48]];
+const P=[["AAPL","AAPLUSDT"],["MSFT","MSFTUSDT"],["GOOGL","GOOGLUSDT"],["AMZN","AMZNUSDT"],["NVDA","NVDAUSDT"],["TSLA","TSLAUSDT"],["META","METAUSDT"],["INTC","INTCUSDT"],["QCOM","QCOMUSDT"],["AMD","AMDUSDT"],["TSM","TSMUSDT"],["AVGO","AVGOUSDT"],["ORCL","ORCLUSDT"],["ARM","ARMUSDT"],["MU","MUUSDT"],["ASML","ASMLUSDT"],["SNDK","SNDKUSDT"],["SKHYNIX","SKHYNIXUSDT"],["MRVL","MRVLUSDT"],["GLW","GLWUSDT"],["HOOD","HOODUSDT"],["CBRS","CBRSUSDT"],["SPCX","SPCXUSDT"],["BTC","BTCUSDT"],["HYPE","HYPEUSDT"],["XAUUSD","XAUUSDT"],["USOIL","CLUSDT"]];
 const sh=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
 const fmt=p=>p>=1000?p.toLocaleString('en-US',{maximumFractionDigits:1}):p>=100?p.toFixed(2):p>=1?p.toFixed(3):p>=.01?p.toFixed(4):p.toFixed(6);
 const stage=document.getElementById('octopusMarketCardGrid');
@@ -1201,18 +1201,17 @@ function size(){W=Math.max(1,stage.clientWidth);H=Math.max(1,stage.clientHeight)
 size();
 sh(P);                                  // 随机组合
 const Ls=sh(Array.from({length:27},(_,i)=>i%3));
-const C=P.map(([n,p0],i)=>{
-  const s=i<14?0:1,l=Ls[i],v=.0008+Math.random()*.0018,hh=[];let x=p0*(1+(Math.random()-.5)*.01);
-  for(let k=0;k<40;k++){x*=1+(Math.random()-.5)*2*v;hh.push(x)}
+const C=P.map(([n,api],i)=>{
+  const s=i<14?0:1,l=Ls[i],v=0,hh=Array(40).fill(0);
   const pos=document.createElement('div');pos.className='pos';
   const st=pos.style;st.zIndex=10+l;st.opacity=OP[l];st.setProperty('--sh',SH[l]);
   st.setProperty('--t',(3.5+Math.random()*3).toFixed(1)+'s');st.setProperty('--d',(-Math.random()*6).toFixed(1)+'s');
   st.setProperty('--ax',(3+Math.random()*4).toFixed(1)+'px');st.setProperty('--ay',(5+Math.random()*7).toFixed(1)+'px');
   pos.innerHTML=`<div class="float"><div class="card"><div class="bg"></div><i class="gl"></i>
-  <span class="coin">${n[0]}</span><b class="sym">${n}<small>/USDT 永续</small></b><span class="price"></span>
+  <span class="coin">${n[0]}</span><b class="sym">${n}<small>资金池</small></b><span class="price"></span>
   <svg class="spark" viewBox="0 0 100 26" preserveAspectRatio="none"><path class="ar"/><path class="ln"/></svg><span class="pct"></span></div></div>`;
   stage.appendChild(pos);
-  return{n,s,l,v,h:hh,p:hh[39],o:hh[0],pos,card:pos.querySelector('.card'),x:0,y:0,vx:0,vy:0,sx:0,sy:0,on:false,hv:0,rx:0,ry:0,tiltX:0,tiltY:0,z:0,lh:-1,c:[0,0,0,0],cv:[0,0,0,0],tc:[0,0,0,0],ax:3+Math.random()*4,ay:5+Math.random()*7,w1:.5+Math.random()*.4,w2:.5+Math.random()*.4,p1:Math.random()*6.283,p2:Math.random()*6.283};
+  return{n,api,s,l,v,h:hh,p:0,o:0,ready:false,pos,card:pos.querySelector('.card'),x:0,y:0,vx:0,vy:0,sx:0,sy:0,on:false,hv:0,rx:0,ry:0,tiltX:0,tiltY:0,z:0,lh:-1,c:[0,0,0,0],cv:[0,0,0,0],tc:[0,0,0,0],ax:3+Math.random()*4,ay:5+Math.random()*7,w1:.5+Math.random()*.4,w2:.5+Math.random()*.4,p1:Math.random()*6.283,p2:Math.random()*6.283};
 });
 const G=[C.filter(o=>o.s===0),C.filter(o=>o.s===1)];
 function apply(){C.forEach(o=>{const st=o.pos.style;st.width=w+'px';st.height=h+'px';st.fontSize=w/13.5+'px';bounds(o)})}
@@ -1287,16 +1286,61 @@ function frame(t){
 requestAnimationFrame(frame);
 
 function paint(d){
-  const c=d.card,q=s=>c.querySelector(s),up=d.p>=d.o;
+  const c=d.card,q=s=>c.querySelector(s);
+  if(!d.ready||!Number.isFinite(d.p)||d.p<=0){
+    c.classList.remove('up','dn');q('.price').textContent='行情加载中';q('.pct').textContent='--';
+    q('.ln').setAttribute('d','');q('.ar').setAttribute('d','');return;
+  }
+  const up=d.p>=d.o;
   c.classList.toggle('up',up);c.classList.toggle('dn',!up);
   q('.price').textContent=fmt(d.p);q('.pct').textContent=(up?'+':'')+((d.p/d.o-1)*100).toFixed(2)+'%';
-  const mn=Math.min(...d.h),mx=Math.max(...d.h),r=mx-mn||1;
-  const ln='M'+d.h.map((v,k)=>(k*100/39).toFixed(1)+' '+(23-(v-mn)/r*20).toFixed(1)).join('L');
-  q('.ln').setAttribute('d',ln);q('.ar').setAttribute('d',ln+'L100 26L0 26Z');
+  const values=d.h.filter(v=>Number.isFinite(v)&&v>0);
+  if(values.length>1){
+    const mn=Math.min(...values),mx=Math.max(...values),r=mx-mn||1;
+    const ln='M'+values.map((v,k)=>(k*100/(values.length-1)).toFixed(1)+' '+(23-(v-mn)/r*20).toFixed(1)).join('L');
+    q('.ln').setAttribute('d',ln);q('.ar').setAttribute('d',ln+'L100 26L0 26Z');
+  }
 }
 C.forEach(paint);
-setInterval(()=>{C.forEach(d=>{d.p*=1+(Math.random()-.5)*2*d.v;d.h.push(d.p);d.h.shift();paint(d);
-  const pr=d.card.querySelector('.price');pr.classList.add('flash');setTimeout(()=>pr.classList.remove('flash'),250)})},1000);
+
+// Live public market feed. No synthetic prices or simulated price changes.
+const API='https://api.bitget.com';
+const apiSymbol=s=>s;
+async function loadMarketData(){
+  try{
+    const response=await fetch(API+'/api/v2/mix/market/tickers?productType=USDT-FUTURES',{cache:'no-store'});
+    if(!response.ok)throw new Error('Bitget HTTP '+response.status);
+    const payload=await response.json();
+    if(payload.code!=='00000'||!Array.isArray(payload.data))throw new Error(payload.msg||'Bitget ticker response invalid');
+    const tickers=new Map(payload.data.map(t=>[String(t.symbol).toUpperCase(),t]));
+    await Promise.all(C.map(async d=>{
+      const ticker=tickers.get(apiSymbol(d.api));
+      if(!ticker){d.ready=false;d.card.querySelector('.price').textContent='暂无该合约';d.card.querySelector('.pct').textContent='--';return}
+      const last=Number(ticker.lastPr),open=Number(ticker.open24h);
+      if(!(last>0&&open>0)){d.ready=false;d.card.querySelector('.price').textContent='行情无效';return}
+      d.p=last;d.o=open;
+      try{
+        const url=API+'/api/v2/mix/market/candles?'+new URLSearchParams({symbol:d.api,productType:'USDT-FUTURES',granularity:'2H',limit:'40'});
+        const cr=await fetch(url,{cache:'no-store'});
+        if(cr.ok){
+          const cp=await cr.json();
+          if(cp.code==='00000'&&Array.isArray(cp.data)){
+            const rows=cp.data.filter(r=>Array.isArray(r)&&Number(r[4])>0).sort((a,b)=>Number(a[0])-Number(b[0]));
+            const closes=rows.map(r=>Number(r[4]));
+            if(closes.length>1)d.h=closes.slice(-40);
+          }
+        }
+      }catch(_){}
+      d.ready=true;paint(d);
+      const pr=d.card.querySelector('.price');pr.classList.add('flash');setTimeout(()=>pr.classList.remove('flash'),250);
+    }));
+  }catch(error){
+    C.forEach(d=>{if(!d.ready){d.card.querySelector('.price').textContent='行情连接失败';d.card.querySelector('.pct').textContent='--'}});
+    console.warn('[Vegas Octopus] live market feed failed:',error);
+  }
+}
+loadMarketData();
+setInterval(loadMarketData,60000);
 
 // 悬停：状态只切换目标值，放大/阴影/倾斜全部在帧循环里平滑插值；松开留 80ms 缓冲防抖，触屏松手后保持 1.5 秒
 C.forEach(o=>{const el=o.pos,c=o.card;let t;
