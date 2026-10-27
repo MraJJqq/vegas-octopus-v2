@@ -941,7 +941,6 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
     </div>
     <div class="top-card"><div class="eyebrow">今日信号</div><div class="top-line"><span class="big-number">12</span><span class="muted">正式 <b class="positive">8</b> · 观察 <b style="color:#73baff">4</b></span></div></div>
     
-    <div class="top-card settings" aria-label="设置">⚙</div>
     <section class="top-card event-top-card" aria-label="最新事件">
         <div class="panel-head"><div class="panel-title"><span class="icon">⌁</span>最新事件</div></div>
         <div class="event-list" id="eventList">
@@ -1149,4 +1148,16 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 .event-top-card .event-symbol{font-size:12px;font-weight:750}
 .event-top-card .pill{font-size:10px;padding:2px 6px;white-space:nowrap}
 .event-top-card .event-detail,.event-top-card .event-time,.event-top-card .tabs{display:none!important}
+</style>
+
+<style>
+/* Final compact two-column event layout, grouped by stage; remove the decorative gear. */
+.topbar>.settings{display:none!important}
+.event-top-card .event-list{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:0 16px!important;padding:0 12px 8px!important}
+.event-top-card .event-item{grid-template-columns:5px minmax(0,1fr)!important;gap:7px!important;padding:5px 0!important;border-bottom:1px solid rgba(54,103,149,.16)!important}
+.event-top-card .event-item:nth-child(2),.event-top-card .event-item:nth-child(4){border-bottom:0!important}
+.event-top-card .event-main,.event-top-card .event-line{display:flex!important;align-items:center!important;gap:6px!important;flex-wrap:nowrap!important;min-width:0}
+.event-top-card .event-symbol{font-size:11px!important;min-width:40px}
+.event-top-card .pill{font-size:9px!important;padding:2px 5px!important;line-height:1.25!important}
+@media(max-width:520px){.event-top-card .event-list{grid-template-columns:1fr!important}.event-top-card .event-item:nth-child(2){border-bottom:1px solid rgba(54,103,149,.16)!important}.event-top-card .event-item:nth-child(4){border-bottom:0!important}}
 </style>
