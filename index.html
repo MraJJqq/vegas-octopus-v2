@@ -910,6 +910,13 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 #pullRefreshIndicator.visible{transform:translate(-50%,0)}
 #pullRefreshIndicator .refresh-dot{display:inline-block;margin-right:7px;color:#35dfff}
 
+
+/* System connection indicators moved to the very bottom of the page. */
+.bottom-system-status{display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;padding:8px 12px;border:1px solid rgba(75,204,255,.16);border-radius:10px;background:rgba(4,17,35,.58);color:#9bb9d3;font-size:11px;}
+.bottom-system-status .status-label{color:#6e9ab9;letter-spacing:.08em;}
+.bottom-system-status .status-row{display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;}
+.bottom-system-status .status-item{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.bottom-system-status .dot{width:6px;height:6px;border-radius:50%;background:#45e4b0;box-shadow:0 0 8px rgba(69,228,176,.55);}
 </style>
 </head>
 <body>
@@ -921,7 +928,6 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
     </div>
     <div class="top-card"><div class="eyebrow">今日信号</div><div class="top-line"><span class="big-number">12</span><span class="muted">正式 <b class="positive">8</b> · 观察 <b style="color:#73baff">4</b></span></div></div>
     
-    <div class="top-card status-card"><div class="eyebrow">系统连接</div><div class="status-row"><span class="status-item"><i class="dot"></i>数据正常</span><span class="status-item"><i class="dot"></i>交易所</span><span class="status-item"><i class="dot"></i>推送</span></div></div>
     <div class="top-card settings" aria-label="设置">⚙</div>
     <section class="top-card event-top-card" aria-label="最新事件">
         <div class="panel-head"><div class="panel-title"><span class="icon">⌁</span>最新事件</div><span class="muted" style="font-size:10px">仅信号期 / 观察期</span></div>
@@ -1019,6 +1025,7 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
       <span>本周经济数据日程密集，关注潜在波动</span><i>◆</i>
     </div></div>
   </section>
+  <div class="bottom-system-status" aria-label="系统连接状态"><span class="status-label">系统连接</span><div class="status-row"><span class="status-item"><i class="dot"></i>数据正常</span><span class="status-item"><i class="dot"></i>交易所</span><span class="status-item"><i class="dot"></i>推送</span></div></div>
   <footer class="footer"><div class="footer-brand">◉ Vegas 章鱼 <span>│ Aether · 3D 数据宇宙</span></div><div>让数据连接市场 · 让交易更简单</div><div class="disclaimer">当前版本为 UI 原型，所有数值与新闻均为演示内容</div></footer>
 </div>
 <script>
