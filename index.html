@@ -1075,9 +1075,9 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 
 <style>
 
-/* 27-card orbital field: preserve the card design while distributing cards around the central luminous orb. */
+/* Shared market-card overlay container; individual cards use the square scatter layout below. */
 .center-stage.orb-original-stage{overflow:hidden!important}
-#octopusMarketCardGrid.orb-stream-card-overlay{position:absolute;z-index:5;inset:0;width:100%;height:100%;max-height:none;overflow:visible;display:block;padding:0;pointer-events:none;perspective:1400px}
+#octopusMarketCardGrid.orb-stream-card-overlay{position:absolute;z-index:5;inset:0;width:100%;height:100%;max-height:none;display:block;padding:0;pointer-events:none}
 
 
 
@@ -1092,16 +1092,7 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 
 
 
-@media(max-width:760px){
- 
-}
-@media(max-width:460px){
- 
-}
-@media(prefers-reduced-motion:reduce){
- 
-}
- 
+
 /* Vegas asset pool redesign: one compact sci-fi terminal row per instrument. */
 .market-panel .table-wrap{padding:2px 12px 12px!important;max-height:none!important;overflow-y:auto!important;overflow-x:hidden!important}
 .market-panel .market-table{display:block!important;width:100%!important;white-space:normal!important}
