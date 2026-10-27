@@ -1214,7 +1214,7 @@ function layoutOrbitCards(){
     const jitterX=((i*7)%5-2)*.35;
     const jitterY=((i*11)%5-2)*.35;
     const y=rowY[row]+jitterY;
-    const scale=compact?.32:.42;
+    const scale=compact ? 0.32 : 0.42;
     slot.style.left=Math.max(5,Math.min(95,x+jitterX))+'%';
     slot.style.top=Math.max(6,Math.min(94,y))+'%';
     slot.style.setProperty('--orbit-scale',scale.toFixed(2));
