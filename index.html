@@ -1084,7 +1084,7 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
   document.addEventListener('touchstart',e=>{
     if(pullActive||!e.touches||e.touches.length!==1)return;
     const t=e.touches[0];
-    if(t.clientY<=120)beginPull(t.clientY);
+    beginPull(t.clientY);
   },{passive:true});
   document.addEventListener('touchmove',e=>{
     if(!pullActive||!e.touches||e.touches.length!==1)return;
