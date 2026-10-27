@@ -1531,66 +1531,122 @@ async function warmFourHourCache(){
 async function loadMarketData(){
   if(marketLoadInFlight)return;
   marketLoadInFlight=true;
+  const sparklineJobs=[];
+  const reportFailure=(label,error)=>{
+    console.warn('[Vegas Octopus] '+label+' failed:',error);
+  };
+  const unavailable=(d,msg)=>{
+    d.ready=false;
+    d.card.querySelector('.price').textContent=msg;
+    d.card.querySelector('.pct').textContent='--';
+    d.h=[];
+    d.card.querySelector('.ln').setAttribute('d','');
+    d.card.querySelector('.ar').setAttribute('d','');
+  };
   try{
-    const [futureRows,spotRows,stockRows]=await Promise.all([
+    // Keep each public endpoint independent: one failed market group must not block the others.
+    const results=await Promise.allSettled([
       bitgetJson('/api/v2/mix/market/tickers?productType=USDT-FUTURES'),
       bitgetJson('/api/v3/market/tickers?category=SPOT'),
       bitgetJson('/api/v3/reality/market/stock-info')
     ]);
-    const futures=new Map(futureRows.map(t=>[String(t.symbol).toUpperCase(),t]));
-    const spots=new Map(spotRows.map(t=>[String(t.symbol).toUpperCase(),t]));
-    const realitySymbols=new Map(stockRows.filter(s=>s&&s.code&&s.symbol).map(s=>[String(s.code).toUpperCase(),String(s.symbol)]));
-    // Bitget lists SK hynix under its exchange ticker SKHY, while this UI card is named SKHYNIX.
-    const skhynixInstrument=stockRows.find(s=>s&&s.symbol&&(
-      String(s.code||'').toUpperCase().replace(/[^A-Z0-9]/g,'')==='SKHY'||
-      /SK\s*HYNIX/i.test(String(s.name||''))||
-      /RSKHYUSDT/i.test(String(s.symbol||''))
-    ));
-    if(skhynixInstrument)realitySymbols.set('SKHYNIX',String(skhynixInstrument.symbol));
-    realitySymbolsForHover.clear();realitySymbols.forEach((v,k)=>realitySymbolsForHover.set(k,v));
-    const sparklineJobs=[];
-    // First paint price/change immediately from ticker data; mini-chart history must not block the cards.
-    C.forEach(d=>{
-      const isStock=REALITY_STOCKS.has(d.n);
-      const symbol=isStock?realitySymbols.get(d.n):d.api;
-      const ticker=isStock?(symbol?spots.get(symbol.toUpperCase()):null):futures.get(String(symbol).toUpperCase());
-      const unavailable=msg=>{
-        d.ready=false;d.card.querySelector('.price').textContent=msg;d.card.querySelector('.pct').textContent='--';
-        d.h=[];d.card.querySelector('.ln').setAttribute('d','');d.card.querySelector('.ar').setAttribute('d','');
-      };
-      if(!symbol){unavailable('暂无Reality交易对');return}
-      if(!ticker){unavailable('暂无该交易对行情');return}
-      const last=Number(isStock?ticker.lastPrice:ticker.lastPr);
-      const open=Number(isStock?ticker.openPrice24h:ticker.open24h);
-      if(!(Number.isFinite(last)&&last>0&&Number.isFinite(open)&&open>0)){unavailable('行情数据无效');return}
+    const [futureResult,spotResult,stockResult]=results;
+    if(futureResult.status==='rejected')reportFailure('USDT-FUTURES ticker endpoint',futureResult.reason);
+    if(spotResult.status==='rejected')reportFailure('SPOT ticker endpoint',spotResult.reason);
+    if(stockResult.status==='rejected')reportFailure('Reality stock-info endpoint',stockResult.reason);
+
+    const futures=futureResult.status==='fulfilled'
+      ?new Map(futureResult.value.map(t=>[String(t.symbol).toUpperCase(),t]))
+      :null;
+    const spots=spotResult.status==='fulfilled'
+      ?new Map(spotResult.value.map(t=>[String(t.symbol).toUpperCase(),t]))
+      :null;
+    const realitySymbols=stockResult.status==='fulfilled'
+      ?new Map(stockResult.value.filter(s=>s&&s.code&&s.symbol).map(s=>[String(s.code).toUpperCase(),String(s.symbol)]))
+      :null;
+
+    if(realitySymbols){
+      // Bitget lists SK hynix under its exchange ticker SKHY, while this UI card is named SKHYNIX.
+      const skhynixInstrument=stockResult.value.find(s=>s&&s.symbol&&(
+        String(s.code||'').toUpperCase().replace(/[^A-Z0-9]/g,'')==='SKHY'||
+        /SK\s*HYNIX/i.test(String(s.name||''))||
+        /RSKHYUSDT/i.test(String(s.symbol||''))
+      ));
+      if(skhynixInstrument)realitySymbols.set('SKHYNIX',String(skhynixInstrument.symbol));
+      realitySymbolsForHover.clear();
+      realitySymbols.forEach((v,k)=>realitySymbolsForHover.set(k,v));
+    }
+
+    // Update futures cards whenever futures data succeeds, regardless of SPOT/Reality failures.
+    C.filter(d=>!REALITY_STOCKS.has(d.n)).forEach(d=>{
+      if(!futures){
+        if(!d.ready)unavailable(d,'合约行情连接失败');
+        return;
+      }
+      const symbol=d.api;
+      const ticker=futures.get(String(symbol).toUpperCase());
+      if(!ticker){if(!d.ready)unavailable(d,'暂无该合约行情');return;}
+      const last=Number(ticker.lastPr),open=Number(ticker.open24h);
+      if(!(Number.isFinite(last)&&last>0&&Number.isFinite(open)&&open>0)){
+        if(!d.ready)unavailable(d,'合约行情数据无效');
+        return;
+      }
+      d.p=last;d.o=open;d.ready=true;
+      paint(d);
+      const pr=d.card.querySelector('.price');
+      pr.classList.add('flash');setTimeout(()=>pr.classList.remove('flash'),250);
+      sparklineJobs.push(()=>loadSparkline(d,symbol,false));
+    });
+
+    // Reality stock prices need both the instrument map and the SPOT ticker list.
+    C.filter(d=>REALITY_STOCKS.has(d.n)).forEach(d=>{
+      if(!realitySymbols||!spots){
+        if(!d.ready)unavailable(d,!realitySymbols?'Reality股票列表加载失败':'现货行情连接失败');
+        return;
+      }
+      const symbol=realitySymbols.get(d.n);
+      if(!symbol){if(!d.ready)unavailable(d,'暂无Reality交易对');return;}
+      const ticker=spots.get(symbol.toUpperCase());
+      if(!ticker){if(!d.ready)unavailable(d,'暂无该交易对行情');return;}
+      const last=Number(ticker.lastPrice),open=Number(ticker.openPrice24h);
+      if(!(Number.isFinite(last)&&last>0&&Number.isFinite(open)&&open>0)){
+        if(!d.ready)unavailable(d,'股票行情数据无效');
+        return;
+      }
       d.api=symbol;d.p=last;d.o=open;d.ready=true;
       paint(d);
-      const pr=d.card.querySelector('.price');pr.classList.add('flash');setTimeout(()=>pr.classList.remove('flash'),250);
-      sparklineJobs.push(async()=>{
-        try{
-          const params=isStock
-            ?new URLSearchParams({category:'SPOT',symbol,interval:'1H',limit:'40'})
-            :new URLSearchParams({symbol,productType:'USDT-FUTURES',granularity:'1H',limit:'40'});
-          const path=isStock?'/api/v3/market/candles':'/api/v2/mix/market/candles';
-          const rows=await bitgetJson(path+'?'+params);
-          const closes=rows.filter(r=>Array.isArray(r)&&Number(r[4])>0)
-            .sort((a,b)=>Number(a[0])-Number(b[0])).map(r=>Number(r[4]));
-          d.h=closes.length>1?closes.slice(-40):[];
-        }catch(_){d.h=[]}
-        paint(d);
-      });
+      const pr=d.card.querySelector('.price');
+      pr.classList.add('flash');setTimeout(()=>pr.classList.remove('flash'),250);
+      sparklineJobs.push(()=>loadSparkline(d,symbol,true));
     });
-    // Start warming the hovered-card 4H data as soon as symbols/prices are available.
-    if(!fourHourWarmStarted)setTimeout(()=>{warmFourHourCache()},0);
-    // Mini-chart histories are secondary: fetch them in controlled batches without delaying first paint.
+
+    // A failure in one group is logged above; successful groups remain live and refresh on the next cycle.
+    if(!fourHourWarmStarted&&C.some(d=>d.ready))setTimeout(()=>{warmFourHourCache()},0);
+    // Mini-chart requests are best-effort and run in controlled batches after prices paint.
     for(let i=0;i<sparklineJobs.length;i+=8){
-      await Promise.all(sparklineJobs.slice(i,i+8).map(job=>job()));
+      await Promise.allSettled(sparklineJobs.slice(i,i+8).map(job=>job()));
     }
   }catch(error){
-    console.warn('[Vegas Octopus] live market feed failed:',error);
+    console.warn('[Vegas Octopus] unexpected market-feed error:',error);
   }finally{
     marketLoadInFlight=false;
   }
+}
+async function loadSparkline(d,symbol,isStock){
+  try{
+    const params=isStock
+      ?new URLSearchParams({category:'SPOT',symbol,interval:'1H',limit:'40'})
+      :new URLSearchParams({symbol,productType:'USDT-FUTURES',granularity:'1H',limit:'40'});
+    const path=isStock?'/api/v3/market/candles':'/api/v2/mix/market/candles';
+    const rows=await bitgetJson(path+'?'+params);
+    const closes=rows.filter(r=>Array.isArray(r)&&Number(r[4])>0)
+      .sort((a,b)=>Number(a[0])-Number(b[0])).map(r=>Number(r[4]));
+    d.h=closes.length>1?closes.slice(-40):[];
+  }catch(error){
+    d.h=[];
+    console.warn('[Vegas Octopus] '+(isStock?'SPOT':'USDT-FUTURES')+' 1H candles failed for '+symbol+':',error);
+  }
+  paint(d);
 }
 loadMarketData();
 setInterval(loadMarketData,15000);
