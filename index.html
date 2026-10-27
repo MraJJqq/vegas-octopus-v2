@@ -1133,7 +1133,7 @@ window.addEventListener("pointerup",function(){dn=false});
 cv.addEventListener("pointermove",function(e){if(!dn)return;rot+=(e.clientX-lx)*.008;pitB=Math.max(-1.2,Math.min(1.2,pitB+(e.clientY-ly)*.006));lx=e.clientX;ly=e.clientY});
 var last=0;
 function frame(ms){var t=ms/1000,dt=Math.max(0,Math.min(.05,t-last));last=t;if(!dn)rot+=dt*V.spd;
-var orbRect=cv.getBoundingClientRect(),cx=window.innerWidth*.5-orbRect.left,cy=H*.5,Rr=Math.min(W*.38,H*.39,cx*.95,(W-cx)*.95)*V.zm,pit=pitB+.1*Math.sin(t*.17),cp=Math.cos(pit),spp=Math.sin(pit);
+var orbRect=cv.getBoundingClientRect(),cx=W*.5,cy=H*.5,Rr=Math.min(W*.19,H*.30)*V.zm,pit=pitB+.1*Math.sin(t*.17),cp=Math.cos(pit),spp=Math.sin(pit);
 x.clearRect(0,0,W,H);
 var pr=P.map(function(p){var yw=rot*(.8+.4*p.k),q=pj([p.x,p.y,p.z],Math.cos(yw),Math.sin(yw),cp,spp,cx,cy,Rr),u=(q[0]-(cx-Rr))/(2*Rr);q.push(Math.max(0,Math.min(1,(.6-u)/.22)),(q[2]+1)/2);return q});
 x.globalCompositeOperation="lighter";x.globalAlpha=1;
@@ -1159,7 +1159,7 @@ requestAnimationFrame(frame);
 
 
 
-#octopusMarketCardGrid.orb-stream-card-overlay{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;display:block;padding:0;max-height:none;perspective:1400px;z-index:5} #octopusMarketCardGrid.orb-stream-card-overlay #octopusMarketCardGrid .pos{pointer-events:auto}
+#octopusMarketCardGrid.orb-stream-card-overlay{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;display:block;padding:0;max-height:none;perspective:1400px;z-index:5} #octopusMarketCardGrid.orb-stream-card-overlay .pos{pointer-events:auto}
 #octopusMarketCardGrid .pos{position:absolute;left:0;top:0;will-change:transform;cursor:pointer}
 #octopusMarketCardGrid .float{position:absolute;inset:0}
 #octopusMarketCardGrid .card{--c:var(--up);position:absolute;inset:0;border-radius:.9em;padding:.55em .75em;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:1fr auto;column-gap:.5em;row-gap:.2em;align-items:center}
@@ -1196,7 +1196,7 @@ const stage=document.getElementById('octopusMarketCardGrid');
 const SC=[.86,1,1.1],SPD=[.7,1,1.3],PAR=[-9,0,16],OP=[.8,.94,1];
 const SH=['0 10px 16px -12px rgba(0,0,0,.7)','0 18px 28px -12px rgba(0,0,0,.85)','0 32px 44px -14px rgba(0,0,0,.95)'];
 let W,H,zw,w,h,centerX,gap,leftMax,rightMin;
-function size(){W=Math.max(1,stage.clientWidth);H=Math.max(1,stage.clientHeight);zw=W*.35;w=zw*.4;h=w*.46;const rect=stage.getBoundingClientRect();centerX=Math.max(w,Math.min(W-w,window.innerWidth*.5-rect.left));gap=Math.max(w*.25,W*.025);leftMax=Math.max(0,centerX-gap-w);rightMin=Math.min(W-w,centerX+gap)}
+function size(){W=Math.max(1,stage.clientWidth);H=Math.max(1,stage.clientHeight);zw=W*.35;w=zw*.4;h=w*.46;centerX=W*.5;gap=Math.max(W*.22,w*.25);leftMax=Math.max(0,centerX-gap-w);rightMin=Math.min(W-w,centerX+gap)}
 size();
 sh(P);                                  // 随机组合
 const Ls=sh(Array.from({length:27},(_,i)=>i%3));
