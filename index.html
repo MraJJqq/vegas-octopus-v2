@@ -1091,17 +1091,7 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
   document.addEventListener('touchcancel',()=>{
     if(pullActive){pullActive=false;pullStartY=null;updatePullIndicator(0);}
   },{passive:true});
-
-  const marketTabs=document.querySelectorAll('#marketTabs [data-market]');
-  marketTabs.forEach(btn=>btn.addEventListener('click',()=>{
-    marketTabs.forEach(b=>b.classList.toggle('active',b===btn));
-    const chosen=btn.dataset.market;
-    document.querySelectorAll('#marketRows tr').forEach(row=>{
-      const type=row.dataset.type;
-      row.hidden=chosen!=='全部' && type!==chosen && !(chosen==='美股' && type==='美股');
-    });
-  }));
-  const newsTabs=document.querySelectorAll('#newsTabs [data-news]');
+    const newsTabs=document.querySelectorAll('#newsTabs [data-news]');
   newsTabs.forEach(btn=>btn.addEventListener('click',()=>{
     newsTabs.forEach(b=>b.classList.toggle('active',b===btn));
     const chosen=btn.dataset.news;
