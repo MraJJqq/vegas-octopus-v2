@@ -1656,3 +1656,32 @@ body{position:fixed;inset:0}
 #octopusMarketCardGrid .oct-slot[hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){#octopusMarketCardGrid .oct-float,#octopusMarketCardGrid .oct-shadow{animation:none}#octopusMarketCardGrid .oct-slot,#octopusMarketCardGrid .oct-card{transition:none}}
 </style>
+
+
+<style id="remove-legacy-left-market-module">
+/* The 27 floating market cards are the active market UI; hide the obsolete left-side list. */
+.main-grid{
+  grid-template-columns:minmax(0,1fr)!important;
+}
+.main-grid>.left-col{
+  display:none!important;
+}
+.main-grid>.center-stage.orb-original-stage{
+  grid-column:1!important;
+  grid-row:1!important;
+  width:100%!important;
+  min-width:0!important;
+}
+@media(max-width:760px){
+  .main-grid{
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:minmax(0,1fr)!important;
+  }
+  .main-grid>.center-stage.orb-original-stage{
+    grid-column:1!important;
+    grid-row:1!important;
+    height:100%!important;
+    min-height:0!important;
+  }
+}
+</style>
