@@ -535,6 +535,62 @@ body:before{
  .fund-top-sub>span:last-child{display:flex!important}
 }
 
+
+/* Alignment and horizontal-scroll audit: panels stay fixed; only vertical lists may scroll. */
+.topbar{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.55fr) minmax(0,.8fr) minmax(0,1.2fr) minmax(0,.85fr) auto!important;
+  grid-auto-rows:minmax(0,1fr);
+  align-items:stretch!important;
+}
+.topbar>.top-card,.topbar>.settings{
+  min-width:0!important;
+  min-height:0!important;
+  height:100%;
+  box-sizing:border-box;
+  align-self:stretch!important;
+  overflow:hidden!important;
+}
+.fund-overview-top{grid-row:1;align-self:stretch!important}
+.topbar>.top-card:not(.fund-overview-top){display:flex;flex-direction:column;justify-content:center}
+.topbar .market-strip,.topbar .status-row{min-width:0;max-width:100%;overflow:hidden}
+.topbar .market-chip{min-width:0;flex:1 1 0}
+.topbar .market-chip>span{min-width:0}
+.topbar .market-chip small{white-space:nowrap}
+html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-card,.center-stage,.footer{
+  overscroll-behavior-x:none!important;
+}
+.panel,.top-card,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.center-stage,.footer{
+  touch-action:pan-y!important;
+}
+.tabs{overflow-x:hidden!important;overflow-y:hidden!important;touch-action:pan-y!important}
+.table-wrap,.market-panel .table-wrap{
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  max-width:100%!important;
+  overscroll-behavior-x:none!important;
+  touch-action:pan-y!important;
+}
+.market-table{width:100%!important;max-width:100%!important;table-layout:fixed!important}
+.market-table th,.market-table td{min-width:0!important;overflow:hidden;text-overflow:ellipsis}
+.market-table td:first-child{min-width:0!important}
+.market-panel,.index-panel,.news-panel,.event-panel,.index-list,.news-list,.event-list{
+  max-width:100%;overflow-x:hidden!important;overscroll-behavior-x:none!important;touch-action:pan-y!important;
+}
+@media(max-width:1180px){
+ .topbar{grid-template-columns:minmax(0,1.5fr) minmax(0,.8fr) minmax(0,1.2fr) auto!important}
+ .topbar>.status-card{display:none!important}
+}
+@media(max-width:760px){
+ .topbar{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;grid-auto-rows:auto}
+ .fund-overview-top{grid-column:1/-1;grid-row:auto}
+ .topbar>.top-card,.topbar>.settings{height:auto;min-height:0}
+ .market-card{grid-column:1/-1}
+ .table-wrap,.market-panel .table-wrap{overflow-x:hidden!important}
+ .market-table{font-size:clamp(8px,2.2vw,11px)!important}
+ .market-table th,.market-table td{padding-left:2px!important;padding-right:2px!important}
+}
+
 </style>
 </head>
 <body>
