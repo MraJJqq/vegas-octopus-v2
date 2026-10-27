@@ -795,6 +795,51 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
  .right-col.event-col{display:none!important}
  .news-ticker{height:34px}
 }
+
+/* Keep account funds and latest events together in the existing top region.
+   The event list is compact and removed from the main grid, so it cannot squeeze the 3D core column. */
+.topbar{
+ grid-template-columns:minmax(300px,1.35fr) minmax(115px,.55fr) minmax(170px,.8fr) minmax(285px,1.25fr) 38px!important;
+ align-items:stretch!important;
+}
+.fund-overview-top{min-width:0}
+.event-top-card{
+ min-width:0;min-height:0;padding:7px 10px!important;gap:3px!important;
+ justify-content:flex-start!important;overflow:hidden;
+}
+.event-top-card:after{left:10px;right:10px}
+.event-top-card .panel-head{padding:0 0 3px;min-height:0}
+.event-top-card .panel-title{font-size:11px;gap:5px}
+.event-top-card .panel-title .icon{width:18px;height:18px;border-radius:5px;font-size:11px}
+.event-top-card .panel-head>.muted{font-size:8px!important;white-space:nowrap}
+.event-top-card .tabs{padding:0 0 3px;gap:3px;overflow:hidden}
+.event-top-card .tab{padding:2px 5px;font-size:8px;border-radius:5px}
+.event-top-card .event-list{display:grid;grid-template-columns:1fr 1fr;column-gap:10px;padding:0;min-height:0;overflow:hidden}
+.event-top-card .event-item{grid-template-columns:7px minmax(0,1fr) auto;gap:5px;padding:3px 0;border-bottom:0;min-width:0}
+.event-top-card .timeline{width:5px;height:5px}
+.event-top-card .event-item:not(:last-child) .timeline:after{display:none}
+.event-top-card .event-line{gap:4px;flex-wrap:nowrap}
+.event-top-card .event-symbol{font-size:9px;white-space:nowrap}
+.event-top-card .pill{font-size:7px;padding:1px 3px}
+.event-top-card .event-detail{font-size:8px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.event-top-card .event-time{font-size:8px}
+@media(max-width:1180px){
+ .topbar{grid-template-columns:minmax(260px,1.2fr) minmax(110px,.6fr) minmax(250px,1.1fr) 34px!important}
+ .topbar .status-card{display:none!important}
+ .event-top-card{min-height:78px}
+ .main-grid{grid-template-columns:minmax(235px,.9fr) minmax(0,1.8fr)!important}
+ .right-col.event-col{display:none!important}
+}
+@media(max-width:760px){
+ .topbar{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:7px}
+ .fund-overview-top{grid-column:1/-1}
+ .topbar>.top-card:not(.fund-overview-top):not(.event-top-card){display:none!important}
+ .event-top-card{grid-column:1/-1;min-height:84px}
+ .event-top-card .event-list{grid-template-columns:1fr 1fr}
+ .main-grid{grid-template-columns:minmax(0,1fr)!important}
+ .center-stage{grid-column:1!important;grid-row:1!important}
+}
+
 </style>
 </head>
 <body>
@@ -808,6 +853,16 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
     
     <div class="top-card status-card"><div class="eyebrow">系统连接</div><div class="status-row"><span class="status-item"><i class="dot"></i>数据正常</span><span class="status-item"><i class="dot"></i>交易所</span><span class="status-item"><i class="dot"></i>推送</span></div></div>
     <div class="top-card settings" aria-label="设置">⚙</div>
+    <section class="top-card event-top-card" aria-label="最新事件">
+        <div class="panel-head"><div class="panel-title"><span class="icon">⌁</span>最新事件</div><span class="muted" style="font-size:10px">仅信号期 / 观察期</span></div>
+        <div class="tabs" id="eventTabs"><button class="tab active" data-stage="全部">全部</button><button class="tab" data-stage="信号期">信号期</button><button class="tab" data-stage="观察期">观察期</button></div>
+        <div class="event-list" id="eventList">
+          <div class="event-item" data-stage="信号期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">₿ BTC</span><span class="pill">信号期 · 2H</span></div><div class="event-detail">正式信号已触发</div></div><span class="event-time">12:34</span></div>
+          <div class="event-item" data-stage="观察期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">◆ ETH</span><span class="pill watch">观察期 · 1H</span></div><div class="event-detail">观察状态更新</div></div><span class="event-time">12:15</span></div>
+          <div class="event-item" data-stage="观察期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">≋ SOL</span><span class="pill watch">观察期 · 2H</span></div><div class="event-detail">观察记录更新</div></div><span class="event-time">10:58</span></div>
+          <div class="event-item" data-stage="信号期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">T TSLA</span><span class="pill">信号期 · 1H</span></div><div class="event-detail">正式信号状态更新</div></div><span class="event-time">09:37</span></div>
+        </div>
+      </section>
   </header>
 
   <main class="main-grid">
@@ -871,16 +926,6 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
     </section>
 
     
-      <section class="right-col event-col"><section class="panel event-panel">
-        <div class="panel-head"><div class="panel-title"><span class="icon">⌁</span>最新事件</div><span class="muted" style="font-size:10px">仅信号期 / 观察期</span></div>
-        <div class="tabs" id="eventTabs"><button class="tab active" data-stage="全部">全部</button><button class="tab" data-stage="信号期">信号期</button><button class="tab" data-stage="观察期">观察期</button></div>
-        <div class="event-list" id="eventList">
-          <div class="event-item" data-stage="信号期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">₿ BTC</span><span class="pill">信号期 · 2H</span></div><div class="event-detail">正式信号已触发</div></div><span class="event-time">12:34</span></div>
-          <div class="event-item" data-stage="观察期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">◆ ETH</span><span class="pill watch">观察期 · 1H</span></div><div class="event-detail">观察状态更新</div></div><span class="event-time">12:15</span></div>
-          <div class="event-item" data-stage="观察期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">≋ SOL</span><span class="pill watch">观察期 · 2H</span></div><div class="event-detail">观察记录更新</div></div><span class="event-time">10:58</span></div>
-          <div class="event-item" data-stage="信号期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">T TSLA</span><span class="pill">信号期 · 1H</span></div><div class="event-detail">正式信号状态更新</div></div><span class="event-time">09:37</span></div>
-        </div>
-      </section></section>
 </main>
 
   <section class="news-ticker" aria-label="新闻横向滚动播报">
