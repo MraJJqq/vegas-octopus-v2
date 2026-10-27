@@ -1260,29 +1260,30 @@ window.addEventListener('resize',updateScrollDepth,{passive:true});
 </style>
 <style>
 
-/* Seven cards align with the seven stream entry heights on the orb canvas. */
-#octopusMarketCardGrid.orb-stream-card-overlay{position:fixed;z-index:30;left:8px;top:0;bottom:0;width:clamp(132px,19vw,220px);max-height:none;height:100vh;height:100dvh;overflow:visible;display:block;padding:0;pointer-events:none;perspective:none}
-#octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{position:absolute;left:7px;right:5px;top:calc(12% + var(--stream-index)*12%);padding:0;transform:translateY(-50%);perspective:700px;pointer-events:auto}
+/* Seven enlarged cards: each row aligns with one stream origin at the canvas' left edge. */
+.center-stage.orb-original-stage{overflow:visible!important}
+#octopusMarketCardGrid.orb-stream-card-overlay{position:absolute;z-index:5;right:100%;left:auto;top:0;bottom:0;width:clamp(190px,22vw,300px);max-height:none;height:100%;overflow:visible;display:block;padding:0 3px 0 0;pointer-events:none;perspective:none}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{position:absolute;left:0;right:0;top:calc(12% + var(--stream-index)*12%);padding:0;transform:translateY(-50%);perspective:700px;pointer-events:auto}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-float{animation:none}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-shadow{display:none}
-#octopusMarketCardGrid.orb-stream-card-overlay .oct-card{min-height:0;height:clamp(43px,7.5vh,58px);padding:6px 8px;border-radius:10px;display:grid;grid-template-columns:minmax(0,1fr);align-content:center;gap:2px;background:rgba(3,15,34,.72);border:1px solid color-mix(in srgb,var(--c) 60%,transparent);box-shadow:0 0 13px color-mix(in srgb,var(--c) 18%,transparent);backdrop-filter:blur(8px)}
-#octopusMarketCardGrid.orb-stream-card-overlay .oct-row{gap:5px}
-#octopusMarketCardGrid.orb-stream-card-overlay .oct-coin{width:18px;height:18px;flex-basis:18px;font-size:9px;box-shadow:0 0 8px -2px var(--c)}
-#octopusMarketCardGrid.orb-stream-card-overlay .oct-sym{font-size:11px;line-height:1.1;white-space:nowrap}
-#octopusMarketCardGrid.orb-stream-card-overlay .oct-sym small{font-size:7px;margin-top:2px;white-space:nowrap}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-card{box-sizing:border-box;min-height:0;height:clamp(54px,9vh,70px);width:100%;padding:9px 13px;border-radius:13px;display:flex;flex-direction:column;justify-content:center;gap:3px;background:rgba(3,15,34,.88);border:1.5px solid color-mix(in srgb,var(--c) 82%,transparent);box-shadow:0 0 18px color-mix(in srgb,var(--c) 28%,transparent),inset 0 0 12px color-mix(in srgb,var(--c) 8%,transparent);backdrop-filter:blur(9px)}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-row{gap:8px}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-coin{width:24px;height:24px;flex-basis:24px;font-size:11px;box-shadow:0 0 10px -2px var(--c)}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-sym{font-size:14px;line-height:1.1;white-space:nowrap}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-sym small{font-size:9px;margin-top:3px;white-space:nowrap}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-price,#octopusMarketCardGrid.orb-stream-card-overlay .oct-spark,#octopusMarketCardGrid.orb-stream-card-overlay .oct-hl{display:none}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-l3{transform:none}
-#octopusMarketCardGrid.orb-stream-card-overlay .oct-pct{font-size:7px;padding:1px 4px;line-height:1.1;border:0;background:transparent;color:#8caac4}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-pct{font-size:9px;padding:1px 0;line-height:1.1;border:0;background:transparent;color:#a8c8e0}
 @media(max-width:760px){
- #octopusMarketCardGrid.orb-stream-card-overlay{left:4px;width:clamp(104px,29vw,142px)}
- #octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{left:4px;right:2px}
- #octopusMarketCardGrid.orb-stream-card-overlay .oct-card{height:clamp(34px,8vh,46px);padding:4px 5px}
+ #octopusMarketCardGrid.orb-stream-card-overlay{right:auto;left:0;width:clamp(128px,36vw,168px);padding:0 2px 0 0}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{left:0;right:0}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-card{height:clamp(38px,8vh,50px);padding:5px 7px;border-radius:9px}
  #octopusMarketCardGrid.orb-stream-card-overlay .oct-coin{display:none}
- #octopusMarketCardGrid.orb-stream-card-overlay .oct-sym{font-size:10px}
- #octopusMarketCardGrid.orb-stream-card-overlay .oct-sym small{font-size:6px}
- #octopusMarketCardGrid.orb-stream-card-overlay .oct-pct{font-size:6px}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-sym{font-size:11px}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-sym small{font-size:7px}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-pct{font-size:7px}
 }
-
+ 
 /* Vegas asset pool redesign: one compact sci-fi terminal row per instrument. */
 .market-panel .table-wrap{padding:2px 12px 12px!important;max-height:none!important;overflow-y:auto!important;overflow-x:hidden!important}
 .market-panel .market-table{display:block!important;width:100%!important;white-space:normal!important}
