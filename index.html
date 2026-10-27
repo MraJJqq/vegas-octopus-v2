@@ -1201,20 +1201,22 @@ function layoutOrbitCards(){
   const rect=orbStage.getBoundingClientRect(),w=rect.width,h=rect.height;
   if(!w||!h)return;
   const slots=Array.from(grid.querySelectorAll('.oct-slot'));
-  const rowY=[12,24,36,48,60,72,84];
-  const sideX=[12,29,71,88];
+  // Keep a wide, unobstructed central corridor for the luminous orb.
+  const rowY=[8,22,36,50,64,78,92];
+  const sideX=[7,23,77,93];
+  const compact=window.matchMedia('(max-width:760px)').matches;
   slots.forEach((slot,i)=>{
     const side=i%2===0?0:1;
     const sideIndex=Math.floor(i/2);
     const row=sideIndex%7;
     const col=sideIndex%2;
     const x=side===0?sideX[col]:sideX[2+col];
-    const jitterX=((i*7)%5-2)*1.1;
-    const jitterY=((i*11)%5-2)*1.0;
+    const jitterX=((i*7)%5-2)*.35;
+    const jitterY=((i*11)%5-2)*.35;
     const y=rowY[row]+jitterY;
-    const scale=.68;
-    slot.style.left=Math.max(7,Math.min(93,x+jitterX))+'%';
-    slot.style.top=Math.max(10,Math.min(90,y))+'%';
+    const scale=compact?.32:.42;
+    slot.style.left=Math.max(5,Math.min(95,x+jitterX))+'%';
+    slot.style.top=Math.max(6,Math.min(94,y))+'%';
     slot.style.setProperty('--orbit-scale',scale.toFixed(2));
     slot.style.setProperty('--drift-x',(((i*13)%13)-6)+'px');
     slot.style.setProperty('--drift-y',(6+((i*7)%10))+'px');
@@ -1297,7 +1299,7 @@ window.addEventListener('resize',layoutOrbitCards,{passive:true});
 /* 27-card orbital field: preserve the card design while distributing cards around the central luminous orb. */
 .center-stage.orb-original-stage{overflow:hidden!important}
 #octopusMarketCardGrid.orb-stream-card-overlay{position:absolute;z-index:5;inset:0;width:100%;height:100%;max-height:none;overflow:visible;display:block;padding:0;pointer-events:none;perspective:1400px}
-#octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{position:absolute;left:50%;top:50%;width:clamp(170px,17vw,220px);min-width:0;padding:0;transform:translate(-50%,-50%);perspective:900px;pointer-events:auto;will-change:left,top}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{position:absolute;left:50%;top:50%;width:clamp(150px,15vw,200px);min-width:0;padding:0;transform:translate(-50%,-50%);perspective:900px;pointer-events:auto;will-change:left,top}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-float{transform-style:preserve-3d;transform-origin:center;animation:octJellyDrift 8s ease-in-out infinite;animation-delay:var(--orbit-delay,0s)}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-shadow{display:block;opacity:.65}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-card{box-sizing:border-box;width:100%;height:auto;min-height:200px;padding:20px;border-radius:22px;display:block;flex-direction:initial;justify-content:initial;gap:0;background:transparent;border:0;box-shadow:none;backdrop-filter:none;transform:scale(var(--orbit-scale,.68));transform-origin:center}
@@ -1317,10 +1319,10 @@ window.addEventListener('resize',layoutOrbitCards,{passive:true});
   78%{transform:translate3d(calc(var(--drift-x,8px)*.45),calc(var(--drift-y,16px)*-.35),12px) rotateX(-2deg) rotateY(4deg) rotateZ(1deg)}
 }
 @media(max-width:760px){
- #octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{width:170px}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{width:clamp(120px,25vw,155px)}
 }
 @media(max-width:460px){
- #octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{width:220px}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{width:clamp(105px,28vw,130px)}
 }
 @media(prefers-reduced-motion:reduce){
  #octopusMarketCardGrid.orb-stream-card-overlay .oct-float{animation:none}
