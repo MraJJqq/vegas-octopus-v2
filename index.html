@@ -925,6 +925,25 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 }
 
 </style>
+
+<style>
+/* V9 notification-template replica: same categories, ordering and no-signal wording. */
+.event-top-card .panel-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;padding:0 0 5px!important}
+.v9-sync-status{font-size:8px;color:#7898b9;white-space:nowrap}
+.v9-notification{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:10px;min-width:0;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 1px 2px;scrollbar-width:thin;scrollbar-color:rgba(67,151,211,.38) transparent}
+.v9-group{min-width:0;border-left:1px solid rgba(85,155,214,.18);padding-left:7px}
+.v9-group-title{font-size:9px;line-height:1.35;font-weight:750;color:#a9d9ff;white-space:nowrap;margin-bottom:4px}
+.v9-symbols{display:flex;flex-wrap:wrap;align-content:flex-start;gap:3px 5px;min-width:0}
+.v9-symbol{font-size:8px;line-height:1.25;color:#8fe9ff;white-space:nowrap;text-shadow:0 0 8px rgba(49,217,255,.14)}
+.v9-nochange{font-size:8px;line-height:1.25;color:#8ba4be;white-space:nowrap}
+@media(max-width:520px){
+ .v9-notification{grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:7px}
+ .v9-group{padding-left:5px}
+ .v9-group-title{font-size:8px}
+ .v9-symbol{font-size:7px}
+ .v9-nochange{font-size:7px}
+}
+</style>
 </head>
 <body>
 <div class="app">
@@ -936,14 +955,21 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
     <div class="top-card"><div class="eyebrow">今日信号</div><div class="top-line"><span class="big-number">12</span><span class="muted">正式 <b class="positive">8</b> · 观察 <b style="color:#73baff">4</b></span></div></div>
     
     <section class="top-card event-top-card" aria-label="最新事件">
-        <div class="panel-head"><div class="panel-title"><span class="icon">⌁</span>最新事件</div></div>
-        <div class="event-list" id="eventList">
-          <div class="event-item" data-stage="信号期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">₿ BTC</span><span class="pill">信号期 · 2H</span></div></div></div>
-          <div class="event-item" data-stage="观察期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">◆ ETH</span><span class="pill watch">观察期 · 1H</span></div></div></div>
-          <div class="event-item" data-stage="观察期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">≋ SOL</span><span class="pill watch">观察期 · 2H</span></div></div></div>
-          <div class="event-item" data-stage="信号期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">T TSLA</span><span class="pill">信号期 · 1H</span></div></div></div>
-        </div>
-      </section>
+  <div class="panel-head">
+    <div class="panel-title"><span class="icon">⌁</span>最新事件</div>
+    <span id="v9SyncStatus" class="v9-sync-status">V9 · 等待数据</span>
+  </div>
+  <div class="v9-notification" id="eventList" aria-live="polite">
+    <section class="v9-group">
+      <div class="v9-group-title">🔸 美股巨头</div>
+      <div class="v9-symbols" id="v9Stocks"><span class="v9-nochange">▰ No change ▰</span></div>
+    </section>
+    <section class="v9-group">
+      <div class="v9-group-title">🔸 核心能源</div>
+      <div class="v9-symbols" id="v9Core"><span class="v9-nochange">▰ No change ▰</span></div>
+    </section>
+  </div>
+</section>
   </header>
 
   <main class="main-grid">
@@ -1735,6 +1761,75 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 }
 </style>
 
+
+<script>
+/* Mirror the latest daily formal-signal report produced by VEGAS V9. */
+(function(){
+  const REPORT_URL="https://raw.githubusercontent.com/MraJJqq/vegas-signal-system/main/v9/scan-report.json";
+  const CORE_ORDER=["BTC","HYPE","XAU","CL"];
+  const STOCK_ORDER=["AAPL","MSFT","GOOGL","AMZN","NVDA","TSLA","META","INTC","QCOM","AMD","TSM","AVGO","ORCL","ARM","MU","ASML","SNDK","SKHYNIX","MRVL","GLW","HOOD","CBRS","SPCX"];
+  const ALLOWED=new Set(CORE_ORDER.concat(STOCK_ORDER));
+  const $=id=>document.getElementById(id);
+  function symbolName(raw){
+    let s=String(raw||"").trim().toUpperCase();
+    if(s.endsWith("USDT"))s=s.slice(0,-4);
+    if(s==="CLU")s="CL";
+    return s;
+  }
+  function renderSymbols(targetId, symbols){
+    const target=$(targetId);
+    if(!target)return;
+    target.replaceChildren();
+    if(!symbols.length){
+      const empty=document.createElement("span");
+      empty.className="v9-nochange";
+      empty.textContent="▰ No change ▰";
+      target.appendChild(empty);
+      return;
+    }
+    symbols.forEach(symbol=>{
+      const item=document.createElement("span");
+      item.className="v9-symbol";
+      item.textContent="▰ "+symbol+" ▰";
+      target.appendChild(item);
+    });
+  }
+  function formatBeijing(iso){
+    if(!iso)return "";
+    const d=new Date(iso);
+    if(Number.isNaN(d.getTime()))return "";
+    return new Intl.DateTimeFormat("zh-CN",{timeZone:"Asia/Shanghai",hour:"2-digit",minute:"2-digit",hour12:false}).format(d);
+  }
+  async function refreshV9Report(){
+    const status=$("v9SyncStatus");
+    try{
+      const response=await fetch(REPORT_URL+"?t="+Date.now(),{cache:"no-store"});
+      if(!response.ok)throw new Error("HTTP "+response.status);
+      const report=await response.json();
+      if(!report||!Array.isArray(report.signals)||!report.started_at_utc)throw new Error("报告格式无效");
+      const seen=new Set();
+      for(const signal of report.signals){
+        if(!signal||signal.formal_signal!==true)continue;
+        const s=symbolName(signal.symbol);
+        if(ALLOWED.has(s))seen.add(s);
+      }
+      const stocks=STOCK_ORDER.filter(s=>seen.has(s));
+      const core=CORE_ORDER.filter(s=>seen.has(s));
+      renderSymbols("v9Stocks",stocks);
+      renderSymbols("v9Core",core);
+      const stamp=formatBeijing(report.started_at_utc);
+      if(status)status.textContent=stamp?"V9 · "+stamp+" 更新":"V9 · 已同步";
+    }catch(error){
+      if(status)status.textContent="V9 · 等待扫描数据";
+      renderSymbols("v9Stocks",[]);
+      renderSymbols("v9Core",[]);
+      console.warn("V9 latest-events report unavailable:",error);
+    }
+  }
+  refreshV9Report();
+  window.setInterval(refreshV9Report,15*60*1000);
+})();
+</script>
 </body>
 </html>
 
