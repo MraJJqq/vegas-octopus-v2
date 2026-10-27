@@ -8,6 +8,16 @@
 <style>
 :root{color-scheme:dark;--bg:#030815;--panel:rgba(5,18,39,.88);--panel2:rgba(5,24,49,.78);--line:rgba(31,157,255,.48);--cyan:#31d9ff;--blue:#2787ff;--violet:#a45dff;--green:#00e0bd;--red:#ff547b;--gold:#ffbd5a;--text:#e8f5ff;--muted:#7e9dbd;--dim:#466784;--radius:16px}
 *{box-sizing:border-box}
+/* Prevent accidental text/image selection highlights during dashboard clicks and drags. */
+html,body,.app,.panel,.top-card,.center-stage,.topbar,.main-grid,.bottom-grid,.footer,
+.panel-head,.panel-title,.stage-label,.stage-live,.stage-caption,.asset-node,.jelly-wrap,
+.orbit,.platform,.tabs,.tab,.panel-action,.settings,.market-chip,.rank-row,.news-item,
+.event-item,.fund-content,.health-item,.sentiment-content,.gauge,.donut,.sentiment-gauge{
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+  -webkit-touch-callout:none
+}
+button,svg{-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+
 html{min-height:100%;background:var(--bg);scroll-behavior:smooth}
 body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 35%,rgba(0,98,255,.15),transparent 42%),radial-gradient(ellipse at 85% 85%,rgba(63,25,160,.13),transparent 38%),#020612;color:var(--text);font:13px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;overflow-x:hidden}
 body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.3;background-image:radial-gradient(1px 1px at 12% 18%,#9ceaff 99%,transparent),radial-gradient(1px 1px at 78% 12%,#8f9dff 99%,transparent),radial-gradient(1px 1px at 64% 68%,#6cecff 99%,transparent),radial-gradient(1px 1px at 28% 82%,#9a79ff 99%,transparent),radial-gradient(1px 1px at 92% 44%,#8ae5ff 99%,transparent);background-size:260px 220px;z-index:-1}
