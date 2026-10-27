@@ -992,19 +992,8 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 
     </section>
 
-    <section class="center-stage" aria-label="中央 3D 数据宇宙">
-      <div class="stage-label"><strong>AETHER / DATA UNIVERSE</strong>MARKET CONNECTION · LIVE VISUALIZATION</div><div class="stage-live"><i class="dot"></i>演示场景运行中</div>
-      <div class="universe"><div class="orbit"></div><div class="orbit o2"></div><div class="orbit o3"></div>
-        <div class="asset-node node-btc"><span class="node-glyph">₿</span><b>BTC</b><small>CRYPTO</small></div>
-        <div class="asset-node node-eth"><span class="node-glyph">◆</span><b>ETH</b><small>CRYPTO</small></div>
-        <div class="asset-node node-tsla"><span class="node-glyph">T</span><b>TSLA</b><small>EQUITY</small></div>
-        <div class="asset-node node-aapl"><span class="node-glyph">●</span><b>AAPL</b><small>EQUITY</small></div>
-        <div class="asset-node node-sol"><span class="node-glyph">≋</span><b>SOL</b><small>CRYPTO</small></div>
-        <div class="asset-node node-xau"><span class="node-glyph">▰</span><b>XAU</b><small>GOLD</small></div>
-        <div class="asset-node node-oil"><span class="node-glyph">◉</span><b>USOIL</b><small>ENERGY</small></div>
-        <canvas id="orb-core-canvas" aria-label="发光粒子球核心展示"></canvas><div class="platform"></div>
-      </div>
-      <div class="stage-caption"><strong>Vegas 章鱼</strong><span>连接全球市场 · 洞察交易机会</span></div>
+    <section class="center-stage orb-only-stage" aria-label="发光球核心展示区">
+      <canvas id="orb-core-canvas" aria-label="发光粒子球"></canvas>
     </section>
 
     
@@ -1200,4 +1189,12 @@ requestAnimationFrame(frame);
 .event-top-card .event-symbol{font-size:11px!important;min-width:40px}
 .event-top-card .pill{font-size:9px!important;padding:2px 5px!important;line-height:1.25!important}
 @media(max-width:520px){.event-top-card .event-list{grid-template-columns:1fr!important}.event-top-card .event-item:nth-child(2){border-bottom:1px solid rgba(54,103,149,.16)!important}.event-top-card .event-item:nth-child(4){border-bottom:0!important}}
+</style>
+
+<style>
+/* Core showcase contains only the original glowing orb. */
+.center-stage.orb-only-stage{position:relative;overflow:hidden;isolation:isolate;background:transparent!important;min-width:0;min-height:0}
+.center-stage.orb-only-stage::before,.center-stage.orb-only-stage::after{display:none!important;content:none!important}
+.center-stage.orb-only-stage #orb-core-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:1;display:block;touch-action:pan-y;cursor:grab}
+.center-stage.orb-only-stage #orb-core-canvas:active{cursor:grabbing}
 </style>
