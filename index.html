@@ -1200,8 +1200,8 @@ const fmt=p=>p>=1000?p.toLocaleString('en-US',{maximumFractionDigits:1}):p>=100?
 const stage=document.getElementById('octopusMarketCardGrid');
 const SC=[.86,1,1.1],SPD=[.7,1,1.3],PAR=[-9,0,16],OP=[.8,.94,1];
 const SH=['0 10px 16px -12px rgba(0,0,0,.7)','0 18px 28px -12px rgba(0,0,0,.85)','0 32px 44px -14px rgba(0,0,0,.95)'];
-let W,H,zw,w,h;
-function size(){W=Math.max(1,stage.clientWidth);H=Math.max(1,stage.clientHeight);zw=W*.35;w=zw*.4;h=w*.46}
+let W,H,zw,w,h,side;
+function size(){W=Math.max(1,stage.clientWidth);H=Math.max(1,stage.clientHeight);zw=W*.35;w=zw*.4;h=w*.46;side=W*.32}
 size();
 sh(P);                                  // 随机组合
 const Ls=sh(Array.from({length:27},(_,i)=>i%3));
@@ -1221,13 +1221,13 @@ const C=P.map(([n,p0],i)=>{
 const G=[C.filter(o=>o.s===0),C.filter(o=>o.s===1)];
 function apply(){C.forEach(o=>{const st=o.pos.style;st.width=w+'px';st.height=h+'px';st.fontSize=w/13.5+'px';bounds(o)})}
 const KW=9,DW=1.5,KC=5,DC=1.5,CAP=.45;     // 软墙 / 软碰撞：弹簧刚度与阻尼
-function bounds(o){const x0=o.s?W*.65:0,x1=o.s?W:W*.35;o.x=Math.min(Math.max(o.x,x0),x1-w);o.y=Math.min(Math.max(o.y,0),H-h)}
-function clampHard(o){const x0=o.s?W*.65:0,x1=o.s?W:W*.35,mx=w*CAP,my=h*CAP;   // 兜底：压入超过上限才强制推回
+function bounds(o){const x0=o.s?W-side:0,x1=o.s?W:side;o.x=Math.min(Math.max(o.x,x0),x1-w);o.y=Math.min(Math.max(o.y,0),H-h)}
+function clampHard(o){const x0=o.s?W-side:0,x1=o.s?W:side,mx=w*CAP,my=h*CAP;   // 兜底：压入超过上限才强制推回
   o.x=Math.min(Math.max(o.x,x0-mx),x1-w+mx);o.y=Math.min(Math.max(o.y,-my),H-h+my)}
 // 初始随机摆放：左右各自在 2×7 网格内随机取格
 G.forEach((arr,s)=>{const cells=[];for(let r=0;r<7;r++)for(let c=0;c<2;c++)cells.push([r,c]);sh(cells);
-  arr.forEach((o,i)=>{const [r,c]=cells[i],cw=zw/2,ch=H/7;
-    o.x=(s?W*.65:0)+c*cw+Math.random()*Math.max(0,cw-w);o.y=r*ch+Math.random()*Math.max(0,ch-h);
+  arr.forEach((o,i)=>{const [r,c]=cells[i],cw=side/2,ch=H/7;
+    o.x=(s?W-side:0)+c*cw+Math.random()*Math.max(0,cw-w);o.y=r*ch+Math.random()*Math.max(0,ch-h);
     const a=Math.random()*6.283,sp=(16+Math.random()*30)*SPD[o.l];o.vx=Math.cos(a)*sp;o.vy=Math.sin(a)*sp})});
 apply();
 const resizeCards=()=>{size();apply()};window.addEventListener('resize',resizeCards);if(window.ResizeObserver)new ResizeObserver(resizeCards).observe(stage);
@@ -1239,7 +1239,7 @@ function step(dt){
     const sp=Math.hypot(o.vx,o.vy),mx=50*SPD[o.l],mn=14*SPD[o.l];
     if(sp>mx){o.vx*=mx/sp;o.vy*=mx/sp}else if(sp<mn){const a=Math.random()*6.283;o.vx+=Math.cos(a)*mn*.3;o.vy+=Math.sin(a)*mn*.3}
     // 软墙：像气泡顶在墙上，压得越深回推越强，没有硬反弹
-    const x0=o.s?W*.65:0,x1=o.s?W:W*.35;let q=x0-o.x;
+    const x0=o.s?W-side:0,x1=o.s?W:side;let q=x0-o.x;
     if(q>0){o.vx+=(KW*q-DW*o.vx)*dt;o.tc[0]=q}
     q=o.x-(x1-w);if(q>0){o.vx+=(-KW*q-DW*o.vx)*dt;o.tc[1]=q}
     q=-o.y;if(q>0){o.vy+=(KW*q-DW*o.vy)*dt;o.tc[2]=q}
