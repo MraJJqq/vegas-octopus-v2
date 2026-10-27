@@ -6,7 +6,7 @@
 (function(){
   'use strict';
   const COLORS=Object.freeze([0,28,52,150,190,245,320]);
-  const PARTICLES_PER_STREAM=22;
+  const PARTICLES_PER_STREAM=220;
   function start(){
     const stage=document.querySelector('.center-stage');
     const grid=document.getElementById('octopusMarketCardGrid');
