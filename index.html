@@ -1250,8 +1250,8 @@ async function loadFourHourData(o){
   const symbol=o.api;
   if(!o.ready||!symbol){setFourHourStatus('等待该品种实时行情加载');return}
   const params=isStock
-    ?new URLSearchParams({category:'SPOT',symbol,interval:'4H',limit:'36'})
-    :new URLSearchParams({symbol,productType:'USDT-FUTURES',granularity:'4H',limit:'36'});
+    ?new URLSearchParams({category:'SPOT',symbol,interval:'4H',limit:'84'})
+    :new URLSearchParams({symbol,productType:'USDT-FUTURES',granularity:'4H',limit:'84'});
   const path=isStock?'/api/v3/market/candles':'/api/v2/mix/market/candles';
   const promise=bitgetJson(path+'?'+params).then(rows=>rows
     .filter(row=>Array.isArray(row)&&[1,2,3,4].every(i=>Number(row[i])>0&&Number.isFinite(Number(row[i]))))
