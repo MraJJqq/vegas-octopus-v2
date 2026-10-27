@@ -1009,7 +1009,18 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 #octopusFourHourHover .o4-chart{display:block;width:100%;height:100%;min-height:100px;overflow:visible;pointer-events:auto}
 #octopusFourHourHover .o4-candles line{stroke-width:1.5;vector-effect:non-scaling-stroke}
 #octopusFourHourHover .o4-candles rect{stroke-width:1.25;vector-effect:non-scaling-stroke;filter:none}
-@media(max-width:760px){#octopusFourHourHover{padding-left:10vw;padding-right:10vw}#octopusFourHourHover .o4-chart{min-height:90px}}
+#octopusFourHourClose{
+  position:fixed;top:clamp(14px,3vh,30px);right:clamp(14px,3vw,34px);z-index:10001;
+  display:grid;place-items:center;width:44px;height:44px;border:1px solid rgba(137,210,255,.58);
+  border-radius:50%;background:rgba(5,15,30,.82);color:#eaf8ff;font-size:27px;line-height:1;
+  box-shadow:0 0 18px rgba(53,177,255,.24),inset 0 0 12px rgba(53,177,255,.1);
+  cursor:pointer;pointer-events:auto;opacity:0;visibility:hidden;transform:scale(.88);
+  transition:opacity .14s ease,transform .14s ease,background .14s ease;
+}
+#octopusFourHourHover.is-visible #octopusFourHourClose{opacity:1;visibility:visible;transform:scale(1)}
+#octopusFourHourClose:hover{background:rgba(20,55,82,.96);box-shadow:0 0 24px rgba(53,177,255,.42)}
+#octopusFourHourClose:focus-visible{outline:2px solid #8ee4ff;outline-offset:3px}
+@media(max-width:760px){#octopusFourHourHover{padding-left:10vw;padding-right:10vw}#octopusFourHourHover .o4-chart{min-height:90px}#octopusFourHourClose{width:40px;height:40px;font-size:25px}}
 
 </style>
 
@@ -1518,9 +1529,11 @@ const centerStage=stage.closest('.center-stage');
 const fourHourLayer=document.createElement('div');
 fourHourLayer.id='octopusFourHourHover';
 fourHourLayer.setAttribute('aria-hidden','true');
-fourHourLayer.innerHTML=`<svg class="o4-chart" viewBox="0 0 1000 300" preserveAspectRatio="none" role="img" aria-label="4小时K线与Vegas均线图"><g class="o4-emas"></g><g class="o4-candles"></g></svg>`;
+fourHourLayer.innerHTML=`<button id="octopusFourHourClose" type="button" aria-label="关闭大卡片" title="关闭">×</button><svg class="o4-chart" viewBox="0 0 1000 300" preserveAspectRatio="none" role="img" aria-label="4小时K线与Vegas均线图"><g class="o4-emas"></g><g class="o4-candles"></g></svg>`;
 document.body.appendChild(fourHourLayer);
-let activeFourHourCard=null,fourHourHideTimer=null,fourHourRefreshTimer=null;
+const fourHourCloseButton=fourHourLayer.querySelector('#octopusFourHourClose');
+let activeFourHourCard=null,fourHourRefreshTimer=null;
+fourHourCloseButton.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();hideFourHour()});
 let fourHourViewCount=180,fourHourViewStart=null,fourHourUserNavigated=false,fourHourDrag=null;
 const fourHourCache=new WeakMap();
 const setFourHourStatus=()=>{};
@@ -1708,7 +1721,6 @@ async function loadFourHourHistory(o){
   }
 }
 function showFourHour(o){
-  clearTimeout(fourHourHideTimer);
   if(activeFourHourCard!==o){
     fourHourLayer.querySelector('.o4-candles').replaceChildren();
     fourHourViewCount=180;fourHourViewStart=null;fourHourUserNavigated=false;fourHourDrag=null;
@@ -1724,7 +1736,6 @@ function redrawActiveFourHour(){
   const cache=fourHourCache.get(activeFourHourCard);
   if(cache?.values?.length)drawFourHour(cache.values);
 }
-fourHourLayer.addEventListener('pointerenter',()=>clearTimeout(fourHourHideTimer));
 fourHourLayer.addEventListener('wheel',e=>{
   if(!activeFourHourCard||!fourHourLayer.classList.contains('is-visible'))return;
   e.preventDefault();
@@ -1823,13 +1834,6 @@ function finishFourHourDrag(e){
 fourHourSvg.addEventListener('pointerup',finishFourHourDrag);
 fourHourSvg.addEventListener('pointercancel',finishFourHourDrag);
 fourHourSvg.addEventListener('lostpointercapture',finishFourHourDrag);
-fourHourLayer.addEventListener('click',e=>{
-  if(e.target!==fourHourSvg&&!fourHourSvg.contains(e.target))hideFourHour();
-});
-// The transparent overlay lets the underlying UI receive clicks; any click outside the K-line closes it.
-document.addEventListener('click',e=>{
-  if(activeFourHourCard&&!fourHourSvg.contains(e.target))hideFourHour();
-},true);
 const SC=[.86,1,1.1],SPD=[.7,1,1.3],PAR=[-9,0,16],OP=[.8,.94,1];
 const SH=['0 10px 16px -12px rgba(0,0,0,.7)','0 18px 28px -12px rgba(0,0,0,.85)','0 32px 44px -14px rgba(0,0,0,.95)'];
 let W,H,zw,w,h,centerX,gap,leftMax,rightMin;
@@ -2088,8 +2092,8 @@ setInterval(loadMarketData,15000);
 
 // 悬停：状态只切换目标值，放大/阴影/倾斜全部在帧循环里平滑插值；松开留 80ms 缓冲防抖，触屏松手后保持 1.5 秒
 C.forEach(o=>{const el=o.pos,c=o.card;let t;
-  el.addEventListener('pointerenter',()=>{clearTimeout(t);clearTimeout(fourHourHideTimer);o.on=true;showFourHour(o)});
-  const off=e=>{clearTimeout(t);t=setTimeout(()=>{o.on=false;o.tiltX=0;o.tiltY=0},e.pointerType==='touch'?1500:80);clearTimeout(fourHourHideTimer);fourHourHideTimer=setTimeout(()=>hideFourHour(o),e.pointerType==='touch'?1500:100)};
+  el.addEventListener('pointerenter',()=>{clearTimeout(t);o.on=true;showFourHour(o)});
+  const off=e=>{clearTimeout(t);t=setTimeout(()=>{o.on=false;o.tiltX=0;o.tiltY=0},e.pointerType==='touch'?1500:80)};
   el.addEventListener('pointerleave',off);el.addEventListener('pointercancel',off);
   el.addEventListener('pointermove',e=>{const r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
     o.tiltY=(x-.5)*14;o.tiltX=(.5-y)*16;c.style.setProperty('--mx',x*100+'%');c.style.setProperty('--my',y*100+'%')})});
