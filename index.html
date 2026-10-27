@@ -799,12 +799,17 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 /* Keep account funds and latest events together in the existing top region.
    The event list is compact and removed from the main grid, so it cannot squeeze the 3D core column. */
 .topbar{
- grid-template-columns:minmax(300px,1.35fr) minmax(115px,.55fr) minmax(170px,.8fr) minmax(285px,1.25fr) 38px!important;
+ grid-template-columns:minmax(300px,1.35fr) minmax(115px,.55fr) minmax(285px,1.35fr) minmax(170px,.8fr) 38px!important;
+ grid-template-rows:minmax(104px,auto)!important;
  align-items:stretch!important;
 }
-.fund-overview-top{min-width:0}
+.fund-overview-top{grid-column:1!important;min-width:0}
+.topbar>.top-card:not(.fund-overview-top):not(.event-top-card):not(.status-card):not(.settings){grid-column:2!important}
+.topbar>.status-card{grid-column:4!important}
+.topbar>.settings{grid-column:5!important}
 .event-top-card{
- min-width:0;min-height:0;padding:7px 10px!important;gap:3px!important;
+ grid-column:3!important;grid-row:1!important;
+ min-width:0;min-height:104px;padding:7px 10px!important;gap:3px!important;
  justify-content:flex-start!important;overflow:hidden;
 }
 .event-top-card:after{left:10px;right:10px}
@@ -824,17 +829,19 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 .event-top-card .event-detail{font-size:8px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 .event-top-card .event-time{font-size:8px}
 @media(max-width:1180px){
- .topbar{grid-template-columns:minmax(260px,1.2fr) minmax(110px,.6fr) minmax(250px,1.1fr) 34px!important}
+ .topbar{grid-template-columns:minmax(260px,1.2fr) minmax(110px,.6fr) minmax(250px,1.1fr) 34px!important;grid-template-rows:minmax(100px,auto)!important}
  .topbar .status-card{display:none!important}
- .event-top-card{min-height:78px}
+ .topbar>.settings{grid-column:4!important}
+ .topbar>.top-card:not(.fund-overview-top):not(.event-top-card):not(.settings){grid-column:2!important}
+ .event-top-card{grid-column:3!important;grid-row:1!important;min-height:100px}
  .main-grid{grid-template-columns:minmax(235px,.9fr) minmax(0,1.8fr)!important}
  .right-col.event-col{display:none!important}
 }
 @media(max-width:760px){
- .topbar{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:7px}
- .fund-overview-top{grid-column:1/-1}
+ .topbar{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;grid-template-rows:auto auto!important;gap:7px}
+ .fund-overview-top{grid-column:1/-1!important;grid-row:1!important}
  .topbar>.top-card:not(.fund-overview-top):not(.event-top-card){display:none!important}
- .event-top-card{grid-column:1/-1;min-height:84px}
+ .event-top-card{grid-column:1/-1!important;grid-row:2!important;min-height:92px}
  .event-top-card .event-list{grid-template-columns:1fr 1fr}
  .main-grid{grid-template-columns:minmax(0,1fr)!important}
  .center-stage{grid-column:1!important;grid-row:1!important}
