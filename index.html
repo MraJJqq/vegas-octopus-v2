@@ -402,6 +402,19 @@ body:before{
   .panel,.top-card,.status-card,.market-card,.settings{backdrop-filter:none}
 }
 
+
+/* Replace market-distribution and hot-assets cards with a broader US equity pool. */
+.us-pool-panel{min-height:0;flex:1}
+.us-pool-note{font-size:10px;white-space:nowrap}
+.us-pool-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px;padding:0 12px 8px}
+.us-pool-item{display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:6px;min-width:0;padding:7px 0;border-bottom:1px solid rgba(80,145,208,.07)}
+.us-pool-item .asset-icon{width:21px;height:21px;flex-basis:21px;font-size:10px}
+.us-pool-item div{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.us-pool-item b{font-size:10px;letter-spacing:.02em;color:#e2f4ff}
+.us-pool-item small{font-size:9px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.us-pool-item em{font-style:normal;font-size:8px;color:#6990b4;white-space:nowrap}
+.us-pool-foot{padding:5px 12px 10px;color:#527594;font-size:9px}
+@media(max-width:760px){.us-pool-grid{grid-template-columns:1fr 1fr;gap:0 8px}.us-pool-item{grid-template-columns:20px minmax(0,1fr);gap:5px}.us-pool-item em{display:none}}
 </style>
 </head>
 <body>
@@ -437,10 +450,32 @@ body:before{
           <tr data-type="原油"><td><span class="symbol"><span class="asset-icon aqua">◉</span>USOIL</span></td><td>$71.36</td><td class="positive">+0.62%</td><td>2.3B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 11 L7 8 L12 10 L18 5 L24 7 L30 4 L35 2" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
         </tbody></table></div>
       </section>
-      <div class="dual-grid">
-        <section class="panel compact-panel"><div class="panel-head"><div class="panel-title"><span class="icon">◉</span>市场分布</div></div><div class="donut-row"><div class="donut"><div class="donut-label">34%<small>市场占比</small></div></div><div class="legend"><div class="legend-row"><span><i class="legend-dot" style="background:#1cbcff"></i>美股</span><b>34%</b></div><div class="legend-row"><span><i class="legend-dot" style="background:#18d8c4"></i>加密</span><b>26%</b></div><div class="legend-row"><span><i class="legend-dot" style="background:#4769ff"></i>外汇</span><b>18%</b></div><div class="legend-row"><span><i class="legend-dot" style="background:#a16bff"></i>黄金</span><b>12%</b></div><div class="legend-row"><span><i class="legend-dot" style="background:#ff70b5"></i>原油</span><b>10%</b></div></div></div></section>
-        <section class="panel compact-panel"><div class="panel-head"><div class="panel-title"><span class="icon">✦</span>热门品种</div><span class="muted" style="font-size:10px">TOP 5</span></div><div class="ranking"><div class="rank-row"><span class="rank-num">1</span><span class="rank-name"><i class="asset-icon orange">₿</i>BTC</span><b class="positive">+3.42%</b></div><div class="rank-row"><span class="rank-num">2</span><span class="rank-name"><i class="asset-icon purple">◆</i>ETH</span><b class="positive">+3.12%</b></div><div class="rank-row"><span class="rank-num">3</span><span class="rank-name"><i class="asset-icon red">T</i>TSLA</span><b class="positive">+2.17%</b></div><div class="rank-row"><span class="rank-num">4</span><span class="rank-name"><i class="asset-icon green">N</i>NVDA</span><b class="positive">+1.92%</b></div><div class="rank-row"><span class="rank-num">5</span><span class="rank-name"><i class="asset-icon purple">S</i>SOL</span><b class="positive">+1.87%</b></div></div></section>
-      </div>
+      <section class="panel us-pool-panel">
+        <div class="panel-head"><div class="panel-title"><span class="icon">▦</span>美股资金池</div><span class="muted us-pool-note">重点观察 · 20 只</span></div>
+        <div class="us-pool-grid">
+          <div class="us-pool-item"><span class="asset-icon green">N</span><div><b>NVDA</b><small>英伟达</small></div><em>半导体</em></div>
+          <div class="us-pool-item"><span class="asset-icon aqua">A</span><div><b>AAPL</b><small>苹果</small></div><em>消费电子</em></div>
+          <div class="us-pool-item"><span class="asset-icon">M</span><div><b>MSFT</b><small>微软</small></div><em>软件 / 云</em></div>
+          <div class="us-pool-item"><span class="asset-icon">G</span><div><b>GOOGL</b><small>谷歌</small></div><em>互联网</em></div>
+          <div class="us-pool-item"><span class="asset-icon red">T</span><div><b>TSLA</b><small>特斯拉</small></div><em>电动车</em></div>
+          <div class="us-pool-item"><span class="asset-icon">A</span><div><b>AMZN</b><small>亚马逊</small></div><em>电商 / 云</em></div>
+          <div class="us-pool-item"><span class="asset-icon purple">M</span><div><b>META</b><small>Meta</small></div><em>社交平台</em></div>
+          <div class="us-pool-item"><span class="asset-icon">B</span><div><b>BRK.B</b><small>伯克希尔</small></div><em>综合控股</em></div>
+          <div class="us-pool-item"><span class="asset-icon aqua">A</span><div><b>AVGO</b><small>博通</small></div><em>半导体</em></div>
+          <div class="us-pool-item"><span class="asset-icon green">W</span><div><b>WMT</b><small>沃尔玛</small></div><em>零售</em></div>
+          <div class="us-pool-item"><span class="asset-icon">J</span><div><b>JPM</b><small>摩根大通</small></div><em>银行</em></div>
+          <div class="us-pool-item"><span class="asset-icon red">E</span><div><b>LLY</b><small>礼来</small></div><em>制药</em></div>
+          <div class="us-pool-item"><span class="asset-icon purple">N</span><div><b>NFLX</b><small>奈飞</small></div><em>流媒体</em></div>
+          <div class="us-pool-item"><span class="asset-icon">V</span><div><b>V</b><small>Visa</small></div><em>支付</em></div>
+          <div class="us-pool-item"><span class="asset-icon aqua">X</span><div><b>AMD</b><small>超微半导体</small></div><em>半导体</em></div>
+          <div class="us-pool-item"><span class="asset-icon orange">C</span><div><b>COIN</b><small>Coinbase</small></div><em>加密交易</em></div>
+          <div class="us-pool-item"><span class="asset-icon">P</span><div><b>PLTR</b><small>Palantir</small></div><em>数据软件</em></div>
+          <div class="us-pool-item"><span class="asset-icon green">U</span><div><b>UBER</b><small>优步</small></div><em>出行平台</em></div>
+          <div class="us-pool-item"><span class="asset-icon goldicon">X</span><div><b>XOM</b><small>埃克森美孚</small></div><em>能源</em></div>
+          <div class="us-pool-item"><span class="asset-icon">C</span><div><b>CRM</b><small>赛富时</small></div><em>企业软件</em></div>
+        </div>
+        <div class="us-pool-foot">观察名单 · 当前为界面演示，未接入实时行情</div>
+      </section>
     </section>
 
     <section class="center-stage" aria-label="中央 3D 数据宇宙">
