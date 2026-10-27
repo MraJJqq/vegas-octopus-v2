@@ -944,14 +944,33 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
  .v9-nochange{font-size:7px}
 }
 </style>
+
+<style>
+/* Account/funds module removed. Reflow the remaining header cards without changing other panels. */
+.topbar{
+  grid-template-columns:minmax(115px,.55fr) minmax(285px,1.35fr) minmax(170px,.8fr) 38px!important;
+}
+.topbar>.top-card:not(.event-top-card):not(.status-card):not(.settings){grid-column:1!important}
+.topbar>.status-card{grid-column:3!important}
+.topbar>.settings{grid-column:4!important}
+.topbar>.event-top-card{grid-column:2!important;grid-row:1!important}
+@media(max-width:1180px){
+  .topbar{grid-template-columns:minmax(110px,.6fr) minmax(250px,1.1fr) 34px!important}
+  .topbar>.top-card:not(.event-top-card):not(.settings){grid-column:1!important}
+  .topbar>.event-top-card{grid-column:2!important;grid-row:1!important}
+  .topbar>.settings{grid-column:3!important}
+}
+@media(max-width:760px){
+  .topbar{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto!important}
+  .topbar>.top-card:not(.event-top-card){display:none!important}
+  .topbar>.event-top-card{grid-column:1!important;grid-row:1!important;min-height:92px}
+}
+</style>
+
 </head>
 <body>
 <div class="app">
   <header class="topbar">
-    <div class="top-card brand fund-overview-top">
-      <div class="fund-top-main"><div class="fund-total-wrap"><small>账户总资金</small><strong>$8,642,381</strong></div><span class="fund-top-change">+3.24%<small>累计收益率</small></span></div>
-      <div class="fund-top-sub"><span><small>今日盈亏</small><b class="positive">+$2,386,402</b></span><span><small>可用资金</small><b>$6,255,979</b></span><span><small>占用资金</small><b>$2,386,402</b></span></div>
-    </div>
     <div class="top-card"><div class="eyebrow">今日信号</div><div class="top-line"><span class="big-number">12</span><span class="muted">正式 <b class="positive">8</b> · 观察 <b style="color:#73baff">4</b></span></div></div>
     
     <section class="top-card event-top-card" aria-label="最新事件">
