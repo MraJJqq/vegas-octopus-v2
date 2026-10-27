@@ -1313,27 +1313,30 @@ async function loadMarketData(){
     const payload=await response.json();
     if(payload.code!=='00000'||!Array.isArray(payload.data))throw new Error(payload.msg||'Bitget ticker response invalid');
     const tickers=new Map(payload.data.map(t=>[String(t.symbol).toUpperCase(),t]));
-    await Promise.all(C.map(async d=>{
-      const ticker=tickers.get(apiSymbol(d.api));
-      if(!ticker){d.ready=false;d.card.querySelector('.price').textContent='暂无该合约';d.card.querySelector('.pct').textContent='--';return}
-      const last=Number(ticker.lastPr),open=Number(ticker.open24h);
-      if(!(last>0&&open>0)){d.ready=false;d.card.querySelector('.price').textContent='行情无效';return}
-      d.p=last;d.o=open;
-      try{
-        const url=API+'/api/v2/mix/market/candles?'+new URLSearchParams({symbol:d.api,productType:'USDT-FUTURES',granularity:'2H',limit:'40'});
-        const cr=await fetch(url,{cache:'no-store'});
-        if(cr.ok){
-          const cp=await cr.json();
-          if(cp.code==='00000'&&Array.isArray(cp.data)){
-            const rows=cp.data.filter(r=>Array.isArray(r)&&Number(r[4])>0).sort((a,b)=>Number(a[0])-Number(b[0]));
-            const closes=rows.map(r=>Number(r[4]));
-            if(closes.length>1)d.h=closes.slice(-40);
+    // Limit candle requests to five at a time to avoid bursts against the public API.
+    for(let start=0;start<C.length;start+=5){
+      await Promise.all(C.slice(start,start+5).map(async d=>{
+        const ticker=tickers.get(apiSymbol(d.api));
+        if(!ticker){d.ready=false;d.card.querySelector('.price').textContent='暂无该合约';d.card.querySelector('.pct').textContent='--';return}
+        const last=Number(ticker.lastPr),open=Number(ticker.open24h);
+        if(!(last>0&&open>0)){d.ready=false;d.card.querySelector('.price').textContent='行情无效';d.card.querySelector('.pct').textContent='--';return}
+        d.p=last;d.o=open;
+        try{
+          const url=API+'/api/v2/mix/market/candles?'+new URLSearchParams({symbol:d.api,productType:'USDT-FUTURES',granularity:'2H',limit:'40'});
+          const cr=await fetch(url,{cache:'no-store'});
+          if(cr.ok){
+            const cp=await cr.json();
+            if(cp.code==='00000'&&Array.isArray(cp.data)){
+              const rows=cp.data.filter(r=>Array.isArray(r)&&Number(r[4])>0).sort((a,b)=>Number(a[0])-Number(b[0]));
+              const closes=rows.map(r=>Number(r[4]));
+              if(closes.length>1)d.h=closes.slice(-40);
+            }
           }
-        }
-      }catch(_){}
-      d.ready=true;paint(d);
-      const pr=d.card.querySelector('.price');pr.classList.add('flash');setTimeout(()=>pr.classList.remove('flash'),250);
-    }));
+        }catch(_){}
+        d.ready=true;paint(d);
+        const pr=d.card.querySelector('.price');pr.classList.add('flash');setTimeout(()=>pr.classList.remove('flash'),250);
+      }));
+    }
   }catch(error){
     C.forEach(d=>{if(!d.ready){d.card.querySelector('.price').textContent='行情连接失败';d.card.querySelector('.pct').textContent='--'}});
     console.warn('[Vegas Octopus] live market feed failed:',error);
