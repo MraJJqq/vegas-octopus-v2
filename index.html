@@ -1163,16 +1163,21 @@ const pool=document.querySelector('#marketRows'),panel=document.querySelector('.
 if(!pool||!panel)return;
 const rows=Array.from(pool.querySelectorAll('tr'));
 const assets=rows.map((row,i)=>({symbol:row.querySelector('.symbol b')?.textContent?.trim(),type:row.dataset.type||'其他',i,bars:Array.from(row.querySelectorAll('.market-placeholder i')).map(el=>parseFloat((el.getAttribute('style')||'').match(/--h:\\s*([\\d.]+)px/)?.[1]||'6'))})).filter(a=>a.symbol);
-const grid=document.createElement('div');grid.id='octopusMarketCardGrid';grid.setAttribute('aria-label','资金池悬浮行情卡片');
+const streamAssets=['AAPL','NVDA','TSLA','MSFT','BTC','XAUUSD','USOIL'];
+const streamColors=['#39d9ff','#ff9c52','#ffe36e','#8c83ff','#39e6b0','#ff70c8','#ff5c72'];
+const streamLabels=['数据流 01','数据流 02','数据流 03','数据流 04','数据流 05','数据流 06','数据流 07'];
+const selected=streamAssets.map((symbol,i)=>{const asset=assets.find(a=>a.symbol===symbol);return asset?{...asset,i,streamIndex:i,streamLabel:streamLabels[i],streamColor:streamColors[i]}:null}).filter(Boolean);
+assets.splice(0,assets.length,...selected);
+const grid=document.createElement('div');grid.id='octopusMarketCardGrid';grid.setAttribute('aria-label','七根发光数据流对应的七张品种卡片');
 panel.querySelector('.table-wrap')?.after(grid);
 function node(tag,cls,txt){const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n}
 function makeCard(d){
 const slot=node('div','oct-slot');slot.dataset.type=d.type;
 const floating=node('div','oct-float');floating.style.setProperty('--d',(-d.i*.9)+'s');
-const card=node('div','oct-card');card.id='oct-card-'+d.i;
+const card=node('div','oct-card');card.id='oct-card-'+d.i;card.style.setProperty('--c',d.streamColor);card.dataset.stream=String(d.streamIndex+1);
 card.append(node('div','oct-bg'),node('i','oct-gl'));
 const row=node('div','oct-row oct-l2');row.append(node('span','oct-coin',d.symbol.slice(0,1)));
-const name=node('b','oct-sym');name.append(document.createTextNode(d.symbol));name.append(node('small','',({美股:'美股',加密资产:'加密资产',大宗商品:'大宗商品'}[d.type]||d.type)+' · 行情卡'));row.append(name);card.append(row);
+const name=node('b','oct-sym');name.append(document.createTextNode(d.symbol));name.append(node('small','',d.streamLabel+' · '+(({美股:'美股',加密资产:'加密资产',大宗商品:'大宗商品'}[d.type]||d.type))));row.append(name);card.append(row);
 card.append(node('div','oct-price oct-l4','待接入'));
 const badgeWrap=node('div','oct-l3');badgeWrap.append(node('span','oct-pct','等待行情数据'));card.append(badgeWrap);
 const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 200 50');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('aria-label','走势占位');svg.setAttribute('class','oct-spark oct-l1');
@@ -1201,7 +1206,7 @@ function updateScrollDepth(){
 }
 grid.addEventListener('scroll',()=>{if(!scrollFrame)scrollFrame=requestAnimationFrame(updateScrollDepth)},{passive:true});
 window.addEventListener('resize',updateScrollDepth,{passive:true});
-// All 27 asset cards remain visible; category filtering controls are intentionally removed.
+// Seven instrument cards map one-to-one to the orb's seven colored data streams.
 })();
 </script>
 
