@@ -1888,39 +1888,36 @@ if(!grid||!stage)return;
 const cards=[...grid.querySelectorAll('.pos')];if(!cards.length)return;
 const name=e=>(e.querySelector('.sym')?.textContent||'').trim().split(/\\s+/)[0].toUpperCase();
 cards.sort((a,b)=>name(a).localeCompare(name(b)));
-/* 360-degree orbital rings with a protected clearance zone around the central orb. */
-const ringCount=3,cfg=new Map();
+/* Restore the previous sphere size. Place cards on two 360-degree rings around the orb. */
+const ringCount=2,cfg=new Map();
+const perRing=Math.ceil(cards.length/ringCount);
 cards.forEach((el,i)=>{
  const lane=i%ringCount,slot=Math.floor(i/ringCount);
- const slots=Math.ceil(cards.length/ringCount);
- const angle=(slot/slots)*Math.PI*2+lane*(Math.PI/slots);
+ const count=lane===0?Math.ceil(cards.length/ringCount):Math.floor(cards.length/ringCount);
+ const angle=(slot/count)*Math.PI*2+lane*(Math.PI/count);
  cfg.set(el,{lane,angle,seed:i*1.73+.4});
 });
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-let W=1,H=1,D=50,orbR=70,ringBase=120,laneGap=65,maxR=200;
+let W=1,H=1,D=70,orbR=70,innerR=150,outerR=230;
 function size(){
  W=Math.max(1,stage.clientWidth);H=Math.max(1,stage.clientHeight);
- const minSide=Math.min(W,H);
- const targetD=W<=760?Math.max(30,Math.min(46,W*.095)):Math.max(48,Math.min(82,W*.055));
+ /* Exact sphere sizing from the previous 360-degree version. */
+ D=W<=760?Math.max(34,Math.min(48,W*.105)):Math.max(58,Math.min(90,W*.058));
  orbR=Math.min(W*.18,H*.20);
- /* Keep the full outer ring inside the stage; reduce card diameter before reducing the orb clearance. */
- maxR=Math.max(1,Math.min(W/2,H/2)-2);
- D=Math.min(targetD,Math.max(25,(maxR-orbR)/3.85));
- ringBase=orbR+D*1.18;
- laneGap=D*1.28;
- const outer=ringBase+(ringCount-1)*laneGap+D*.52;
- if(outer>maxR){
-  D=Math.max(24,(maxR-orbR)/(1.18+2*1.28+.52));
-  ringBase=orbR+D*1.18;
-  laneGap=D*1.28;
- }
+ const edgeLimit=Math.max(D*.8,Math.min(W/2-D*.58,H/2-D*.58));
+ const minInner=orbR+D*.78;
+ const ringGap=D*1.15;
+ /* Fit both rings inside the stage without shrinking the spheres. */
+ outerR=Math.min(edgeLimit,Math.max(minInner+ringGap,D*perRing/(Math.PI*2)*1.12));
+ innerR=Math.min(minInner,outerR-ringGap);
+ if(innerR<D*perRing/(Math.PI*2)*1.05)innerR=Math.max(D*perRing/(Math.PI*2)*1.05,outerR-ringGap);
  cards.forEach(e=>{e.style.setProperty('width',D+'px','important');e.style.setProperty('height',D+'px','important');e.style.setProperty('opacity','1','important')});
 }
 function frame(ms){
  const t=ms/1000,cx=W/2,cy=H/2;
  cards.forEach(e=>{
   const c=cfg.get(e);if(!c)return;
-  const radius=ringBase+c.lane*laneGap;
+  const radius=c.lane===0?innerR:outerR;
   const theta=c.angle+(reduced?0:t*.018);
   const x=cx+radius*Math.cos(theta);
   const y=cy+radius*Math.sin(theta);
