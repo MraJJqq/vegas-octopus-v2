@@ -1303,47 +1303,68 @@ function paint(d){
 }
 C.forEach(paint);
 
-// Live public market feed. No synthetic prices or simulated price changes.
+// Live public market feed. Reality equities use Bitget SPOT rToken symbols;
+// BTC/HYPE/XAU/OIL continue to use the V9-approved USDT-FUTURES symbols.
 const API='https://api.bitget.com';
-const apiSymbol=s=>s;
+const REALITY_STOCKS=new Set(['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','QCOM','AMD','TSM','AVGO','ORCL','ARM','MU','ASML','SNDK','SKHYNIX','MRVL','GLW','HOOD','CBRS','SPCX']);
+async function bitgetJson(path){
+  const r=await fetch(API+path,{cache:'no-store'});
+  if(!r.ok)throw new Error('Bitget HTTP '+r.status);
+  const p=await r.json();
+  if(p.code!=='00000'||!Array.isArray(p.data))throw new Error(p.msg||'Bitget response invalid');
+  return p.data;
+}
 async function loadMarketData(){
   try{
-    const response=await fetch(API+'/api/v2/mix/market/tickers?productType=USDT-FUTURES',{cache:'no-store'});
-    if(!response.ok)throw new Error('Bitget HTTP '+response.status);
-    const payload=await response.json();
-    if(payload.code!=='00000'||!Array.isArray(payload.data))throw new Error(payload.msg||'Bitget ticker response invalid');
-    const tickers=new Map(payload.data.map(t=>[String(t.symbol).toUpperCase(),t]));
-    // Limit candle requests to five at a time to avoid bursts against the public API.
-    for(let start=0;start<C.length;start+=5){
-      await Promise.all(C.slice(start,start+5).map(async d=>{
-        const ticker=tickers.get(apiSymbol(d.api));
-        if(!ticker){d.ready=false;d.card.querySelector('.price').textContent='暂无该合约';d.card.querySelector('.pct').textContent='--';return}
-        const last=Number(ticker.lastPr),open=Number(ticker.open24h);
-        if(!(last>0&&open>0)){d.ready=false;d.card.querySelector('.price').textContent='行情无效';d.card.querySelector('.pct').textContent='--';return}
-        d.p=last;d.o=open;
-        try{
-          const url=API+'/api/v2/mix/market/candles?'+new URLSearchParams({symbol:d.api,productType:'USDT-FUTURES',granularity:'1H',limit:'40'});
-          const cr=await fetch(url,{cache:'no-store'});
-          if(cr.ok){
-            const cp=await cr.json();
-            if(cp.code==='00000'&&Array.isArray(cp.data)){
-              const rows=cp.data.filter(r=>Array.isArray(r)&&Number(r[4])>0).sort((a,b)=>Number(a[0])-Number(b[0]));
-              const closes=rows.map(r=>Number(r[4]));
-              if(closes.length>1)d.h=closes.slice(-40);
-            }
-          }
-        }catch(_){}
-        d.ready=true;paint(d);
-        const pr=d.card.querySelector('.price');pr.classList.add('flash');setTimeout(()=>pr.classList.remove('flash'),250);
-      }));
-    }
+    const [futureRows,spotRows,stockRows]=await Promise.all([
+      bitgetJson('/api/v2/mix/market/tickers?productType=USDT-FUTURES'),
+      bitgetJson('/api/v3/market/tickers?category=SPOT'),
+      bitgetJson('/api/v3/reality/market/stock-info')
+    ]);
+    const futures=new Map(futureRows.map(t=>[String(t.symbol).toUpperCase(),t]));
+    const spots=new Map(spotRows.map(t=>[String(t.symbol).toUpperCase(),t]));
+    const realitySymbols=new Map(stockRows.filter(s=>s&&s.code&&s.symbol).map(s=>[String(s.code).toUpperCase(),String(s.symbol)]));
+    // Resolve Reality stock symbols from Bitget's own instrument list; never guess/fallback to a futures symbol.
+    const jobs=C.map(async d=>{
+      const isStock=REALITY_STOCKS.has(d.n);
+      const symbol=isStock?realitySymbols.get(d.n):d.api;
+      const ticker=isStock?(symbol?spots.get(symbol.toUpperCase()):null):futures.get(String(symbol).toUpperCase());
+      const unavailable=msg=>{
+        d.ready=false;d.card.querySelector('.price').textContent=msg;d.card.querySelector('.pct').textContent='--';
+        d.h=[];d.card.querySelector('.ln').setAttribute('d','');d.card.querySelector('.ar').setAttribute('d','');
+      };
+      if(!symbol){unavailable('暂无Reality交易对');return}
+      if(!ticker){unavailable('暂无该交易对行情');return}
+      const last=Number(isStock?ticker.lastPrice:ticker.lastPr);
+      const open=Number(isStock?ticker.openPrice24h:ticker.open24h);
+      if(!(Number.isFinite(last)&&last>0&&Number.isFinite(open)&&open>0)){unavailable('行情数据无效');return}
+      d.api=symbol;d.p=last;d.o=open;
+      try{
+        const params=isStock
+          ?new URLSearchParams({category:'SPOT',symbol,interval:'1H',limit:'40'})
+          :new URLSearchParams({symbol,productType:'USDT-FUTURES',granularity:'1H',limit:'40'});
+        const path=isStock?'/api/v3/market/candles':'/api/v2/mix/market/candles';
+        const rows=await bitgetJson(path+'?'+params);
+        const closes=rows.filter(r=>Array.isArray(r)&&Number(r[4])>0)
+          .sort((a,b)=>Number(a[0])-Number(b[0])).map(r=>Number(r[4]));
+        if(closes.length>1)d.h=closes.slice(-40);
+        else d.h=[];
+      }catch(_){d.h=[]}
+      d.ready=true;paint(d);
+      const pr=d.card.querySelector('.price');pr.classList.add('flash');setTimeout(()=>pr.classList.remove('flash'),250);
+    });
+    // Keep public requests moderate and avoid launching 27 candle requests simultaneously.
+    for(let i=0;i<jobs.length;i+=5)await Promise.all(jobs.slice(i,i+5));
   }catch(error){
-    C.forEach(d=>{if(!d.ready){d.card.querySelector('.price').textContent='行情连接失败';d.card.querySelector('.pct').textContent='--'}});
+    C.forEach(d=>{
+      d.ready=false;d.card.querySelector('.price').textContent='行情连接失败';
+      d.card.querySelector('.pct').textContent='--';d.card.querySelector('.ln').setAttribute('d','');d.card.querySelector('.ar').setAttribute('d','');
+    });
     console.warn('[Vegas Octopus] live market feed failed:',error);
   }
 }
 loadMarketData();
-setInterval(loadMarketData,60000);
+setInterval(loadMarketData,15000);
 
 // 悬停：状态只切换目标值，放大/阴影/倾斜全部在帧循环里平滑插值；松开留 80ms 缓冲防抖，触屏松手后保持 1.5 秒
 C.forEach(o=>{const el=o.pos,c=o.card;let t;
