@@ -1419,6 +1419,14 @@ async function loadMarketData(){
     const futures=new Map(futureRows.map(t=>[String(t.symbol).toUpperCase(),t]));
     const spots=new Map(spotRows.map(t=>[String(t.symbol).toUpperCase(),t]));
     const realitySymbols=new Map(stockRows.filter(s=>s&&s.code&&s.symbol).map(s=>[String(s.code).toUpperCase(),String(s.symbol)]));
+    // Bitget lists SK hynix under its exchange ticker SKHY, while this UI card is named SKHYNIX.
+    // Resolve the UI alias from the live exchange instrument list rather than guessing a trading pair.
+    const skhynixInstrument=stockRows.find(s=>s&&s.symbol&&(
+      String(s.code||'').toUpperCase().replace(/[^A-Z0-9]/g,'')==='SKHY'||
+      /SK\s*HYNIX/i.test(String(s.name||''))||
+      /RSKHYUSDT/i.test(String(s.symbol||''))
+    ));
+    if(skhynixInstrument)realitySymbols.set('SKHYNIX',String(skhynixInstrument.symbol));
     realitySymbolsForHover.clear();realitySymbols.forEach((v,k)=>realitySymbolsForHover.set(k,v));
     // Resolve Reality stock symbols from Bitget's own instrument list; never guess/fallback to a futures symbol.
     const updateCard=async d=>{
@@ -1447,7 +1455,7 @@ async function loadMarketData(){
         else d.h=[];
       }catch(_){d.h=[]}
       d.ready=true;paint(d);
-      if(activeFourHourCard===d){fourHourLayer.querySelector('.o4-price').textContent=fmt(d.p);showFourHour(d)}
+      if(activeFourHourCard===d)showFourHour(d)
       const pr=d.card.querySelector('.price');pr.classList.add('flash');setTimeout(()=>pr.classList.remove('flash'),250);
     };
     // Process five cards at a time so candle requests are genuinely throttled.
