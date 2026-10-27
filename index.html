@@ -2312,7 +2312,7 @@ function frame(ms){
  const t=ms/1000,cx=W/2,cy=H/2;
  cards.forEach(e=>{
   const c=cfg.get(e);if(!c)return;
-  const theta=c.angle+(reduced?0:t*.055);
+  const theta=c.angle+(reduced?0:t*.09);
   const depth=Math.sin(theta);
   /* A broad elliptical orbit: the far side contracts toward the core, the near side sweeps outward. */
   const baseRadius=c.lane===0?innerR:outerR;
