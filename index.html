@@ -1799,6 +1799,17 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       target.appendChild(item);
     });
   }
+  function renderMessage(message){
+    ["v9Stocks","v9Core"].forEach(id=>{
+      const target=$(id);
+      if(!target)return;
+      target.replaceChildren();
+      const item=document.createElement("span");
+      item.className="v9-nochange";
+      item.textContent=message;
+      target.appendChild(item);
+    });
+  }
   async function refreshV9State(){
     const status=$("v9SyncStatus");
     try{
@@ -1808,8 +1819,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const daily=state&&state.__daily_formal_signals__;
       if(!daily||!Array.isArray(daily.signals))throw new Error("状态格式无效");
       if(daily.date!==todayBeijing()){
-        renderSymbols("v9Stocks",[]);
-        renderSymbols("v9Core",[]);
+        renderMessage("等待今日扫描");
         if(status)status.textContent="V9 · 等待今日扫描";
         return;
       }
@@ -1824,8 +1834,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       if(status)status.textContent="V9 · 每2小时扫描";
     }catch(error){
       if(status)status.textContent="V9 · 数据暂不可用";
-      renderSymbols("v9Stocks",[]);
-      renderSymbols("v9Core",[]);
+      renderMessage("数据暂不可用");
       console.warn("V9 latest-events state unavailable:",error);
     }
   }
