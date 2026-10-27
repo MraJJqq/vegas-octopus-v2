@@ -1212,7 +1212,7 @@ const centerStage=stage.closest('.center-stage');
 const fourHourLayer=document.createElement('div');
 fourHourLayer.id='octopusFourHourHover';
 fourHourLayer.setAttribute('aria-hidden','true');
-fourHourLayer.innerHTML=`<svg class="o4-chart" viewBox="0 0 1000 300" preserveAspectRatio="none" role="img" aria-label="4小时K线图"><g class="o4-candles"></g></svg>`;
+fourHourLayer.innerHTML=`<svg class="o4-chart" viewBox="0 0 1000 300" preserveAspectRatio="none" role="img" aria-label="4小时K线与Vegas均线图"><g class="o4-emas"></g><g class="o4-candles"></g></svg>`;
 document.body.appendChild(fourHourLayer);
 let activeFourHourCard=null,fourHourHideTimer=null;
 const fourHourCache=new WeakMap();
@@ -1224,25 +1224,46 @@ function hideFourHour(o){
   fourHourLayer.setAttribute('aria-hidden','true');
 }
 function drawFourHour(candles){
-  const group=fourHourLayer.querySelector('.o4-candles');
-  group.replaceChildren();
-  const rows=candles.filter(c=>c&&[c.o,c.h,c.l,c.c].every(v=>Number.isFinite(v)&&v>0));
+  const candleGroup=fourHourLayer.querySelector('.o4-candles');
+  const emaGroup=fourHourLayer.querySelector('.o4-emas');
+  candleGroup.replaceChildren();emaGroup.replaceChildren();
+  const allRows=candles.filter(c=>c&&[c.o,c.h,c.l,c.c].every(v=>Number.isFinite(v)&&v>0));
+  if(allRows.length<2)return;
+  // Calculate EMA over the full fetched history for warm-up, but display only the latest ~2 months.
+  const periods=[12,144,169,576,676];
+  const alpha=p=>2/(p+1);
+  const emaSeries={};
+  periods.forEach(p=>{
+    let value=allRows[0].c;
+    emaSeries[p]=allRows.map((c,i)=>{if(i===0)return value;value=c.c*alpha(p)+value*(1-alpha(p));return value;});
+  });
+  const rows=allRows.slice(-400),offset=allRows.length-rows.length;
   if(rows.length<2)return;
-  const min=Math.min(...rows.map(c=>c.l)),max=Math.max(...rows.map(c=>c.h));
+  const visibleEmas=periods.map(p=>emaSeries[p].slice(offset));
+  const scaleValues=[...rows.flatMap(c=>[c.l,c.h]),...visibleEmas.flat()];
+  const min=Math.min(...scaleValues),max=Math.max(...scaleValues);
   const range=max-min||Math.max(Math.abs(max)*.001,1),y=v=>285-(v-min)/range*260;
-  const slot=1000/rows.length,bodyW=Math.max(2,Math.min(12,slot*.58));
+  const slot=1000/rows.length,bodyW=Math.max(1,Math.min(12,slot*.58));
   const ns='http://www.w3.org/2000/svg';
+  const emaColors={12:'#f5d547',144:'#4da3ff',169:'#b48cff',576:'#ff9f43',676:'#f06bd8'};
+  periods.forEach(p=>{
+    const values=emaSeries[p].slice(offset);
+    if(values.length<2)return;
+    const path=document.createElementNS(ns,'path');
+    path.setAttribute('d',values.map((v,i)=>`${i===0?'M':'L'}${(i+.5)*slot},${y(v)}`).join(' '));
+    path.setAttribute('fill','none');path.setAttribute('stroke',emaColors[p]);path.setAttribute('stroke-width',p===144||p===169?'1.7':'1.25');path.setAttribute('stroke-linejoin','round');path.setAttribute('vector-effect','non-scaling-stroke');path.setAttribute('opacity',p===144||p===169?'0.95':'0.82');
+    emaGroup.appendChild(path);
+  });
   rows.forEach((c,i)=>{
     const x=(i+.5)*slot,prevClose=i>0?rows[i-1].c:c.o;
-    // Hollow-candle convention: body fill follows close vs open; color follows close vs previous close.
     const risingBody=c.c>c.o,fallingBody=c.c<c.o;
     const color=c.c>prevClose?'#00c087':c.c<prevClose?'#f6465d':'#9aa4b2';
     const wick=document.createElementNS(ns,'line');
-    wick.setAttribute('x1',x);wick.setAttribute('x2',x);wick.setAttribute('y1',y(c.h));wick.setAttribute('y2',y(c.l));wick.setAttribute('stroke',color);group.appendChild(wick);
+    wick.setAttribute('x1',x);wick.setAttribute('x2',x);wick.setAttribute('y1',y(c.h));wick.setAttribute('y2',y(c.l));wick.setAttribute('stroke',color);candleGroup.appendChild(wick);
     const body=document.createElementNS(ns,'rect');
     const top=Math.min(y(c.o),y(c.c)),height=Math.max(1.5,Math.abs(y(c.o)-y(c.c)));
     body.setAttribute('x',x-bodyW/2);body.setAttribute('y',top);body.setAttribute('width',bodyW);body.setAttribute('height',height);
-    body.setAttribute('fill',risingBody?'transparent':fallingBody?color:'none');body.setAttribute('stroke',color);group.appendChild(body);
+    body.setAttribute('fill',risingBody?'transparent':fallingBody?color:'none');body.setAttribute('stroke',color);candleGroup.appendChild(body);
   });
 }
 async function loadFourHourData(o){
@@ -1253,8 +1274,8 @@ async function loadFourHourData(o){
   const symbol=o.api;
   if(!o.ready||!symbol){setFourHourStatus('等待该品种实时行情加载');return}
   const params=isStock
-    ?new URLSearchParams({category:'SPOT',symbol,interval:'4H',limit:'400'})
-    :new URLSearchParams({symbol,productType:'USDT-FUTURES',granularity:'4H',limit:'400'});
+    ?new URLSearchParams({category:'SPOT',symbol,interval:'4H',limit:'800'})
+    :new URLSearchParams({symbol,productType:'USDT-FUTURES',granularity:'4H',limit:'800'});
   const path=isStock?'/api/v3/market/candles':'/api/v2/mix/market/candles';
   const promise=bitgetJson(path+'?'+params).then(rows=>rows
     .filter(row=>Array.isArray(row)&&[1,2,3,4].every(i=>Number(row[i])>0&&Number.isFinite(Number(row[i]))))
