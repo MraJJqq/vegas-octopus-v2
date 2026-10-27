@@ -432,6 +432,37 @@ body:before{
 .index-spark{font-size:18px;text-align:right;letter-spacing:-.12em;color:#559fd0;text-shadow:0 0 9px rgba(49,217,255,.2)}
 @media(max-width:760px){.index-list{grid-template-columns:1fr 1fr;column-gap:12px}.index-item{grid-template-columns:minmax(0,1fr) auto;gap:5px}.index-spark{display:none}.market-table td{padding:7px 3px}}
 
+
+/* Unified premium capital summary: one source of display, no duplicate total card. */
+.topbar{grid-template-columns:minmax(0,2.05fr) minmax(0,.9fr) minmax(0,1.45fr) minmax(0,1.2fr) auto}
+.fund-overview-top{gap:clamp(4px,.38vw,7px);padding:clamp(7px,.65vw,12px) clamp(10px,.85vw,16px);background:linear-gradient(115deg,rgba(10,25,43,.72),rgba(4,10,21,.48))!important}
+.fund-top-head{align-items:center}
+.fund-top-head .eyebrow{display:flex;align-items:center;gap:7px}
+.fund-top-head .eyebrow i{font-size:9px;font-style:normal;color:#6e8ca8;letter-spacing:.04em}
+.fund-top-util{font-size:9px;color:#7e9db9}
+.fund-top-util b{font-weight:600;color:#b9eaff;margin-left:3px}
+.fund-top-main{align-items:flex-end;justify-content:space-between;gap:12px}
+.fund-total-wrap{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fund-total-wrap small,.fund-top-change small,.fund-top-sub small{display:block;font-size:9px;color:#7892ad;font-weight:400;letter-spacing:.025em}
+.fund-total-wrap strong{font-size:clamp(19px,1.6vw,29px);font-weight:550;letter-spacing:-.035em;line-height:1.1;color:#edf8ff;white-space:nowrap;font-variant-numeric:tabular-nums}
+.fund-top-change{font-size:clamp(11px,.82vw,14px);font-weight:600;color:#62e6b0;text-align:right;white-space:nowrap}
+.fund-top-change small{margin-top:3px;text-align:right}
+.fund-top-sub{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:5px;border-top:1px solid rgba(110,169,218,.1)}
+.fund-top-sub>span{display:flex;flex-direction:column;gap:3px;min-width:0}
+.fund-top-sub b{font-size:clamp(10px,.68vw,12px);font-weight:550;font-variant-numeric:tabular-nums}
+@media(max-width:1180px){
+ .topbar{grid-template-columns:minmax(0,1.8fr) minmax(0,.9fr) minmax(0,1.4fr) auto}
+ .fund-top-sub{grid-template-columns:1fr 1fr}
+ .fund-top-sub>span:last-child{display:none}
+}
+@media(max-width:760px){
+ .topbar{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ .fund-overview-top{grid-column:1/-1;min-height:0}
+ .fund-top-sub{grid-template-columns:1fr 1fr}
+ .fund-top-sub>span:last-child{display:flex}
+ .fund-total-wrap strong{font-size:24px}
+}
+
 /* Compact fund overview occupies the former top-left logo slot. */
 .fund-overview-top{display:flex;flex-direction:column;justify-content:center;gap:5px;padding:clamp(6px,.55vw,10px) clamp(8px,.7vw,13px);min-width:0}
 .fund-top-head,.fund-top-main,.fund-top-sub{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
@@ -465,11 +496,10 @@ body:before{
 <div class="app">
   <header class="topbar">
     <div class="top-card brand fund-overview-top">
-      <div class="fund-top-head"><span class="eyebrow">资金概览 · 演示</span><span class="fund-top-util">72% 利用率</span></div>
-      <div class="fund-top-main"><strong>$8,642,381</strong><span class="positive">+3.24%</span></div>
-      <div class="fund-top-sub"><span>今日盈亏 <b class="positive">+$2,386,402</b></span><span>可用资金 <b>$6,255,979</b></span></div>
+      <div class="fund-top-head"><span class="eyebrow">资金总览 <i>演示数据</i></span><span class="fund-top-util">资金利用率 <b>72%</b></span></div>
+      <div class="fund-top-main"><div class="fund-total-wrap"><small>账户总资金</small><strong>$8,642,381</strong></div><span class="fund-top-change">+3.24%<small>累计收益率</small></span></div>
+      <div class="fund-top-sub"><span><small>今日盈亏</small><b class="positive">+$2,386,402</b></span><span><small>可用资金</small><b>$6,255,979</b></span><span><small>占用资金</small><b>$2,386,402</b></span></div>
     </div>
-    <div class="top-card"><div class="eyebrow">总览资金（演示）</div><div class="top-line"><span class="big-number">$8,642,381</span><span class="positive">+3.24%</span></div></div>
     <div class="top-card"><div class="eyebrow">今日信号</div><div class="top-line"><span class="big-number">12</span><span class="muted">正式 <b class="positive">8</b> · 观察 <b style="color:#73baff">4</b></span></div></div>
     <div class="top-card market-card"><div class="eyebrow">市场表现 · 演示数据</div><div class="market-strip"><div class="market-chip"><span>🇺🇸</span><span>美股<small>+2.31%</small></span></div><div class="market-chip"><span>₿</span><span>加密<small>+3.42%</small></span></div><div class="market-chip"><span>▰</span><span>黄金<small>+1.87%</small></span></div><div class="market-chip"><span>◉</span><span>原油<small>+0.76%</small></span></div></div></div>
     <div class="top-card status-card"><div class="eyebrow">系统连接</div><div class="status-row"><span class="status-item"><i class="dot"></i>数据正常</span><span class="status-item"><i class="dot"></i>交易所</span><span class="status-item"><i class="dot"></i>推送</span></div></div>
