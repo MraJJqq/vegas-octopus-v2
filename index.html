@@ -1168,6 +1168,43 @@ requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
 
 </script>
+
+<script id="octopus-market-card-interaction">
+(function(){
+  const pool=document.querySelector('#marketRows');
+  if(!pool)return;
+  const cards=Array.from(pool.querySelectorAll('tr'));
+  const finePointer=window.matchMedia('(hover:hover) and (pointer:fine)').matches;
+  if(!finePointer)return;
+  cards.forEach(card=>{
+    card.addEventListener('pointerenter',()=>{
+      pool.classList.add('has-focused');
+      cards.forEach(other=>other.classList.toggle('card-focused',other===card));
+    });
+    card.addEventListener('pointermove',event=>{
+      const rect=card.getBoundingClientRect();
+      if(!rect.width||!rect.height)return;
+      const px=(event.clientX-rect.left)/rect.width;
+      const py=(event.clientY-rect.top)/rect.height;
+      card.style.setProperty('--card-rx',((.5-py)*5.5).toFixed(2)+'deg');
+      card.style.setProperty('--card-ry',((px-.5)*7).toFixed(2)+'deg');
+      card.style.setProperty('--shine-x',(px*100).toFixed(1)+'%');
+      card.style.setProperty('--shine-y',(py*100).toFixed(1)+'%');
+    });
+    card.addEventListener('pointerleave',()=>{
+      card.style.setProperty('--card-rx','0deg');
+      card.style.setProperty('--card-ry','0deg');
+      card.style.setProperty('--shine-x','50%');
+      card.style.setProperty('--shine-y','0%');
+    });
+  });
+  pool.addEventListener('pointerleave',()=>{
+    pool.classList.remove('has-focused');
+    cards.forEach(card=>card.classList.remove('card-focused'));
+  });
+})();
+</script>
+
 </body>
 </html>
 
@@ -1429,5 +1466,74 @@ body{position:fixed;inset:0}
 }
 @media (prefers-reduced-motion:reduce){
   .market-panel .market-table tbody#marketRows tr{transition:none!important}
+}
+</style>
+
+
+<style id="octopus-market-card-import">
+/* Imported 3D floating-card interaction for the existing Vegas asset pool.
+   Existing symbols and market values are preserved; no synthetic quotes are added. */
+.market-panel .table-wrap{perspective:1100px;overflow-x:hidden}
+.market-panel .market-table tbody#marketRows{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:8px!important;align-items:stretch;transform-style:preserve-3d;
+}
+.market-panel .market-table tbody#marketRows tr{
+  position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,.72fr) minmax(0,1fr);
+  align-items:center;min-width:0;min-height:72px;padding:10px 9px!important;margin:0;
+  border:1px solid rgba(91,175,231,.19)!important;border-radius:12px!important;
+  background:linear-gradient(135deg,rgba(19,39,62,.88),rgba(7,17,32,.94))!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.035),0 5px 16px rgba(0,0,0,.15)!important;
+  transform:perspective(800px) rotateX(var(--card-rx,0deg)) rotateY(var(--card-ry,0deg)) translateY(var(--card-lift,0px)) scale(var(--card-scale,1))!important;
+  transform-origin:center center;transition:transform .22s cubic-bezier(.2,.8,.2,1),border-color .22s ease,box-shadow .22s ease,opacity .22s ease,filter .22s ease!important;
+  transform-style:preserve-3d;will-change:transform;overflow:visible;
+}
+.market-panel .market-table tbody#marketRows tr:before{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
+  background:radial-gradient(circle at var(--shine-x,50%) var(--shine-y,0%),rgba(62,192,255,.16),transparent 58%);
+  opacity:0;transition:opacity .2s ease;
+}
+.market-panel .market-table tbody#marketRows tr:after{
+  content:"";position:absolute;left:10px;right:10px;top:0;height:1px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(106,222,255,.38),transparent);opacity:.6;
+}
+.market-panel .market-table tbody#marketRows tr td{min-width:0;padding:0 4px!important;border:0!important;background:transparent!important}
+.market-panel .market-table tbody#marketRows tr td:first-child{padding-left:2px!important}
+.market-panel .market-table tbody#marketRows tr td:nth-child(2){text-align:center;font-variant-numeric:tabular-nums}
+.market-panel .market-table tbody#marketRows tr td:nth-child(3){overflow:hidden}
+.market-panel .market-table tbody#marketRows tr .symbol{gap:6px;min-width:0}
+.market-panel .market-table tbody#marketRows tr .symbol b{font-size:11px;letter-spacing:.035em}
+.market-panel .market-table tbody#marketRows tr .asset-icon{flex-shrink:0}
+.market-panel .market-table tbody#marketRows tr .market-placeholder{width:100%;min-width:0;gap:3px;justify-content:flex-end}
+.market-panel .market-table tbody#marketRows tr .market-placeholder i{flex:1;max-width:5px;transform-origin:bottom;animation:assetBarBreath 2.8s ease-in-out infinite alternate}
+.market-panel .market-table tbody#marketRows tr .market-placeholder i:nth-child(2n){animation-delay:-.8s}
+.market-panel .market-table tbody#marketRows tr .market-placeholder i:nth-child(3n){animation-delay:-1.5s}
+@keyframes assetBarBreath{from{opacity:.62;filter:brightness(.86)}to{opacity:1;filter:brightness(1.22)}}
+.market-panel .market-table tbody#marketRows.has-focused tr:not(.card-focused){--card-scale:.985;opacity:.72;filter:saturate(.78)}
+.market-panel .market-table tbody#marketRows tr.card-focused{
+  z-index:8;border-color:rgba(67,210,255,.66)!important;
+  box-shadow:0 12px 28px rgba(0,0,0,.34),0 0 0 1px rgba(60,190,255,.13),0 0 22px rgba(33,156,255,.14),inset 0 0 22px rgba(36,165,238,.08)!important;
+  --card-lift:-4px;--card-scale:1.045;opacity:1;filter:saturate(1.12);
+}
+.market-panel .market-table tbody#marketRows tr.card-focused:before{opacity:1}
+.market-panel .market-table tbody#marketRows tr.card-focused .symbol b{color:#f4fbff!important;text-shadow:0 0 12px rgba(78,205,255,.34)}
+.market-panel .market-table tbody#marketRows tr[hidden]{display:none!important}
+@media(max-width:760px){
+  .market-panel .market-table tbody#marketRows{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important}
+  .market-panel .market-table tbody#marketRows tr{min-height:64px;padding:8px 5px!important;grid-template-columns:minmax(0,1fr) minmax(0,.7fr)}
+  .market-panel .market-table tbody#marketRows tr td:nth-child(3){display:none}
+  .market-panel .market-table tbody#marketRows tr .symbol b{font-size:10px}
+  .market-panel .market-table tbody#marketRows tr.card-focused{--card-scale:1.025;--card-lift:-2px}
+}
+@media(max-width:390px){
+  .market-panel .market-table tbody#marketRows{gap:4px!important}
+  .market-panel .market-table tbody#marketRows tr{padding:7px 4px!important;min-height:58px}
+  .market-panel .market-table tbody#marketRows tr .asset-icon{width:19px;height:19px;flex-basis:19px}
+}
+@media(hover:none),(pointer:coarse){
+  .market-panel .market-table tbody#marketRows tr{--card-rx:0deg!important;--card-ry:0deg!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .market-panel .market-table tbody#marketRows tr,.market-panel .market-table tbody#marketRows tr .market-placeholder i{animation:none!important;transition:none!important}
 }
 </style>
