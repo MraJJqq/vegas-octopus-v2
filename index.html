@@ -1135,10 +1135,11 @@ function pj(v,cs,sn,cp,spp,cx,cy,Rr){var x1=v[0]*cs+v[2]*sn,z1=-v[0]*sn+v[2]*cs,
 /* Seven market-linked fibre streams anchored to the first seven visible asset rows. */
 function streamY(index,fallback,stageRect){
  var rows=Array.prototype.slice.call(document.querySelectorAll("#marketRows tr")).filter(function(r){return !r.hidden});
- var wrap=document.querySelector(".market-panel .table-wrap"),row=rows[index];
- if(!row||!wrap)return fallback;
- var rr=row.getBoundingClientRect(),wr=wrap.getBoundingClientRect();
- if(rr.bottom<wr.top||rr.top>wr.bottom)return fallback;
+ var wrap=document.querySelector(".market-panel .table-wrap");if(!wrap)return fallback;
+ var wr=wrap.getBoundingClientRect();
+ rows=rows.filter(function(r){var b=r.getBoundingClientRect();return b.bottom>wr.top+2&&b.top<wr.bottom-2});
+ var row=rows[index];if(!row)return fallback;
+ var rr=row.getBoundingClientRect();
  return Math.max(8,Math.min(H-8,(rr.top+rr.height/2)-stageRect.top));
 }
 /* seven coloured fibre streams (orb-lab v1 pulses) */
