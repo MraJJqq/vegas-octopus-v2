@@ -142,6 +142,93 @@ button{font:inherit;color:inherit;cursor:pointer}
 @media(min-width:1500px){.app{padding:14px;gap:12px}.main-grid,.bottom-grid{gap:12px}.center-stage{min-height:660px}.market-table td{padding:10px 4px}.news-item{padding:13px 0}.event-item{padding:10px 0}}
 @media(max-width:1180px){.topbar{grid-template-columns:1.2fr 1fr 1fr 1.25fr}.status-card{display:none}.main-grid{grid-template-columns:minmax(240px,.9fr) minmax(360px,1.4fr)}.right-col{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}.center-stage{min-height:520px}.bottom-grid{grid-template-columns:1fr 1fr}.sentiment-panel{grid-column:1/-1}.sentiment-content{grid-template-columns:100px 1fr}.news-panel{min-height:0}}
 @media(max-width:760px){.app{padding:7px;gap:8px}.topbar{grid-template-columns:1fr 1fr;gap:7px}.brand{grid-column:1/-1}.market-card{grid-column:1/-1}.settings{display:none}.main-grid{grid-template-columns:1fr}.left-col,.right-col{display:flex;grid-column:auto}.center-stage{order:-1;min-height:440px}.asset-node{width:55px;height:55px}.asset-node .node-glyph{font-size:18px}.jelly-wrap{width:74%;height:52%}.core-orb{width:62px;height:62px;font-size:32px}.stage-caption{bottom:3%}.stage-caption strong{font-size:18px}.dual-grid{grid-template-columns:1fr 1fr}.right-col{display:flex}.news-panel{min-height:0}.bottom-grid{grid-template-columns:1fr}.sentiment-panel{grid-column:auto}.fund-content{grid-template-columns:86px 1fr}.gauge{width:78px;height:78px}.fund-chart{grid-column:1/-1}.chart{height:68px}.footer{gap:8px;align-items:flex-start;flex-direction:column}.disclaimer{line-height:1.5}}
+
+/* Responsive density: scale panels, typography, icons and the central scene together. */
+:root{
+  --ui-gap:clamp(5px,.55vw,10px);
+  --ui-pad:clamp(6px,.7vw,13px);
+  --ui-font:clamp(10px,.68vw,13px);
+  --ui-icon:clamp(20px,1.45vw,27px);
+}
+body{font-size:var(--ui-font)}
+.app{padding:var(--ui-pad);gap:var(--ui-gap)}
+.topbar,.main-grid,.bottom-grid,.left-col,.right-col{gap:var(--ui-gap)}
+.panel-head{padding:clamp(6px,.7vw,13px) clamp(7px,.75vw,14px) clamp(5px,.5vw,9px)}
+.panel-title{font-size:clamp(11px,.8vw,15px);gap:clamp(4px,.4vw,8px)}
+.panel-title .icon{width:var(--ui-icon);height:var(--ui-icon);border-radius:clamp(6px,.48vw,9px)}
+.logo{width:clamp(28px,2.7vw,52px);height:clamp(28px,2.7vw,52px)}
+.top-card{padding:clamp(6px,.55vw,10px) clamp(7px,.68vw,13px)}
+.settings{width:clamp(30px,2.3vw,44px)}
+.asset-icon{width:clamp(15px,1.1vw,21px);height:clamp(15px,1.1vw,21px);flex-basis:clamp(15px,1.1vw,21px);font-size:clamp(9px,.63vw,12px)}
+.asset-node{width:clamp(42px,3.65vw,70px);height:clamp(42px,3.65vw,70px)}
+.asset-node .node-glyph{font-size:clamp(15px,1.15vw,22px)}
+.asset-node b{font-size:clamp(9px,.58vw,11px)}
+.asset-node small{font-size:clamp(7px,.48vw,9px)}
+.core-orb{width:clamp(44px,4.2vw,80px);height:clamp(44px,4.2vw,80px);font-size:clamp(24px,2.2vw,42px)}
+.donut{width:clamp(58px,4.8vw,91px);height:clamp(58px,4.8vw,91px)}
+.donut:before{inset:clamp(12px,1vw,19px)}
+.gauge{width:clamp(60px,5.1vw,96px);height:clamp(60px,5.1vw,96px)}
+.sentiment-gauge{width:clamp(58px,4.8vw,90px);height:clamp(58px,4.8vw,90px)}
+.health-ring{width:clamp(28px,2.3vw,43px);height:clamp(28px,2.3vw,43px);font-size:clamp(12px,.9vw,17px)}
+.market-table td{padding-block:clamp(4px,.42vw,8px)}
+.news-item{padding-block:clamp(5px,.52vw,10px)}
+.event-item{padding-block:clamp(4px,.42vw,8px)}
+.compact-panel{min-height:0}
+.center-stage{min-height:0;height:100%;min-width:0}
+.news-panel{min-height:0}
+.event-panel{min-height:0}
+@media(max-height:950px){
+  .app{gap:6px;padding:7px}
+  .topbar,.main-grid,.bottom-grid,.left-col,.right-col{gap:6px}
+  .top-card{padding:6px 8px}
+  .panel-head{padding-top:7px;padding-bottom:5px}
+  .tabs{padding-bottom:5px}
+  .tab{padding:4px 7px}
+  .market-table th{padding-block:4px}
+  .market-table td{padding-block:4px}
+  .donut-row{padding:4px 6px 7px;gap:7px}
+  .ranking{gap:4px;padding-bottom:6px}
+  .news-calendar{margin-bottom:6px;padding:6px}
+  .fund-content{padding:2px 8px 7px;gap:7px}
+  .health-grid{padding:3px 6px 7px}
+  .sentiment-content{padding:2px 8px 7px;gap:7px}
+  .footer{padding:5px 8px}
+}
+@media(max-height:780px) and (min-width:761px){
+  .topbar{grid-template-columns:1.2fr 1fr .85fr 1.15fr 1fr auto}
+  .main-grid{grid-template-columns:minmax(210px,1fr) minmax(300px,1.55fr) minmax(240px,1fr)}
+  .bottom-grid{grid-template-columns:minmax(230px,1.5fr) minmax(220px,1.05fr) minmax(210px,1fr)}
+  .stage-label{top:8px;left:10px}
+  .stage-live{top:9px;right:10px}
+  .stage-caption strong{font-size:clamp(14px,1.3vw,22px)}
+  .stage-caption span{font-size:9px}
+  .news-title{font-size:10px;line-height:1.35}
+  .news-meta{margin-top:2px}
+  .event-detail,.event-time,.event-symbol{font-size:9px}
+  .compact-panel .panel-head{padding:6px 8px}
+  .fund-stats{gap:5px}
+  .stat-value{font-size:clamp(10px,.8vw,15px)}
+  .chart{height:clamp(35px,4.2vw,65px)}
+}
+@media(max-width:1180px){
+  .center-stage{min-height:0}
+}
+@media(max-width:760px){
+  .app{gap:6px;padding:6px}
+  .main-grid{gap:6px}
+  .center-stage{min-height:0;height:36vh;flex:0 0 36vh}
+  .main-grid{min-height:0}
+  .asset-node{width:clamp(34px,10vw,55px);height:clamp(34px,10vw,55px)}
+  .asset-node .node-glyph{font-size:clamp(13px,4vw,18px)}
+  .jelly-wrap{width:70%;height:65%}
+  .core-orb{width:clamp(38px,12vw,62px);height:clamp(38px,12vw,62px);font-size:clamp(20px,6vw,32px)}
+  .stage-label{top:8px;left:10px;font-size:8px}
+  .stage-label strong{font-size:10px}
+  .stage-live{top:9px;right:9px;font-size:8px}
+  .bottom-grid{gap:6px}
+  .fund-content{gap:8px}
+}
+
 /* Fixed dashboard viewport: mouse-wheel scrolling must not move the page. */
 html,body{width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavior:none;scroll-behavior:auto}
 body{position:fixed;inset:0}
