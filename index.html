@@ -1157,79 +1157,160 @@ requestAnimationFrame(frame);
 
 </script>
 
-<script id="octopus-market-card-interaction">
+
+<style id="octopus-market-card-replacement">
+/* User-supplied 27-card floating market system; confined to left/right orbital zones. */
+
+
+
+
+#octopusMarketCardGrid.orb-stream-card-overlay{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;display:block;padding:0;max-height:none;perspective:1400px;z-index:5} #octopusMarketCardGrid.orb-stream-card-overlay #octopusMarketCardGrid .pos{pointer-events:auto}
+#octopusMarketCardGrid .pos{position:absolute;left:0;top:0;will-change:transform;cursor:pointer}
+#octopusMarketCardGrid .float{position:absolute;inset:0}
+#octopusMarketCardGrid .card{--c:var(--up);position:absolute;inset:0;border-radius:.9em;padding:.55em .75em;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:1fr auto;column-gap:.5em;row-gap:.2em;align-items:center}
+#octopusMarketCardGrid .card.up{--c:var(--up)}#octopusMarketCardGrid .card.dn{--c:var(--dn)}
+#octopusMarketCardGrid .bg{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(145deg,rgba(255,255,255,.14),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:var(--sh)}
+#octopusMarketCardGrid .bg::after{content:"";position:absolute;inset:0;border-radius:inherit;border:1px solid rgba(255,255,255,.5);box-shadow:0 44px 60px -18px rgba(0,0,0,.95),0 0 34px -6px var(--c);opacity:var(--hv,0);pointer-events:none}
+#octopusMarketCardGrid .gl{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:var(--hv,0);background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.26),transparent 55%)}
+#octopusMarketCardGrid .coin{position:relative;width:1.8em;height:1.8em;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.9em;color:#07101f;background:var(--c);box-shadow:0 0 .9em -.15em var(--c)}
+#octopusMarketCardGrid .sym{position:relative;font-size:1em;font-weight:700;line-height:1.1}
+#octopusMarketCardGrid .sym small{display:block;font-size:.62em;color:var(--mute);font-weight:500}
+#octopusMarketCardGrid .price{position:relative;font-size:.95em;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;transition:color .3s}
+#octopusMarketCardGrid .price.flash{color:var(--c)}
+#octopusMarketCardGrid .spark{position:relative;grid-column:1/3;width:100%;height:1.5em}
+#octopusMarketCardGrid .spark .ln{fill:none;stroke:var(--c);stroke-width:1.5;vector-effect:non-scaling-stroke}
+#octopusMarketCardGrid .spark .ar{fill:var(--c);opacity:.14}
+#octopusMarketCardGrid .pct{position:relative;font-size:.8em;font-weight:700;color:var(--c);font-variant-numeric:tabular-nums;text-align:right}
+@media (prefers-reduced-motion:reduce){#octopusMarketCardGrid .float{animation:none}}
+
+#octopusMarketCardGrid.orb-stream-card-overlay{background:transparent;touch-action:pan-y}
+#octopusMarketCardGrid .pos{pointer-events:auto}
+#octopusMarketCardGrid .card{border-radius:10px;padding:.45em .55em;column-gap:.35em;row-gap:.1em}
+@media(max-width:760px){#octopusMarketCardGrid .pos{font-size:clamp(6px,1.5vw,9px)!important}}
+</style>
+
+<script id="octopus-market-card-replacement-script">
 (function(){
-const pool=document.querySelector('#marketRows'),panel=document.querySelector('.market-panel');
-if(!pool||!panel)return;
-const rows=Array.from(pool.querySelectorAll('tr'));
-const assets=rows.map((row,i)=>({symbol:row.querySelector('.symbol b')?.textContent?.trim(),type:row.dataset.type||'其他',i,bars:Array.from(row.querySelectorAll('.market-placeholder i')).map(el=>parseFloat((el.getAttribute('style')||'').match(/--h:\\s*([\\d.]+)px/)?.[1]||'6'))})).filter(a=>a.symbol);
-const streamAssets=['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','QCOM','AMD','TSM','AVGO','ORCL','ARM','MU','ASML','SNDK','SKHYNIX','MRVL','GLW','HOOD','CBRS','SPCX','BTC','HYPE','XAUUSD','USOIL'];
-const streamPalette=['#39d9ff','#ff9c52','#ffe36e','#8c83ff','#39e6b0','#ff70c8','#ff5c72'];
-const streamColors=streamAssets.map((_,i)=>streamPalette[i%streamPalette.length]);
-const streamLabels=streamAssets.map((_,i)=>'资金池 '+String(i+1).padStart(2,'0'));
-const selected=streamAssets.map((symbol,i)=>{const asset=assets.find(a=>a.symbol===symbol);return asset?{...asset,i,streamIndex:i,streamLabel:streamLabels[i],streamColor:streamColors[i]}:null}).filter(Boolean);
-assets.splice(0,assets.length,...selected);
-const grid=document.createElement('div');grid.id='octopusMarketCardGrid';grid.setAttribute('aria-label','27个资金池品种行情卡片');
-const orbStage=document.querySelector('.center-stage.orb-original-stage');
-if(!orbStage)return;
-orbStage.append(grid);
-grid.classList.add('orb-stream-card-overlay');
-function node(tag,cls,txt){const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n}
-function makeCard(d){
-const slot=node('div','oct-slot');slot.dataset.type=d.type;slot.style.setProperty('--stream-index',d.streamIndex);
-const floating=node('div','oct-float');floating.style.setProperty('--d',(-d.i*.9)+'s');
-const card=node('div','oct-card');card.id='oct-card-'+d.i;card.style.setProperty('--c',d.streamColor);card.dataset.stream=String(d.streamIndex+1);
-card.append(node('div','oct-bg'),node('i','oct-gl'));
-const row=node('div','oct-row oct-l2');row.append(node('span','oct-coin',d.symbol.slice(0,1)));
-const name=node('b','oct-sym');name.append(document.createTextNode(d.symbol));name.append(node('small','',d.streamLabel+' · '+(({美股:'美股',加密资产:'加密资产',大宗商品:'大宗商品'}[d.type]||d.type))));row.append(name);card.append(row);
-card.append(node('div','oct-price oct-l4','待接入'));
-const badgeWrap=node('div','oct-l3');badgeWrap.append(node('span','oct-pct','等待行情数据'));card.append(badgeWrap);
-const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 200 50');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('aria-label','走势占位');svg.setAttribute('class','oct-spark oct-l1');
-const bars=d.bars.length?d.bars:[4,8,6,10,7,5],pts=Array.from({length:40},(_,k)=>{const p=k/39*(bars.length-1),a=Math.floor(p),b=Math.min(bars.length-1,a+1),v=bars[a]+(bars[b]-bars[a])*(p-a);return [k*200/39,46-(v/12)*42]});
-const path='M'+pts.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join('L');
-const area=document.createElementNS(svg.namespaceURI,'path');area.setAttribute('class','oct-ar');area.setAttribute('d',path+'L200 50L0 50Z');
-const line=document.createElementNS(svg.namespaceURI,'path');line.setAttribute('class','oct-ln');line.setAttribute('d',path);svg.append(area,line);card.append(svg);
-const hl=node('div','oct-hl','高');hl.append(node('span','','—'),document.createTextNode('低'),node('span','','—'));card.append(hl);
-floating.append(card);slot.append(floating,node('div','oct-shadow'));slot.querySelector('.oct-shadow').style.setProperty('--d',(-d.i*.9)+'s');grid.append(slot);
-const off=()=>{card.style.setProperty('--rx','0deg');card.style.setProperty('--ry','0deg');card.classList.remove('hot')};
-slot.addEventListener('pointermove',e=>{const r=slot.getBoundingClientRect();if(!r.width||!r.height)return;const x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;card.style.setProperty('--ry',((x-.5)*34)+'deg');card.style.setProperty('--rx',((.5-y)*28)+'deg');card.style.setProperty('--mx',(x*100)+'%');card.style.setProperty('--my',(y*100)+'%');card.classList.add('hot')});
-['pointerleave','pointerup','pointercancel'].forEach(t=>slot.addEventListener(t,off));
+const grid=document.getElementById('octopusMarketCardGrid');if(!grid)return;
+grid.replaceChildren();
+const P=[["BTC",67850],["ETH",2610],["SOL",172],["BNB",585],["XRP",.52],["DOGE",.158],["ADA",.38],["AVAX",36.4],["LINK",14.2],["DOT",7.1],["TON",5.9],["TRX",.121],["LTC",84],["BCH",472],["NEAR",6.2],["APT",8.9],["ARB",1.12],["OP",2.45],["SUI",1.68],["INJ",24.5],["ATOM",8.3],["FIL",5.4],["UNI",9.6],["AAVE",162],["PEPE",.000011],["WLD",2.7],["ENA",.48]];
+const sh=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const fmt=p=>p>=1000?p.toLocaleString('en-US',{maximumFractionDigits:1}):p>=100?p.toFixed(2):p>=1?p.toFixed(3):p>=.01?p.toFixed(4):p.toFixed(6);
+const stage=document.getElementById('octopusMarketCardGrid');
+const SC=[.86,1,1.1],SPD=[.7,1,1.3],PAR=[-9,0,16],OP=[.8,.94,1];
+const SH=['0 10px 16px -12px rgba(0,0,0,.7)','0 18px 28px -12px rgba(0,0,0,.85)','0 32px 44px -14px rgba(0,0,0,.95)'];
+let W,H,zw,w,h;
+function size(){W=Math.max(1,stage.clientWidth);H=Math.max(1,stage.clientHeight);zw=W*.35;w=zw*.4;h=w*.46}
+size();
+sh(P);                                  // 随机组合
+const Ls=sh(Array.from({length:27},(_,i)=>i%3));
+const C=P.map(([n,p0],i)=>{
+  const s=i<14?0:1,l=Ls[i],v=.0008+Math.random()*.0018,hh=[];let x=p0*(1+(Math.random()-.5)*.01);
+  for(let k=0;k<40;k++){x*=1+(Math.random()-.5)*2*v;hh.push(x)}
+  const pos=document.createElement('div');pos.className='pos';
+  const st=pos.style;st.zIndex=10+l;st.opacity=OP[l];st.setProperty('--sh',SH[l]);
+  st.setProperty('--t',(3.5+Math.random()*3).toFixed(1)+'s');st.setProperty('--d',(-Math.random()*6).toFixed(1)+'s');
+  st.setProperty('--ax',(3+Math.random()*4).toFixed(1)+'px');st.setProperty('--ay',(5+Math.random()*7).toFixed(1)+'px');
+  pos.innerHTML=`<div class="float"><div class="card"><div class="bg"></div><i class="gl"></i>
+  <span class="coin">${n[0]}</span><b class="sym">${n}<small>/USDT 永续</small></b><span class="price"></span>
+  <svg class="spark" viewBox="0 0 100 26" preserveAspectRatio="none"><path class="ar"/><path class="ln"/></svg><span class="pct"></span></div></div>`;
+  stage.appendChild(pos);
+  return{n,s,l,v,h:hh,p:hh[39],o:hh[0],pos,card:pos.querySelector('.card'),x:0,y:0,vx:0,vy:0,sx:0,sy:0,on:false,hv:0,rx:0,ry:0,tiltX:0,tiltY:0,z:0,lh:-1,c:[0,0,0,0],cv:[0,0,0,0],tc:[0,0,0,0],ax:3+Math.random()*4,ay:5+Math.random()*7,w1:.5+Math.random()*.4,w2:.5+Math.random()*.4,p1:Math.random()*6.283,p2:Math.random()*6.283};
+});
+const G=[C.filter(o=>o.s===0),C.filter(o=>o.s===1)];
+function apply(){C.forEach(o=>{const st=o.pos.style;st.width=w+'px';st.height=h+'px';st.fontSize=w/13.5+'px';bounds(o)})}
+const KW=9,DW=1.5,KC=5,DC=1.5,CAP=.45;     // 软墙 / 软碰撞：弹簧刚度与阻尼
+function bounds(o){const x0=o.s?W*.65:0,x1=o.s?W:W*.35;o.x=Math.min(Math.max(o.x,x0),x1-w);o.y=Math.min(Math.max(o.y,0),H-h)}
+function clampHard(o){const x0=o.s?W*.65:0,x1=o.s?W:W*.35,mx=w*CAP,my=h*CAP;   // 兜底：压入超过上限才强制推回
+  o.x=Math.min(Math.max(o.x,x0-mx),x1-w+mx);o.y=Math.min(Math.max(o.y,-my),H-h+my)}
+// 初始随机摆放：左右各自在 2×7 网格内随机取格
+G.forEach((arr,s)=>{const cells=[];for(let r=0;r<7;r++)for(let c=0;c<2;c++)cells.push([r,c]);sh(cells);
+  arr.forEach((o,i)=>{const [r,c]=cells[i],cw=zw/2,ch=H/7;
+    o.x=(s?W*.65:0)+c*cw+Math.random()*Math.max(0,cw-w);o.y=r*ch+Math.random()*Math.max(0,ch-h);
+    const a=Math.random()*6.283,sp=(16+Math.random()*30)*SPD[o.l];o.vx=Math.cos(a)*sp;o.vy=Math.sin(a)*sp})});
+apply();
+const resizeCards=()=>{size();apply()};window.addEventListener('resize',resizeCards);if(window.ResizeObserver)new ResizeObserver(resizeCards).observe(stage);
+
+function step(dt){
+  for(const o of C){o.tc[0]=o.tc[1]=o.tc[2]=o.tc[3]=0}
+  for(const o of C){const f=1-o.hv,m=f*f;if(f<.02)continue;
+    o.vx+=(Math.random()-.5)*70*dt;o.vy+=(Math.random()-.5)*70*dt;      // 随机转向
+    const sp=Math.hypot(o.vx,o.vy),mx=50*SPD[o.l],mn=14*SPD[o.l];
+    if(sp>mx){o.vx*=mx/sp;o.vy*=mx/sp}else if(sp<mn){const a=Math.random()*6.283;o.vx+=Math.cos(a)*mn*.3;o.vy+=Math.sin(a)*mn*.3}
+    // 软墙：像气泡顶在墙上，压得越深回推越强，没有硬反弹
+    const x0=o.s?W*.65:0,x1=o.s?W:W*.35;let q=x0-o.x;
+    if(q>0){o.vx+=(KW*q-DW*o.vx)*dt;o.tc[0]=q}
+    q=o.x-(x1-w);if(q>0){o.vx+=(-KW*q-DW*o.vx)*dt;o.tc[1]=q}
+    q=-o.y;if(q>0){o.vy+=(KW*q-DW*o.vy)*dt;o.tc[2]=q}
+    q=o.y-(H-h);if(q>0){o.vy+=(-KW*q-DW*o.vy)*dt;o.tc[3]=q}
+    o.x+=o.vx*dt*m;o.y+=o.vy*dt*m}
+  for(const a of G)for(let i=0;i<a.length;i++)for(let j=i+1;j<a.length;j++){
+    const A=a[i],B=a[j],ox=w-Math.abs(A.x-B.x),oy=h-Math.abs(A.y-B.y);
+    if(ox<=0||oy<=0)continue;
+    const wa=1-A.hv,wb=1-B.hv,t=wa+wb;if(t<.05)continue;
+    if(A.l!==B.l){const k=.04;                                         // 不同层：只轻推，保留前后穿插
+      if(ox<oy){const g=(A.x<B.x?-1:1)*ox*k;A.x+=g*wa/t;B.x-=g*wb/t}else{const g=(A.y<B.y?-1:1)*oy*k;A.y+=g*wa/t;B.y-=g*wb/t}continue}
+    const sa=wa/t,sb=wb/t;                                             // 同层：软接触，双方各压缩一部分，接触面刚好贴合
+    if(ox<oy){const d=A.x<B.x?1:-1,f=KC*ox+DC*(A.vx-B.vx)*d;
+      A.vx-=d*f*dt*wa;B.vx+=d*f*dt*wb;
+      A.tc[d>0?1:0]=Math.max(A.tc[d>0?1:0],ox*sa);B.tc[d>0?0:1]=Math.max(B.tc[d>0?0:1],ox*sb)}
+    else{const d=A.y<B.y?1:-1,f=KC*oy+DC*(A.vy-B.vy)*d;
+      A.vy-=d*f*dt*wa;B.vy+=d*f*dt*wb;
+      A.tc[d>0?3:2]=Math.max(A.tc[d>0?3:2],oy*sa);B.tc[d>0?2:3]=Math.max(B.tc[d>0?2:3],oy*sb)}}
+  for(const o of C)clampHard(o);
 }
-assets.forEach(makeCard);
-// Arrange all 27 cards in two side fields beside the luminous core; keep the upper/lower center clear.
-function layoutOrbitCards(){
-  const rect=orbStage.getBoundingClientRect(),w=rect.width,h=rect.height;
-  if(!w||!h)return;
-  const slots=Array.from(grid.querySelectorAll('.oct-slot'));
-  // Keep a wide, unobstructed central corridor for the luminous orb.
-  const rowY=[8,22,36,50,64,78,92];
-  const sideX=[7,23,77,93];
-  const compact=window.matchMedia('(max-width:760px)').matches;
-  slots.forEach((slot,i)=>{
-    const side=i%2===0?0:1;
-    const sideIndex=Math.floor(i/2);
-    const row=sideIndex%7;
-    const col=sideIndex%2;
-    const x=side===0?sideX[col]:sideX[2+col];
-    const jitterX=((i*7)%5-2)*.35;
-    const jitterY=((i*11)%5-2)*.35;
-    const y=rowY[row]+jitterY;
-    const scale=compact ? 0.32 : 0.42;
-    slot.style.left=Math.max(5,Math.min(95,x+jitterX))+'%';
-    slot.style.top=Math.max(6,Math.min(94,y))+'%';
-    slot.style.setProperty('--orbit-scale',scale.toFixed(2));
-    slot.style.setProperty('--drift-x',(((i*13)%13)-6)+'px');
-    slot.style.setProperty('--drift-y',(6+((i*7)%10))+'px');
-    slot.style.setProperty('--drift-rot',(((i*11)%9)-4)+'deg');
-    slot.style.setProperty('--orbit-delay',(-((i*1.73)%19))+'s');
-    slot.style.zIndex=String(2+(i%5));
-  });
+let tx=0,ty=0,cx=0,cy=0,last=0,T=0;
+addEventListener('pointermove',e=>{tx=e.clientX/W-.5;ty=e.clientY/H-.5});
+const still=matchMedia('(prefers-reduced-motion:reduce)').matches;
+function frame(t){
+  const dt=Math.min(.05,(t-last)/1000||0);last=t;T+=dt;if(!still)step(dt);
+  const E=r=>1-Math.exp(-dt*r),kp=E(4),kIn=E(9),kOut=E(6),kT=E(14),kS=E(10);
+  cx+=(tx-cx)*kp;cy+=(ty-cy)*kp;
+  for(const o of C){
+    o.hv+=((o.on?1:0)-o.hv)*(o.on?kIn:kOut);if(!o.on&&o.hv<.002)o.hv=0;
+    const e=o.hv*o.hv*(3-2*o.hv),sc=1+.5*e,a=1-e;                       // 平滑缓动
+    let X=o.x+cx*PAR[o.l]*2,Y=o.y+cy*PAR[o.l]*1.2,tsx=0,tsy=0;
+    if(e>0){const gx=Math.max(0,w*(SC[o.l]*sc-1)/2)+6*e,gy=Math.max(0,h*(SC[o.l]*sc-1)/2)+6*e;
+      tsx=Math.max(gx-X,0)+Math.min(W-gx-w-X,0);tsy=Math.max(gy-Y,0)+Math.min(H-gy-h-Y,0)}
+    o.sx+=(tsx-o.sx)*kS;o.sy+=(tsy-o.sy)*kS;o.rx+=(o.tiltX-o.rx)*kT;o.ry+=(o.tiltY-o.ry)*kT;
+    for(let k=0;k<4;k++){                                                  // 四边压缩量走欠阻尼弹簧：缓入、过冲、果冻般回弹
+      const dim=k<2?w:h,tg=Math.min(o.tc[k],dim*.4)*(1-e);
+      o.cv[k]+=(260*(tg-o.c[k])-14.5*o.cv[k])*dt;o.c[k]=Math.min(dim*.4,Math.max(-dim*.15,o.c[k]+o.cv[k]*dt))}
+    const bx=Math.sin(T*o.w1+o.p1)*o.ax*a,by=Math.sin(T*o.w2+o.p2)*o.ay*a,br=Math.sin(T*o.w1*.8+o.p2)*1.2*a;  // 悬浮漂移，悬停时渐渐收敛
+    const st=o.pos.style;
+    st.transform=`translate3d(${X+o.sx+bx}px,${Y+o.sy+by}px,0) rotate(${br}deg) scale(${SC[o.l]})`;
+    const br2=Math.sin(T*1.3+o.p1)*.012*a,sx0=(w-o.c[0]-o.c[1])/w*(1+br2),sy0=(h-o.c[2]-o.c[3])/h*(1-br2*.8);   // 呼吸感 + 压缩
+    const sx=sx0*(1+(1-sy0)*.8),sy=sy0*(1+(1-sx0)*.8);                    // 近似保体积：压扁处向垂直方向鼓出
+    o.card.style.transform=`translate(${(o.c[0]-o.c[1])/2}px,${(o.c[2]-o.c[3])/2}px) perspective(700px) rotateX(${o.rx}deg) rotateY(${o.ry}deg) scale(${sc*sx},${sc*sy})`;
+    st.opacity=OP[o.l]+(1-OP[o.l])*e;
+    const z=(e>.01||o.on)?100:10+o.l;if(o.z!==z){o.z=z;st.zIndex=z}
+    if(o.lh!==e){o.lh=e;st.setProperty('--hv',e)}
+  }
+  requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+
+function paint(d){
+  const c=d.card,q=s=>c.querySelector(s),up=d.p>=d.o;
+  c.classList.toggle('up',up);c.classList.toggle('dn',!up);
+  q('.price').textContent=fmt(d.p);q('.pct').textContent=(up?'+':'')+((d.p/d.o-1)*100).toFixed(2)+'%';
+  const mn=Math.min(...d.h),mx=Math.max(...d.h),r=mx-mn||1;
+  const ln='M'+d.h.map((v,k)=>(k*100/39).toFixed(1)+' '+(23-(v-mn)/r*20).toFixed(1)).join('L');
+  q('.ln').setAttribute('d',ln);q('.ar').setAttribute('d',ln+'L100 26L0 26Z');
 }
-layoutOrbitCards();
-window.addEventListener('resize',layoutOrbitCards,{passive:true});
-// All 27 cards orbit the luminous core with independent jellyfish-like drifting motion.
+C.forEach(paint);
+setInterval(()=>{C.forEach(d=>{d.p*=1+(Math.random()-.5)*2*d.v;d.h.push(d.p);d.h.shift();paint(d);
+  const pr=d.card.querySelector('.price');pr.classList.add('flash');setTimeout(()=>pr.classList.remove('flash'),250)})},1000);
+
+// 悬停：状态只切换目标值，放大/阴影/倾斜全部在帧循环里平滑插值；松开留 80ms 缓冲防抖，触屏松手后保持 1.5 秒
+C.forEach(o=>{const el=o.pos,c=o.card;let t;
+  el.addEventListener('pointerenter',()=>{clearTimeout(t);o.on=true});
+  const off=e=>{clearTimeout(t);t=setTimeout(()=>{o.on=false;o.tiltX=0;o.tiltY=0},e.pointerType==='touch'?1500:80)};
+  el.addEventListener('pointerleave',off);el.addEventListener('pointercancel',off);
+  el.addEventListener('pointermove',e=>{const r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
+    o.tiltY=(x-.5)*14;o.tiltX=(.5-y)*16;c.style.setProperty('--mx',x*100+'%');c.style.setProperty('--my',y*100+'%')})});
 })();
 </script>
+
 
 
 
