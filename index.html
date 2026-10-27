@@ -1233,13 +1233,16 @@ function drawFourHour(candles){
   const slot=1000/rows.length,bodyW=Math.max(2,Math.min(12,slot*.58));
   const ns='http://www.w3.org/2000/svg';
   rows.forEach((c,i)=>{
-    const x=(i+.5)*slot,up=c.c>=c.o,color=up?'#00c087':'#f6465d';
+    const x=(i+.5)*slot,prevClose=i>0?rows[i-1].c:c.o;
+    // Hollow-candle convention: body fill follows close vs open; color follows close vs previous close.
+    const risingBody=c.c>c.o,fallingBody=c.c<c.o;
+    const color=c.c>prevClose?'#00c087':c.c<prevClose?'#f6465d':'#9aa4b2';
     const wick=document.createElementNS(ns,'line');
     wick.setAttribute('x1',x);wick.setAttribute('x2',x);wick.setAttribute('y1',y(c.h));wick.setAttribute('y2',y(c.l));wick.setAttribute('stroke',color);group.appendChild(wick);
     const body=document.createElementNS(ns,'rect');
     const top=Math.min(y(c.o),y(c.c)),height=Math.max(1.5,Math.abs(y(c.o)-y(c.c)));
     body.setAttribute('x',x-bodyW/2);body.setAttribute('y',top);body.setAttribute('width',bodyW);body.setAttribute('height',height);
-    body.setAttribute('fill',up?'transparent':color);body.setAttribute('stroke',color);group.appendChild(body);
+    body.setAttribute('fill',risingBody?'transparent':fallingBody?color:'none');body.setAttribute('stroke',color);group.appendChild(body);
   });
 }
 async function loadFourHourData(o){
