@@ -1685,3 +1685,58 @@ body{position:fixed;inset:0}
   }
 }
 </style>
+
+
+<style id="restore-visible-orb-stage">
+/* Keep the orb stage visible after removing the legacy left column. */
+.main-grid{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:minmax(520px,1fr)!important;
+  min-height:520px!important;
+  height:auto!important;
+  overflow:visible!important;
+}
+.main-grid>.left-col{display:none!important}
+.main-grid>.center-stage.orb-original-stage{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  position:relative!important;
+  grid-column:1!important;
+  grid-row:1!important;
+  width:100%!important;
+  height:clamp(520px,70vh,900px)!important;
+  min-height:520px!important;
+  min-width:0!important;
+  overflow:hidden!important;
+}
+.main-grid>.center-stage.orb-original-stage #orb-core-canvas{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  z-index:1!important;
+}
+.main-grid>.center-stage.orb-original-stage #octopusMarketCardGrid{
+  position:absolute!important;
+  inset:0!important;
+  z-index:5!important;
+}
+@media(max-width:760px){
+  .main-grid{
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:minmax(420px,1fr)!important;
+    min-height:420px!important;
+  }
+  .main-grid>.center-stage.orb-original-stage{
+    grid-column:1!important;
+    grid-row:1!important;
+    height:clamp(420px,62vh,680px)!important;
+    min-height:420px!important;
+  }
+}
+</style>
