@@ -1196,21 +1196,32 @@ slot.addEventListener('pointermove',e=>{const r=slot.getBoundingClientRect();if(
 ['pointerleave','pointerup','pointercancel'].forEach(t=>slot.addEventListener(t,off));
 }
 assets.forEach(makeCard);
-// Keep all 27 cards scrollable; scrolling gently emphasizes cards nearest the viewport center.
-let scrollFrame=0;
-function updateScrollDepth(){
-  scrollFrame=0;
-  const box=grid.getBoundingClientRect(),center=box.top+box.height/2,span=Math.max(1,box.height/2);
-  grid.querySelectorAll('.oct-slot:not([hidden])').forEach(slot=>{
-    const r=slot.getBoundingClientRect(),distance=Math.min(1,Math.abs((r.top+r.height/2-center)/span));
-    const card=slot.querySelector('.oct-card');
-    card.style.setProperty('--scroll-scale',(1.015-distance*.035).toFixed(3));
-    slot.style.setProperty('--scroll-shift',((center-(r.top+r.height/2))/span*1.5).toFixed(1)+'px');
+// Scatter all 27 cards around the central orb; deterministic pseudo-random positions keep the layout stable.
+function layoutOrbitCards(){
+  const rect=orbStage.getBoundingClientRect(),w=rect.width,h=rect.height;
+  if(!w||!h)return;
+  const slots=Array.from(grid.querySelectorAll('.oct-slot'));
+  const golden=2.399963229728653;
+  slots.forEach((slot,i)=>{
+    const seed=(i*9301+49297)%233280,rand=seed/233280;
+    const angle=i*golden+(rand-.5)*.42;
+    const radius=.31+(((i*37)%29)/29)*.19;
+    const x=50+Math.cos(angle)*radius*100*(h/w)*1.32;
+    const y=50+Math.sin(angle)*radius*82;
+    const scale=.52+(((i*17)%11)/10)*.19;
+    slot.style.left=Math.max(9,Math.min(91,x))+'%';
+    slot.style.top=Math.max(13,Math.min(87,y))+'%';
+    slot.style.setProperty('--orbit-scale',scale.toFixed(2));
+    slot.style.setProperty('--drift-x',(((i*13)%17)-8)+'px');
+    slot.style.setProperty('--drift-y',(10+((i*7)%18))+'px');
+    slot.style.setProperty('--drift-rot',(((i*11)%13)-6)+'deg');
+    slot.style.setProperty('--orbit-delay',(-((i*1.73)%19))+'s');
+    slot.style.zIndex=String(2+(i%5));
   });
 }
-grid.addEventListener('scroll',()=>{if(!scrollFrame)scrollFrame=requestAnimationFrame(updateScrollDepth)},{passive:true});
-window.addEventListener('resize',updateScrollDepth,{passive:true});
-// Seven instrument cards map one-to-one to the orb's seven colored data streams.
+layoutOrbitCards();
+window.addEventListener('resize',layoutOrbitCards,{passive:true});
+// All 27 cards orbit the luminous core with independent jellyfish-like drifting motion.
 })();
 </script>
 
@@ -1279,13 +1290,13 @@ window.addEventListener('resize',updateScrollDepth,{passive:true});
 </style>
 <style>
 
-/* Seven enlarged cards: each row aligns with one stream origin at the canvas' left edge. */
-.center-stage.orb-original-stage{overflow:visible!important}
-#octopusMarketCardGrid.orb-stream-card-overlay{position:absolute;z-index:5;left:0;right:auto;top:0;bottom:0;width:clamp(280px,30vw,380px);height:100%;max-height:100%;overflow-y:auto;overflow-x:hidden;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:8px 2px 18px 0;pointer-events:auto;perspective:1200px;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(49,217,255,.35) transparent}
-#octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{position:relative;left:auto;right:auto;top:auto;min-width:0;padding:18px 16px 34px;transform:none;perspective:900px;pointer-events:auto}
-#octopusMarketCardGrid.orb-stream-card-overlay .oct-float{animation:octBob 5.5s ease-in-out infinite alternate}
-#octopusMarketCardGrid.orb-stream-card-overlay .oct-shadow{display:block}
-#octopusMarketCardGrid.orb-stream-card-overlay .oct-card{box-sizing:border-box;width:100%;height:auto;min-height:200px;padding:20px;border-radius:22px;display:block;flex-direction:initial;justify-content:initial;gap:0;background:transparent;border:0;box-shadow:none;backdrop-filter:none}
+/* 27-card orbital field: preserve the card design while distributing cards around the central luminous orb. */
+.center-stage.orb-original-stage{overflow:hidden!important}
+#octopusMarketCardGrid.orb-stream-card-overlay{position:absolute;z-index:5;inset:0;width:100%;height:100%;max-height:none;overflow:visible;display:block;padding:0;pointer-events:none;perspective:1400px}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{position:absolute;left:50%;top:50%;width:clamp(190px,22vw,290px);min-width:0;padding:0;transform:translate(-50%,-50%);perspective:900px;pointer-events:auto;will-change:left,top}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-float{transform-style:preserve-3d;transform-origin:center;animation:octJellyDrift 8s ease-in-out infinite;animation-delay:var(--orbit-delay,0s)}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-shadow{display:block;opacity:.65}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-card{box-sizing:border-box;width:100%;height:auto;min-height:200px;padding:20px;border-radius:22px;display:block;flex-direction:initial;justify-content:initial;gap:0;background:transparent;border:0;box-shadow:none;backdrop-filter:none;transform:scale(var(--orbit-scale,.62));transform-origin:center}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-row{gap:10px}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-coin{display:grid;width:34px;height:34px;flex-basis:34px;font-size:15px;box-shadow:0 0 16px -2px var(--c)}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-sym{font-size:18px;line-height:normal;white-space:normal}
@@ -1295,14 +1306,25 @@ window.addEventListener('resize',updateScrollDepth,{passive:true});
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-hl{display:block;margin-top:8px}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-l3{transform:translateZ(60px)}
 #octopusMarketCardGrid.orb-stream-card-overlay .oct-pct{font-size:14px;padding:3px 10px;line-height:normal;border:0;background:var(--c);color:#07101f}
+@keyframes octJellyDrift{
+  0%,100%{transform:translate3d(0,0,0) rotateX(2deg) rotateY(-4deg) rotateZ(-1deg) scale(var(--orbit-scale,.62))}
+  25%{transform:translate3d(var(--drift-x,8px),calc(var(--drift-y,16px)*-.55),22px) rotateX(-3deg) rotateY(5deg) rotateZ(var(--drift-rot,3deg)) scale(var(--orbit-scale,.62))}
+  55%{transform:translate3d(calc(var(--drift-x,8px)*-.65),var(--drift-y,16px),-12px) rotateX(3deg) rotateY(-2deg) rotateZ(calc(var(--drift-rot,3deg)*-.7)) scale(var(--orbit-scale,.62))}
+  78%{transform:translate3d(calc(var(--drift-x,8px)*.45),calc(var(--drift-y,16px)*-.35),12px) rotateX(-2deg) rotateY(4deg) rotateZ(1deg) scale(var(--orbit-scale,.62))}
+}
 @media(max-width:760px){
- #octopusMarketCardGrid.orb-stream-card-overlay{width:clamp(260px,44vw,340px);padding-right:2px}
- #octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{padding:14px 8px 28px}
- #octopusMarketCardGrid.orb-stream-card-overlay .oct-card{height:auto;min-height:200px;padding:20px;border-radius:22px}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{width:clamp(150px,29vw,210px)}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-card{min-height:200px}
 }
 @media(max-width:460px){
- #octopusMarketCardGrid.orb-stream-card-overlay{width:min(82vw,320px);padding:6px 2px 12px 0;gap:8px}
- #octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{padding:14px 8px 28px}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{width:clamp(125px,34vw,170px)}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-card{padding:15px;min-height:180px}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-price{font-size:27px}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-sym{font-size:15px}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-spark{height:42px}
+}
+@media(prefers-reduced-motion:reduce){
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-float{animation:none}
 }
  
 /* Vegas asset pool redesign: one compact sci-fi terminal row per instrument. */
