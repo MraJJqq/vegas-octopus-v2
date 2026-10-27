@@ -1886,50 +1886,49 @@ function start(){
 const grid=document.getElementById('octopusMarketCardGrid'),stage=grid&&grid.closest('.center-stage');
 if(!grid||!stage)return;
 const cards=[...grid.querySelectorAll('.pos')];if(!cards.length)return;
-const name=e=>(e.querySelector('.sym')?.textContent||'').trim().split(/\s+/)[0].toUpperCase();
+const name=e=>(e.querySelector('.sym')?.textContent||'').trim().split(/\\s+/)[0].toUpperCase();
 cards.sort((a,b)=>name(a).localeCompare(name(b)));
-const left=[],right=[];cards.forEach((e,i)=>(i%2===0?left:right).push(e));
+/* Three concentric orbital rings distribute all cards around the orb through 360 degrees. */
 const cfg=new Map();
-function assign(list,side){
- list.forEach((el,i)=>{
-  /* Alternate radial lanes so adjacent cards do not sit on one straight column. */
-  const lane=i%4;
-  const angle=list.length===1?0:(i/(list.length-1))*2-1;
-  cfg.set(el,{side,lane,angle,seed:i*1.73+(side==='left'?.4:1.9)});
- });
-}
-assign(left,'left');assign(right,'right');
+const ringCount=3;
+cards.forEach((el,i)=>{
+ const lane=i%ringCount;
+ const slot=Math.floor(i/ringCount);
+ const slots=Math.ceil(cards.length/ringCount);
+ const angle=(slot/slots)*Math.PI*2+lane*(Math.PI/slots);
+ cfg.set(el,{lane,angle,seed:i*1.73+.4});
+});
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let W=1,H=1,D=70;
 function size(){
  W=Math.max(1,stage.clientWidth);H=Math.max(1,stage.clientHeight);
- D=W<=760?Math.max(38,Math.min(54,W*.12)):Math.max(62,Math.min(98,W*.064));
+ D=W<=760?Math.max(34,Math.min(48,W*.105)):Math.max(58,Math.min(90,W*.058));
  cards.forEach(e=>{e.style.setProperty('width',D+'px','important');e.style.setProperty('height',D+'px','important');e.style.setProperty('opacity','1','important')});
 }
 function frame(ms){
  const t=ms/1000,cx=W/2,cy=H/2;
  const orbR=Math.min(W*.18,H*.20);
- const laneGap=D*.91;
- const maxRadius=orbR+3*laneGap+D*.62;
- const verticalRoom=Math.max(0,H/2-D*.72);
- const maxAngle=Math.min(62*Math.PI/180,Math.asin(Math.min(.99,verticalRoom/Math.max(1,maxRadius))));
+ const laneGap=D*1.02;
+ const ringBase=orbR+D*.72;
+ const verticalRoom=Math.max(0,H/2-D*.62);
+ const horizontalRoom=Math.max(0,W/2-D*.62);
+ const maxR=Math.max(D*.8,Math.min(ringBase+2*laneGap,Math.min(verticalRoom,horizontalRoom)));
+ const scale=Math.min(1,maxR/Math.max(1,ringBase+2*laneGap));
  cards.forEach(e=>{
   const c=cfg.get(e);if(!c)return;
-  /* Each side is an arc around the luminous orb, not a vertical fan/column. */
-  const theta=c.angle*maxAngle;
-  const radius=orbR+D*.72+c.lane*laneGap;
-  const side=c.side==='left'?-1:1;
-  const x=cx+side*radius*Math.cos(theta);
+  const radius=(ringBase+c.lane*laneGap)*scale;
+  const theta=c.angle+(reduced?0:t*.025);
+  const x=cx+radius*Math.cos(theta);
   const y=cy+radius*Math.sin(theta);
-  const dx=reduced?0:Math.sin(t*.25+c.seed)*Math.min(2.8,W*.002);
-  const dy=reduced?0:Math.sin(t*.31+c.seed*1.3)*Math.min(3.5,H*.0045);
-  const z=reduced?0:Math.sin(t*.38+c.seed)*4;
+  const dx=reduced?0:Math.sin(t*.25+c.seed)*Math.min(2.4,W*.0018);
+  const dy=reduced?0:Math.cos(t*.31+c.seed*1.3)*Math.min(2.8,H*.0035);
+  const z=reduced?0:Math.sin(t*.38+c.seed)*5;
   e.style.setProperty('transform','translate3d('+(x+dx)+'px,'+(y+dy)+'px,'+z+'px) translate(-50%,-50%)','important');
-  e.style.setProperty('z-index',String(30+Math.round(z+4)),'important');
+  e.style.setProperty('z-index',String(30+Math.round(z+5)),'important');
   const card=e.querySelector('.card');
   if(card){
-   card.style.setProperty('--sphere-rx',(reduced?0:Math.sin(t*.21+c.seed)*2.5)+'deg');
-   card.style.setProperty('--sphere-ry',((c.side==='left'?-1:1)*(reduced?3:4+Math.sin(t*.24+c.seed)*2.5))+'deg');
+   card.style.setProperty('--sphere-rx',(reduced?0:Math.sin(t*.21+c.seed)*2.2)+'deg');
+   card.style.setProperty('--sphere-ry',(reduced?3:Math.sin(theta+c.seed)*5)+'deg');
   }
  });
  requestAnimationFrame(frame);
