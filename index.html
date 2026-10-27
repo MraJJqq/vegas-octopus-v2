@@ -1402,6 +1402,42 @@ body{position:fixed;inset:0}
 .center-stage .octopus-volatility-streams{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
 @media(prefers-reduced-motion:reduce){.center-stage .octopus-volatility-streams{opacity:.85}}
 </style>
+
+<style id="octopus-square-scatter-layout">
+/* 方块行情卡片：保持原始信息结构，改为横向矩形终端样式。 */
+#octopusMarketCardGrid.orb-stream-card-overlay{perspective:none!important;transform-style:flat!important;overflow:hidden!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .pos{transform-style:flat!important;animation:none!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .float{animation:none!important;transform:none!important;transform-style:flat!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .card{
+  width:100%!important;height:100%!important;min-height:0!important;box-sizing:border-box!important;
+  border-radius:8px!important;padding:5px 7px!important;overflow:hidden!important;
+  display:grid!important;grid-template-columns:18px minmax(0,1fr)!important;
+  grid-template-rows:auto auto 8px auto!important;align-content:center!important;align-items:center!important;
+  justify-items:start!important;gap:1px 5px!important;text-align:left!important;
+  transform:none!important;transform-style:flat!important;
+  background:linear-gradient(135deg,rgba(14,36,61,.94),rgba(4,12,27,.94))!important;
+  border:1px solid rgba(91,188,255,.42)!important;
+  box-shadow:inset 0 1px 0 rgba(200,238,255,.07),0 3px 12px rgba(0,0,0,.2),0 0 9px rgba(0,143,255,.08)!important;
+  backdrop-filter:blur(8px)!important;-webkit-backdrop-filter:blur(8px)!important;
+}
+#octopusMarketCardGrid.orb-stream-card-overlay .bg{inset:0!important;border-radius:7px!important;background:linear-gradient(135deg,rgba(66,150,220,.08),rgba(4,13,30,.05))!important;border:0!important;box-shadow:none!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .gl{border-radius:7px!important;opacity:.35!important;pointer-events:none!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .coin{grid-column:1!important;grid-row:1!important;width:16px!important;height:16px!important;margin:0!important;font-size:8px!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .sym{grid-column:2!important;grid-row:1!important;min-width:0!important;max-width:100%!important;font-size:clamp(8px,.72vw,11px)!important;line-height:1.05!important;text-align:left!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .sym small{display:none!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .price{grid-column:1/-1!important;grid-row:2!important;max-width:100%!important;margin:1px 0 0!important;font-size:clamp(9px,.88vw,13px)!important;line-height:1!important;text-align:left!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .spark{grid-column:1/-1!important;grid-row:3!important;width:100%!important;height:8px!important;min-height:8px!important;margin:0!important;flex:none!important;opacity:.72!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .pct{grid-column:1/-1!important;grid-row:4!important;justify-self:start!important;max-width:100%!important;margin:1px 0 0!important;padding:1px 4px!important;border-radius:3px!important;font-size:clamp(7px,.58vw,9px)!important;line-height:1!important}
+@media(max-width:760px){
+ #octopusMarketCardGrid.orb-stream-card-overlay .card{padding:3px 4px!important;grid-template-columns:13px minmax(0,1fr)!important;grid-template-rows:auto auto 6px auto!important;gap:1px 3px!important;border-radius:6px!important}
+ #octopusMarketCardGrid.orb-stream-card-overlay .coin{width:12px!important;height:12px!important;font-size:7px!important}
+ #octopusMarketCardGrid.orb-stream-card-overlay .sym{font-size:clamp(7px,2vw,9px)!important}
+ #octopusMarketCardGrid.orb-stream-card-overlay .price{font-size:clamp(8px,2.5vw,10px)!important}
+ #octopusMarketCardGrid.orb-stream-card-overlay .spark{height:6px!important;min-height:6px!important}
+ #octopusMarketCardGrid.orb-stream-card-overlay .pct{font-size:7px!important;padding:1px 3px!important}
+}
+@media(prefers-reduced-motion:reduce){#octopusMarketCardGrid.orb-stream-card-overlay *{animation:none!important;transition:none!important}}
+</style>
 </head>
 <body>
 <div class="app">
@@ -2276,75 +2312,63 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 </script>
 
 <script id="octopus-fan-sphere-layout-script">
+/* Vegas 章鱼｜方形行情卡片：取消公转，分散排列在舞台左右边缘，按网格间距防止重叠。 */
 (function(){
-function start(){
-const grid=document.getElementById('octopusMarketCardGrid'),stage=grid&&grid.closest('.center-stage');
-if(!grid||!stage)return;
-const cards=[...grid.querySelectorAll('.pos')];if(!cards.length)return;
-const name=e=>(e.querySelector('.sym')?.textContent||'').trim().split(/\s+/)[0].toUpperCase();
-cards.sort((a,b)=>name(a).localeCompare(name(b)));
-/* Keep existing sphere size; simulate orbiting moons passing behind and in front of the luminous core. */
-const ringCount=2,cfg=new Map();
-cards.forEach((el,i)=>{
- const lane=i%ringCount,slot=Math.floor(i/ringCount);
- const count=lane===0?Math.ceil(cards.length/ringCount):Math.floor(cards.length/ringCount);
- const angle=(slot/count)*Math.PI*2+lane*(Math.PI/count);
- cfg.set(el,{lane,angle,seed:i*1.73+.4});
-});
-const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-let W=1,H=1,D=70,orbR=70,innerR=150,outerR=230;
-function size(){
- W=Math.max(1,stage.clientWidth);H=Math.max(1,stage.clientHeight);
- D=W<=760?Math.max(34,Math.min(48,W*.105)):Math.max(58,Math.min(90,W*.058));
- orbR=Math.min(W*.18,H*.20);
- /* Expand both orbital lanes across the stage while keeping a clear gap around the luminous core. */
- const edgeLimit=Math.max(D*.8,Math.min(W/2-D*.62,H/(2*.78)-D*.62));
- const ringGap=D*1.35;
- innerR=Math.max(orbR+D*.72,Math.min(W*.31,H*.43));
- outerR=Math.min(edgeLimit,Math.max(innerR+ringGap,Math.min(W*.47,H/(2*.78)-D*.62)));
- if(outerR<innerR+ringGap)innerR=Math.max(orbR+D*.35,outerR-ringGap);
- grid.style.setProperty('z-index','auto','important');
- grid.style.setProperty('perspective','none','important');
- grid.style.setProperty('transform-style','flat','important');
- cards.forEach(e=>{e.style.setProperty('width',D+'px','important');e.style.setProperty('height',D+'px','important');e.style.setProperty('opacity','1','important')});
-}
-function frame(ms){
- const t=ms/1000,cx=W/2,cy=H/2;
- cards.forEach(e=>{
-  const c=cfg.get(e);if(!c)return;
-  const theta=c.angle+(reduced?0:t*.09);
-  const depth=Math.sin(theta);
-  /* A broad elliptical orbit: the far side contracts toward the core, the near side sweeps outward. */
-  const baseRadius=c.lane===0?innerR:outerR;
-  const orbitScale=.78+((depth+1)*.5)*.22;
-  const radius=baseRadius*orbitScale;
-  const x=cx+radius*Math.cos(theta);
-  const y=cy+radius*Math.sin(theta)*.78;
-  const dx=reduced?0:Math.sin(t*.25+c.seed)*Math.min(1.8,W*.0013);
-  const dy=reduced?0:Math.cos(t*.31+c.seed*1.3)*Math.min(2.1,H*.0025);
-  const z=reduced?0:Math.sin(t*.38+c.seed)*4;
-  e.style.setProperty('transform','translate3d('+(x+dx)+'px,'+(y+dy)+'px,'+z+'px) translate(-50%,-50%)','important');
-  e.style.setProperty('z-index',depth<0?'0':'2','important');
-  const card=e.querySelector('.card');
-  if(card){
-   const rear=depth<0;
-   const fade=rear?(.48+Math.min(1,Math.abs(depth))*.22):(.88+Math.min(1,depth)*.12);
-   const scale=rear?.84+.08*(1-Math.abs(depth)):1;
-   e.style.setProperty('opacity',String(fade),'important');
-   e.style.setProperty('filter',rear?'saturate(.72) brightness(.78)':'saturate(1) brightness(1)','important');
-   card.style.setProperty('--sphere-rx',(reduced?0:Math.sin(t*.21+c.seed)*1.8)+'deg');
-   card.style.setProperty('--sphere-ry',(reduced?3:Math.sin(theta+c.seed)*4)+'deg');
-   card.style.setProperty('transform','perspective(700px) rotateX(var(--sphere-rx,2deg)) rotateY(var(--sphere-ry,-5deg)) scale('+scale+')','important');
+  function start(){
+    const grid=document.getElementById('octopusMarketCardGrid');
+    const stage=grid&&grid.closest('.center-stage');
+    if(!grid||!stage)return;
+    const cards=[...grid.querySelectorAll('.pos')];
+    if(!cards.length)return;
+    let W=1,H=1;
+    function sizeAndPlace(){
+      W=Math.max(1,stage.clientWidth);
+      H=Math.max(1,stage.clientHeight);
+      const mobile=W<=760,cols=4,rows=Math.ceil(cards.length/cols);
+      const sideMargin=mobile?W*.015:W*.008;
+      const cardW=mobile?Math.min(W*.215,108):Math.min(W*.145,188);
+      const rowStep=H/rows;
+      const cardH=Math.max(34,Math.min(mobile?54:78,rowStep*.78));
+      const centers=mobile?[.12,.35,.65,.88]:[.08,.245,.755,.92];
+      const ordered=cards.slice().sort((a,b)=>{
+        const na=(a.querySelector('.sym')?.textContent||'').trim().toUpperCase();
+        const nb=(b.querySelector('.sym')?.textContent||'').trim().toUpperCase();
+        return na.localeCompare(nb);
+      });
+      ordered.forEach((el,i)=>{
+        const col=i%cols,row=Math.floor(i/cols);
+        const seed=(i*37+11)%17;
+        const jitterX=(seed/16-.5)*(mobile?W*.012:W*.018);
+        const jitterY=(((i*13+5)%11)/10-.5)*Math.min(8,rowStep*.12);
+        const x=Math.max(sideMargin+cardW/2,Math.min(W-sideMargin-cardW/2,W*centers[col]+jitterX));
+        const y=Math.max(cardH/2+5,Math.min(H-cardH/2-5,(row+.5)*rowStep+jitterY));
+        const st=el.style;
+        st.setProperty('position','absolute','important');
+        st.setProperty('left',x+'px','important');
+        st.setProperty('top',y+'px','important');
+        st.setProperty('width',cardW+'px','important');
+        st.setProperty('height',cardH+'px','important');
+        st.setProperty('transform','translate(-50%,-50%)','important');
+        st.setProperty('opacity','1','important');
+        st.setProperty('filter','none','important');
+        st.setProperty('z-index',String(10+(i%3)),'important');
+        st.setProperty('will-change','auto','important');
+        const card=el.querySelector('.card');
+        if(card){
+          card.style.setProperty('--sphere-rx','0deg');
+          card.style.setProperty('--sphere-ry','0deg');
+          card.style.setProperty('transform','none','important');
+        }
+      });
+      grid.style.setProperty('perspective','none','important');
+      grid.style.setProperty('transform-style','flat','important');
+      grid.style.setProperty('overflow','hidden','important');
+    }
+    sizeAndPlace();
+    if(window.ResizeObserver)new ResizeObserver(sizeAndPlace).observe(stage);
+    window.addEventListener('resize',sizeAndPlace,{passive:true});
   }
- });
- requestAnimationFrame(frame);
-}
-size();
-if(window.ResizeObserver)new ResizeObserver(size).observe(stage);
-window.addEventListener('resize',size,{passive:true});
-requestAnimationFrame(frame);
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
 
