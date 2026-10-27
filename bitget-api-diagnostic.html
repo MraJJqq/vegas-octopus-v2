@@ -53,24 +53,26 @@ function candleCheck(data){
 async function run(){
  document.getElementById('rerun').disabled=true;root.replaceChildren();
  const stock=await testOne('1. Reality 股票交易对列表','/api/v3/reality/market/stock-info',data=>'股票交易对数量：'+data.length+'\nAAPL 样例：'+JSON.stringify(data.find(x=>String(x.code).toUpperCase()==='AAPL')||data[0]||null));
- const futures=await testOne('2. BTCUSDT 合约 4H 最新 K 线','/api/v2/mix/market/candles?symbol=BTCUSDT&productType=USDT-FUTURES&granularity=4H&limit=1000',candleCheck);
+ await testOne('2. 正式页面使用的 USDT-FUTURES 全市场行情','/api/v2/mix/market/tickers?productType=USDT-FUTURES',data=>'行情品种数量：'+data.length+'\nBTCUSDT 样例：'+JSON.stringify(data.find(x=>String(x.symbol).toUpperCase()==='BTCUSDT')||null));
+ await testOne('3. 正式页面使用的 SPOT 全市场行情','/api/v3/market/tickers?category=SPOT',data=>'现货品种数量：'+data.length+'\n首个交易对：'+JSON.stringify(data[0]||null));
+ const futures=await testOne('4. BTCUSDT 合约 4H 最新 K 线','/api/v2/mix/market/candles?symbol=BTCUSDT&productType=USDT-FUTURES&granularity=4H&limit=1000',candleCheck);
  let sym=null;
  if(stock){const row=stock.data.find(x=>String(x.code).toUpperCase()==='AAPL')||stock.data[0];sym=row&&row.symbol;}
  if(sym){
   const p=new URLSearchParams({category:'SPOT',symbol:sym,interval:'4H',limit:'1000'});
-  const reality=await testOne('3. Reality 股票 '+sym+' 的 4H 最新 K 线','/api/v3/market/candles?'+p,candleCheck);
+  const reality=await testOne('5. Reality 股票 '+sym+' 的 4H 最新 K 线','/api/v3/market/candles?'+p,candleCheck);
   if(reality&&reality.data.length){
    const endTime=Number(reality.data.map(r=>Number(r[0])).filter(Number.isFinite).sort((a,b)=>a-b)[0])-1;
    const hp=new URLSearchParams({category:'SPOT',symbol:sym,interval:'4H',endTime:String(endTime),limit:'100'});
-   await testOne('4. Reality 股票历史 K 线分页','/api/v3/market/history-candles?'+hp,candleCheck);
+   await testOne('6. Reality 股票历史 K 线分页','/api/v3/market/history-candles?'+hp,candleCheck);
   }
  }else{
-  const c=card('3. Reality 股票 4H K 线');c.state.className='state bad';c.state.textContent='跳过：股票交易对列表接口未返回可用数据';c.pre.textContent='先检查第 1 项失败原因。';
+  const c=card('5. Reality 股票 4H K 线');c.state.className='state bad';c.state.textContent='跳过：股票交易对列表接口未返回可用数据';c.pre.textContent='先检查第 1 项失败原因。';
  }
  if(futures&&futures.data.length){
   const endTime=Number(futures.data.map(r=>Number(r[0])).filter(Number.isFinite).sort((a,b)=>a-b)[0])-1;
   const hp=new URLSearchParams({symbol:'BTCUSDT',productType:'USDT-FUTURES',granularity:'4H',endTime:String(endTime),limit:'200'});
-  await testOne('5. BTCUSDT 合约历史 K 线分页','/api/v2/mix/market/history-candles?'+hp,candleCheck);
+  await testOne('7. BTCUSDT 合约历史 K 线分页','/api/v2/mix/market/history-candles?'+hp,candleCheck);
  }
  document.getElementById('rerun').disabled=false;
 }
