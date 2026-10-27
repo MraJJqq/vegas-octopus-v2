@@ -431,14 +431,43 @@ body:before{
 .index-item strong{font-size:10px;color:#6edcff;letter-spacing:.05em}
 .index-spark{font-size:18px;text-align:right;letter-spacing:-.12em;color:#559fd0;text-shadow:0 0 9px rgba(49,217,255,.2)}
 @media(max-width:760px){.index-list{grid-template-columns:1fr 1fr;column-gap:12px}.index-item{grid-template-columns:minmax(0,1fr) auto;gap:5px}.index-spark{display:none}.market-table td{padding:7px 3px}}
+
+/* Compact fund overview occupies the former top-left logo slot. */
+.fund-overview-top{display:flex;flex-direction:column;justify-content:center;gap:5px;padding:clamp(6px,.55vw,10px) clamp(8px,.7vw,13px);min-width:0}
+.fund-top-head,.fund-top-main,.fund-top-sub{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.fund-top-util{font-size:10px;color:var(--cyan);white-space:nowrap}
+.fund-top-main strong{font-size:clamp(15px,1.25vw,22px);letter-spacing:.01em;white-space:nowrap}
+.fund-top-main>span{font-size:11px;white-space:nowrap}
+.fund-top-sub{font-size:clamp(8px,.55vw,10px);color:var(--muted);flex-wrap:wrap}
+.fund-top-sub b{color:#d9efff;font-weight:650;white-space:nowrap}
+.fund-top-sub .positive{color:var(--green)}
+/* Keep the page fixed; scrolling is enabled only inside the named panels. */
+.market-panel,.index-panel,.news-panel,.event-panel{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.market-panel .table-wrap{flex:1;min-height:0;overflow-y:auto;overflow-x:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(67,151,211,.45) transparent}
+.index-panel .index-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(67,151,211,.45) transparent}
+.news-panel .news-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(67,151,211,.45) transparent}
+.news-panel .news-calendar{flex:0 0 auto}
+.event-panel .event-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(67,151,211,.45) transparent}
+.market-panel .table-wrap::-webkit-scrollbar,.index-panel .index-list::-webkit-scrollbar,.news-panel .news-list::-webkit-scrollbar,.event-panel .event-list::-webkit-scrollbar{width:5px}
+.market-panel .table-wrap::-webkit-scrollbar-thumb,.index-panel .index-list::-webkit-scrollbar-thumb,.news-panel .news-list::-webkit-scrollbar-thumb,.event-panel .event-list::-webkit-scrollbar-thumb{background:rgba(67,151,211,.38);border-radius:5px}
+@media(max-width:760px){
+ .fund-top-sub{gap:3px 8px}
+ .fund-top-main strong{font-size:18px}
+ .fund-overview-top{min-height:82px}
+ .market-panel .table-wrap{max-height:48vh}
+ .index-panel .index-list{max-height:32vh}
+ .news-panel .news-list{max-height:38vh}
+ .event-panel .event-list{max-height:28vh}
+}
 </style>
 </head>
 <body>
 <div class="app">
   <header class="topbar">
-    <div class="top-card brand">
-      <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="lg"><stop stop-color="#b9ffff"/><stop offset=".48" stop-color="#21cfff"/><stop offset="1" stop-color="#174dff" stop-opacity=".15"/></radialGradient></defs><circle cx="32" cy="22" r="18" fill="url(#lg)" stroke="#62e8ff"/><circle cx="26" cy="21" r="3" fill="#fff"/><circle cx="38" cy="21" r="3" fill="#fff"/><g fill="none" stroke="#43dfff" stroke-width="2.4" stroke-linecap="round"><path d="M22 34 Q8 43 12 55 Q16 59 20 48"/><path d="M27 37 Q18 48 27 59 Q33 61 32 48"/><path d="M33 37 Q42 48 39 59 Q34 62 34 49"/><path d="M39 34 Q54 42 51 53 Q47 58 44 47"/><path d="M17 30 Q8 31 7 39"/><path d="M47 30 Q56 30 58 38"/></g></svg>
-      <div><div class="brand-name">Vegas 章鱼</div><div class="brand-sub">AETHER · 3D 数据宇宙</div></div>
+    <div class="top-card brand fund-overview-top">
+      <div class="fund-top-head"><span class="eyebrow">资金概览 · 演示</span><span class="fund-top-util">72% 利用率</span></div>
+      <div class="fund-top-main"><strong>$8,642,381</strong><span class="positive">+3.24%</span></div>
+      <div class="fund-top-sub"><span>今日盈亏 <b class="positive">+$2,386,402</b></span><span>可用资金 <b>$6,255,979</b></span></div>
     </div>
     <div class="top-card"><div class="eyebrow">总览资金（演示）</div><div class="top-line"><span class="big-number">$8,642,381</span><span class="positive">+3.24%</span></div></div>
     <div class="top-card"><div class="eyebrow">今日信号</div><div class="top-line"><span class="big-number">12</span><span class="muted">正式 <b class="positive">8</b> · 观察 <b style="color:#73baff">4</b></span></div></div>
@@ -546,9 +575,6 @@ body:before{
   </main>
 
   <section class="bottom-grid">
-    <section class="panel"><div class="panel-head"><div class="panel-title"><span class="icon">▥</span>资金概览</div><div class="tabs" style="padding:0"><button class="tab active">资金总览</button><button class="tab">资金流向</button><button class="tab">持仓分布</button></div></div>
-      <div class="fund-content"><div class="gauge"><div class="gauge-label">72%<small>资金利用率</small></div></div><div class="fund-stats"><div><div class="stat-label">总资金（演示）</div><div class="stat-value">$8,642,381</div><div class="stat-change positive">+3.24%</div></div><div><div class="stat-label">今日盈亏（演示）</div><div class="stat-value">$2,386,402</div><div class="stat-change positive">+2.15%</div></div><div><div class="stat-label">可用资金（演示）</div><div class="stat-value">$6,255,979</div><div class="stat-change positive">+12.47%</div></div><div><div class="stat-label">统计周期</div><div class="stat-value">1D / 1W / 1M</div><div class="stat-change muted">交互待接入</div></div></div><div class="fund-chart"><svg class="chart" viewBox="0 0 180 80" preserveAspectRatio="none"><defs><linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0bbfff" stop-opacity=".35"/><stop offset="1" stop-color="#0bbfff" stop-opacity="0"/></linearGradient></defs><path d="M0 70 L12 61 L22 64 L34 48 L45 54 L56 43 L68 48 L79 32 L90 38 L103 27 L114 34 L126 19 L137 28 L148 15 L161 20 L174 5 L180 8 L180 80 L0 80Z" fill="url(#chartFill)"/><path d="M0 70 L12 61 L22 64 L34 48 L45 54 L56 43 L68 48 L79 32 L90 38 L103 27 L114 34 L126 19 L137 28 L148 15 L161 20 L174 5 L180 8" fill="none" stroke="#29d9ff" stroke-width="1.7"/></svg></div></div>
-    </section>
     <section class="panel"><div class="panel-head"><div class="panel-title"><span class="icon">⌘</span>系统健康度</div><span class="pill">演示状态</span></div><div class="health-grid"><div class="health-item"><div class="health-ring">⌁</div><div class="health-name">数据连接</div><div class="health-value">待接入</div><div class="health-state">未连接真实源</div></div><div class="health-item"><div class="health-ring">▤</div><div class="health-name">交易所连接</div><div class="health-value">待接入</div><div class="health-state">未连接真实源</div></div><div class="health-item"><div class="health-ring">◎</div><div class="health-name">扫描进度</div><div class="health-value">演示</div><div class="health-state">非实时任务</div></div><div class="health-item"><div class="health-ring">♧</div><div class="health-name">推送通道</div><div class="health-value">待接入</div><div class="health-state">未发送通知</div></div></div></section>
     <section class="panel sentiment-panel"><div class="panel-head"><div class="panel-title"><span class="icon">◉</span>市场情绪</div><span class="muted" style="font-size:10px">指标占位</span></div><div class="sentiment-content"><div class="sentiment-gauge"><div>68<small>中性偏多</small></div></div><div class="sentiment-metrics"><div class="metric-row"><span>上涨 / 下跌家数</span><b>4128 : 2184</b></div><div class="metric-row"><span>情绪指数</span><b>68 / 100</b></div><div class="metric-row"><span>恐慌贪婪</span><b>62</b></div><div class="metric-row"><span>波动率指数 VIX</span><b>18.7</b></div></div></div></section>
   </section>
