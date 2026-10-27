@@ -990,6 +990,11 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
         <div class="us-pool-foot">共 27 个品种；当前涨跌幅与 K 线为占位，尚未接入实时行情。</div>
       </section>
 
+      <section class="center-stage orb-original-stage" aria-label="中央发光球核心区域">
+        <div class="orb-stage-label"><strong>VEGAS ORB</strong><span>ORIGINAL MODULE · LIVE VISUAL</span></div>
+        <iframe class="orb-original-frame" src="./章鱼素材库/web-modules/orb-particle-lab/index.html" title="原版 ORB v3 发光球" loading="eager"></iframe>
+      </section>
+
     </section>
 
 
@@ -1149,6 +1154,16 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 .market-panel .table-wrap{scroll-behavior:smooth}
 </style>
 
+<style>
+/* Place the untouched ORB module in the center stage; only the outer layout is styled. */
+.center-stage.orb-original-stage{position:relative;isolation:isolate;min-width:0;min-height:540px;overflow:hidden;border:1px solid rgba(36,139,255,.42);border-radius:18px;background:radial-gradient(ellipse at 50% 52%,rgba(0,102,255,.16),transparent 48%),#030a18}
+.orb-original-stage .orb-original-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:transparent;z-index:1}
+.orb-original-stage .orb-stage-label{position:absolute;left:15px;top:13px;z-index:2;display:flex;flex-direction:column;gap:3px;pointer-events:none;text-shadow:0 1px 5px #020712}
+.orb-original-stage .orb-stage-label strong{font-size:11px;letter-spacing:.14em;color:#dff8ff}
+.orb-original-stage .orb-stage-label span{font-size:7px;letter-spacing:.09em;color:#6f9bb9}
+@media(max-width:1180px){.center-stage.orb-original-stage{min-height:500px}}
+@media(max-width:760px){.center-stage.orb-original-stage{grid-column:1!important;grid-row:1!important;order:-1;min-height:0!important;height:clamp(300px,48vh,460px)!important}}
+</style>
 <style>
 /* Vegas asset pool redesign: one compact sci-fi terminal row per instrument. */
 .market-panel .table-wrap{padding:2px 12px 12px!important;max-height:none!important;overflow-y:auto!important;overflow-x:hidden!important}
