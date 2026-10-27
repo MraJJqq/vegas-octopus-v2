@@ -1472,7 +1472,7 @@ async function loadMarketData(){
       d.api=symbol;d.p=last;d.o=open;d.ready=true;
       paint(d);
       const pr=d.card.querySelector('.price');pr.classList.add('flash');setTimeout(()=>pr.classList.remove('flash'),250);
-      sparklineJobs.push((async()=>{
+      sparklineJobs.push(async()=>{
         try{
           const params=isStock
             ?new URLSearchParams({category:'SPOT',symbol,interval:'1H',limit:'40'})
@@ -1484,13 +1484,13 @@ async function loadMarketData(){
           d.h=closes.length>1?closes.slice(-40):[];
         }catch(_){d.h=[]}
         paint(d);
-      })());
+      });
     });
     // Start warming the hovered-card 4H data as soon as symbols/prices are available.
     if(!fourHourWarmStarted)setTimeout(()=>{warmFourHourCache()},0);
     // Mini-chart histories are secondary: fetch them in controlled batches without delaying first paint.
     for(let i=0;i<sparklineJobs.length;i+=8){
-      await Promise.all(sparklineJobs.slice(i,i+8));
+      await Promise.all(sparklineJobs.slice(i,i+8).map(job=>job()));
     }
   }catch(error){
     console.warn('[Vegas Octopus] live market feed failed:',error);
