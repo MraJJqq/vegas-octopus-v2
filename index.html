@@ -647,6 +647,17 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
  .fund-top-sub{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important}
  .fund-top-sub b{font-size:clamp(9px,2.6vw,11px)!important}
 }
+
+/* Merge market performance and benchmark indices into the US equity pool panel. */
+.pool-index-strip{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 12px 9px}
+.pool-index-item{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:8px 10px;border:1px solid rgba(49,166,255,.19);border-radius:9px;background:linear-gradient(100deg,rgba(9,47,83,.24),rgba(3,17,38,.08))}
+.pool-index-item span{display:flex;flex-direction:column;min-width:0}
+.pool-index-item b{font-size:10px;color:#dff5ff;white-space:nowrap}
+.pool-index-item small{font-size:9px;color:var(--muted);margin-top:2px;white-space:nowrap}
+.pool-index-item strong{font-size:15px;color:#dff8ff;letter-spacing:.02em}
+.pool-index-item em{font-style:normal;font-size:9px;color:#6689a8;white-space:nowrap}
+@media(max-width:760px){.pool-index-strip{gap:6px;padding:0 9px 8px}.pool-index-item{padding:7px 8px;gap:5px}.pool-index-item strong{font-size:13px}.pool-index-item small{font-size:8px}}
+
 </style>
 </head>
 <body>
@@ -657,7 +668,7 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
       <div class="fund-top-sub"><span><small>今日盈亏</small><b class="positive">+$2,386,402</b></span><span><small>可用资金</small><b>$6,255,979</b></span><span><small>占用资金</small><b>$2,386,402</b></span></div>
     </div>
     <div class="top-card"><div class="eyebrow">今日信号</div><div class="top-line"><span class="big-number">12</span><span class="muted">正式 <b class="positive">8</b> · 观察 <b style="color:#73baff">4</b></span></div></div>
-    <div class="top-card market-card"><div class="eyebrow">市场表现 · 演示数据</div><div class="market-strip"><div class="market-chip"><span>🇺🇸</span><span>美股<small>+2.31%</small></span></div><div class="market-chip"><span>₿</span><span>加密<small>+3.42%</small></span></div><div class="market-chip"><span>▰</span><span>黄金<small>+1.87%</small></span></div><div class="market-chip"><span>◉</span><span>原油<small>+0.76%</small></span></div></div></div>
+    
     <div class="top-card status-card"><div class="eyebrow">系统连接</div><div class="status-row"><span class="status-item"><i class="dot"></i>数据正常</span><span class="status-item"><i class="dot"></i>交易所</span><span class="status-item"><i class="dot"></i>推送</span></div></div>
     <div class="top-card settings" aria-label="设置">⚙</div>
   </header>
@@ -665,7 +676,8 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
   <main class="main-grid">
     <section class="left-col">
       <section class="panel market-panel">
-        <div class="panel-head"><div class="panel-title"><span class="icon">◈</span>市场概览</div><span class="muted market-count">V9 美股池 · 23 只</span></div>
+        <div class="panel-head"><div class="panel-title"><span class="icon">◈</span>美股资金池</div><span class="muted market-count">V9 扫描池 · 23 只</span></div>
+        <div class="pool-index-strip" aria-label="核心市场指数演示数据"><div class="pool-index-item"><span><b>标普 500</b><small>S&amp;P 500 · SPX</small></span><strong>—</strong><em>待接入</em></div><div class="pool-index-item"><span><b>纳斯达克</b><small>NASDAQ Composite · IXIC</small></span><strong>—</strong><em>待接入</em></div></div>
         <div class="tabs" id="marketTabs"><button class="tab active" data-market="全部">全部</button><button class="tab" data-market="美股">美股</button></div>
         <div class="table-wrap"><table class="market-table"><thead><tr><th>品种</th><th>价格</th><th>涨跌幅</th><th>成交量</th><th>走势</th></tr></thead><tbody id="marketRows">
           <tr data-type="美股"><td><span class="symbol"><span class="asset-icon green">A</span><span><b>AAPL</b><small class="market-company">苹果</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
@@ -693,18 +705,6 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
           <tr data-type="美股"><td><span class="symbol"><span class="asset-icon purple">S</span><span><b>SPCX</b><small class="market-company">SPCX（按 V9 代码）</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
         </tbody></table></div>
         <div class="us-pool-foot">品种与 V9 扫描池代码保持一致；价格、涨跌幅、成交量及走势尚未接入实时数据。</div>
-      </section>
-      <section class="panel us-pool-panel index-panel">
-        <div class="panel-head"><div class="panel-title"><span class="icon">⌁</span>核心市场指数</div><span class="muted us-pool-note">指数观察 · 6 项</span></div>
-        <div class="index-list">
-          <div class="index-item"><div><b>S&amp;P 500</b><small>标普 500 · 美股大盘</small></div><strong>SPX</strong><span class="index-spark">╱╲╱</span></div>
-          <div class="index-item"><div><b>NASDAQ 100</b><small>纳斯达克 100 · 大型成长股</small></div><strong>NDX</strong><span class="index-spark">╱╱╲</span></div>
-          <div class="index-item"><div><b>Dow Jones</b><small>道琼斯工业平均指数</small></div><strong>DJI</strong><span class="index-spark">╱╲╱</span></div>
-          <div class="index-item"><div><b>Russell 2000</b><small>罗素 2000 · 小盘股</small></div><strong>RUT</strong><span class="index-spark">╲╱╲</span></div>
-          <div class="index-item"><div><b>PHLX Semiconductor</b><small>费城半导体指数 · 芯片周期</small></div><strong>SOX</strong><span class="index-spark">╱╱╱</span></div>
-          <div class="index-item"><div><b>CBOE Volatility</b><small>VIX · 市场隐含波动率</small></div><strong>VIX</strong><span class="index-spark">╲╱╲</span></div>
-        </div>
-        <div class="us-pool-foot">指数报价与走势尚未接入实时数据。</div>
       </section>
     </section>
 
