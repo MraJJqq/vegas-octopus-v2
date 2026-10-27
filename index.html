@@ -1519,9 +1519,9 @@ body{position:fixed;inset:0}
 
 
 <style id="octopus-market-card-import">
-/* Card sizing follows the supplied 3D floating-card reference; keep dashboard styling and interactions. */
+/* Card geometry matched to the user's supplied 3D floating-card reference. */
 .market-panel .table-wrap{display:none!important}
-#octopusMarketCardGrid{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;width:100%;padding:18px 14px 60px;align-items:stretch;max-height:clamp(300px,54vh,620px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:rgba(49,217,255,.45) rgba(5,18,39,.25);perspective:1200px}
+#octopusMarketCardGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;width:100%;padding:18px 14px 60px;align-items:stretch;max-height:clamp(300px,54vh,620px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:rgba(49,217,255,.45) rgba(5,18,39,.25);perspective:1200px}
 #octopusMarketCardGrid::-webkit-scrollbar{width:7px}
 #octopusMarketCardGrid::-webkit-scrollbar-track{background:rgba(5,18,39,.25);border-radius:8px}
 #octopusMarketCardGrid::-webkit-scrollbar-thumb{background:rgba(49,217,255,.4);border-radius:8px}
@@ -1539,16 +1539,14 @@ body{position:fixed;inset:0}
 #octopusMarketCardGrid .oct-row{display:flex;align-items:center;gap:10px;min-width:0}
 #octopusMarketCardGrid .oct-coin{width:34px;height:34px;flex:0 0 34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:15px;color:#07101f;background:var(--c);box-shadow:0 0 16px -2px var(--c)}
 #octopusMarketCardGrid .oct-sym{font-size:18px;font-weight:700;min-width:0;overflow-wrap:anywhere}
-#octopusMarketCardGrid .oct-sym small{display:block;font-size:12px;color:#7f8db0;font-weight:500;margin-top:2px}
-#octopusMarketCardGrid .oct-price{font-size:clamp(28px,2.2vw,34px);font-weight:700;margin:14px 0 4px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-#octopusMarketCardGrid .oct-pct{display:inline-block;padding:3px 10px;border-radius:99px;font-size:14px;font-weight:700;color:#bdefff;background:rgba(35,177,225,.16);border:1px solid rgba(68,204,255,.22)}
+#octopusMarketCardGrid .oct-sym small{font-size:12px;color:#7f8db0;font-weight:500;margin-left:6px}
+#octopusMarketCardGrid .oct-price{font-size:34px;font-weight:700;margin:14px 0 4px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+#octopusMarketCardGrid .oct-pct{display:inline-block;padding:3px 10px;border-radius:99px;font-size:14px;font-weight:700;color:#07101f;background:var(--c)}
 #octopusMarketCardGrid .oct-spark{display:block;width:100%;height:50px;margin-top:12px;overflow:visible}
 #octopusMarketCardGrid .oct-spark .oct-ln{fill:none;stroke:var(--c);stroke-width:2;vector-effect:non-scaling-stroke}
 #octopusMarketCardGrid .oct-spark .oct-ar{fill:var(--c);opacity:.14}
 #octopusMarketCardGrid .oct-hl{margin-top:8px;font-size:12px;color:#7f8db0;font-variant-numeric:tabular-nums}
 #octopusMarketCardGrid .oct-hl span{color:#e8f0ff;margin:0 12px 0 4px}
 #octopusMarketCardGrid .oct-slot[hidden]{display:none!important}
-@media(max-width:900px){#octopusMarketCardGrid{grid-template-columns:minmax(0,1fr);max-height:clamp(300px,52vh,560px)}}
-@media(max-width:460px){#octopusMarketCardGrid{grid-template-columns:minmax(0,1fr);gap:8px;padding:10px 6px 24px;max-height:52vh}#octopusMarketCardGrid .oct-slot{padding:14px 8px 28px}#octopusMarketCardGrid .oct-card{padding:16px;min-height:200px;border-radius:20px}#octopusMarketCardGrid .oct-coin{width:30px;height:30px;flex-basis:30px;font-size:13px}#octopusMarketCardGrid .oct-sym{font-size:16px}#octopusMarketCardGrid .oct-sym small{font-size:10px}#octopusMarketCardGrid .oct-price{font-size:clamp(26px,7vw,32px);margin-top:12px}#octopusMarketCardGrid .oct-pct{font-size:12px;padding:3px 8px}#octopusMarketCardGrid .oct-spark{height:42px;margin-top:9px}#octopusMarketCardGrid .oct-hl{font-size:11px}#octopusMarketCardGrid .oct-hl span{margin-right:7px}}
 @media(prefers-reduced-motion:reduce){#octopusMarketCardGrid .oct-float,#octopusMarketCardGrid .oct-shadow{animation:none}#octopusMarketCardGrid .oct-slot,#octopusMarketCardGrid .oct-card{transition:none}}
 </style>
