@@ -1325,7 +1325,7 @@ async function loadMarketData(){
     const spots=new Map(spotRows.map(t=>[String(t.symbol).toUpperCase(),t]));
     const realitySymbols=new Map(stockRows.filter(s=>s&&s.code&&s.symbol).map(s=>[String(s.code).toUpperCase(),String(s.symbol)]));
     // Resolve Reality stock symbols from Bitget's own instrument list; never guess/fallback to a futures symbol.
-    const jobs=C.map(async d=>{
+    const updateCard=async d=>{
       const isStock=REALITY_STOCKS.has(d.n);
       const symbol=isStock?realitySymbols.get(d.n):d.api;
       const ticker=isStock?(symbol?spots.get(symbol.toUpperCase()):null):futures.get(String(symbol).toUpperCase());
@@ -1352,9 +1352,9 @@ async function loadMarketData(){
       }catch(_){d.h=[]}
       d.ready=true;paint(d);
       const pr=d.card.querySelector('.price');pr.classList.add('flash');setTimeout(()=>pr.classList.remove('flash'),250);
-    });
-    // Keep public requests moderate and avoid launching 27 candle requests simultaneously.
-    for(let i=0;i<jobs.length;i+=5)await Promise.all(jobs.slice(i,i+5));
+    };
+    // Process five cards at a time so candle requests are genuinely throttled.
+    for(let i=0;i<C.length;i+=5)await Promise.all(C.slice(i,i+5).map(updateCard));
   }catch(error){
     C.forEach(d=>{
       d.ready=false;d.card.querySelector('.price').textContent='行情连接失败';
