@@ -1155,8 +1155,6 @@ if(hb>0)blit(HH[n],q[0],q[1],(6+10*hb)*V.ps,hb*.9)});
 x.globalAlpha=1;x.globalCompositeOperation="source-over";
 requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
 
@@ -1312,6 +1310,8 @@ C.forEach(o=>{const el=o.pos,c=o.card;let t;
   el.addEventListener('pointerleave',off);el.addEventListener('pointercancel',off);
   el.addEventListener('pointermove',e=>{const r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
     o.tiltY=(x-.5)*14;o.tiltX=(.5-y)*16;c.style.setProperty('--mx',x*100+'%');c.style.setProperty('--my',y*100+'%')})});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
 
