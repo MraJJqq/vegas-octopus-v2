@@ -423,9 +423,9 @@ body:before{
 .market-panel .panel-title{font-size:13px;font-weight:600;letter-spacing:0;color:#dce5ef}
 .market-panel .panel-title .icon{display:none!important}
 .market-count{font-size:10px!important;color:#718096!important;letter-spacing:0}
-#marketTabs{padding:0 14px 9px;gap:3px;border-bottom:1px solid rgba(132,151,174,.13)}
-#marketTabs .tab{border:0;border-radius:4px;background:transparent;padding:5px 9px;color:#8998aa;font-size:10px}
-#marketTabs .tab.active{background:rgba(67,116,164,.17);color:#d5e7f7;box-shadow:inset 0 -2px 0 #5796d1}
+
+
+
 .market-panel .table-wrap{padding:0 8px 4px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(125,146,169,.3) transparent}
 .market-table{table-layout:fixed;border-collapse:collapse;border-spacing:0;width:100%;font-size:11px;white-space:nowrap}
 .market-table th{padding:9px 7px 8px;border-bottom:1px solid rgba(132,151,174,.14);font-size:9px;font-weight:500;letter-spacing:.015em;text-transform:none;color:#7f8da0}
@@ -781,7 +781,7 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 .market-table .market-placeholder{width:57px;height:17px;justify-content:flex-end;opacity:.82}
 .market-table .market-placeholder i{width:3px}
 .market-count{font-size:9px!important}
-#marketTabs{flex-wrap:wrap}
+
 @media(max-width:1180px){
  .main-grid{grid-template-columns:minmax(220px,.9fr) minmax(0,1.65fr) minmax(205px,.75fr)!important}
  .market-table tbody{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
@@ -851,7 +851,7 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 /* Market Dynamics: larger compact tiles in a vertically scrolling 27-symbol pool. */
 .market-panel{display:flex;flex-direction:column;min-height:0;max-height:660px}
 .market-panel .panel-head{flex:0 0 auto}
-.market-panel #marketTabs{flex:0 0 auto}
+.market-panel 
 .market-panel .table-wrap{padding:0 9px 8px;overflow-y:auto;overflow-x:hidden;max-height:500px;scrollbar-width:thin;scrollbar-color:rgba(49,217,255,.5) rgba(4,18,38,.4)}
 .market-panel .table-wrap::-webkit-scrollbar{width:5px}
 .market-panel .table-wrap::-webkit-scrollbar-thumb{background:rgba(49,217,255,.45);border-radius:8px}
@@ -957,7 +957,6 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
       <section class="panel market-panel">
         <div class="panel-head"><div class="panel-title"><span class="icon">◈</span>市场动态</div><span class="muted market-count">资金池 · 27 个品种</span></div>
         
-        <div class="tabs" id="marketTabs"><button class="tab active" data-market="全部">全部</button><button class="tab" data-market="美股">美股</button><button class="tab" data-market="加密资产">加密</button><button class="tab" data-market="大宗商品">商品</button></div>
         <div class="table-wrap"><table class="market-table"><thead><tr><th>品种</th><th>涨跌幅</th><th>走势 K 线</th></tr></thead><tbody id="marketRows">
           <tr data-type="美股"><td><span class="symbol"><span class="asset-icon green">A</span><span><b>AAPL</b></span></span></td><td class="muted">待接入</td><td><span class="market-placeholder" aria-label="K线占位，行情数据尚未接入"><i style="--h:5px"></i><i style="--h:9px"></i><i style="--h:6px"></i><i style="--h:11px"></i><i style="--h:7px"></i><i style="--h:4px"></i></span></td></tr>
           <tr data-type="美股"><td><span class="symbol"><span class="asset-icon aqua">M</span><span><b>MSFT</b></span></span></td><td class="muted">待接入</td><td><span class="market-placeholder" aria-label="K线占位，行情数据尚未接入"><i style="--h:5px"></i><i style="--h:9px"></i><i style="--h:6px"></i><i style="--h:11px"></i><i style="--h:7px"></i><i style="--h:4px"></i></span></td></tr>
@@ -1170,7 +1169,7 @@ requestAnimationFrame(frame);
 
 <script id="octopus-market-card-interaction">
 (function(){
-const pool=document.querySelector('#marketRows'),tabs=document.querySelector('#marketTabs'),panel=document.querySelector('.market-panel');
+const pool=document.querySelector('#marketRows'),panel=document.querySelector('.market-panel');
 if(!pool||!panel)return;
 const rows=Array.from(pool.querySelectorAll('tr'));
 const assets=rows.map((row,i)=>({symbol:row.querySelector('.symbol b')?.textContent?.trim(),type:row.dataset.type||'其他',i,bars:Array.from(row.querySelectorAll('.market-placeholder i')).map(el=>parseFloat((el.getAttribute('style')||'').match(/--h:\\s*([\\d.]+)px/)?.[1]||'6'))})).filter(a=>a.symbol);
@@ -1212,8 +1211,7 @@ function updateScrollDepth(){
 }
 grid.addEventListener('scroll',()=>{if(!scrollFrame)scrollFrame=requestAnimationFrame(updateScrollDepth)},{passive:true});
 window.addEventListener('resize',updateScrollDepth,{passive:true});
-function filter(type){grid.querySelectorAll('.oct-slot').forEach(c=>{c.hidden=type!=='全部'&&c.dataset.type!==type})}
-if(tabs)tabs.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>filter(t.dataset.market||'全部')));
+// All 27 asset cards remain visible; category filtering controls are intentionally removed.
 })();
 </script>
 
