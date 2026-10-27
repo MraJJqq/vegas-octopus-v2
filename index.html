@@ -1169,10 +1169,13 @@ const streamLabels=['数据流 01','数据流 02','数据流 03','数据流 04',
 const selected=streamAssets.map((symbol,i)=>{const asset=assets.find(a=>a.symbol===symbol);return asset?{...asset,i,streamIndex:i,streamLabel:streamLabels[i],streamColor:streamColors[i]}:null}).filter(Boolean);
 assets.splice(0,assets.length,...selected);
 const grid=document.createElement('div');grid.id='octopusMarketCardGrid';grid.setAttribute('aria-label','七根发光数据流对应的七张品种卡片');
-panel.querySelector('.table-wrap')?.after(grid);
+const orbStage=document.querySelector('.center-stage.orb-original-stage');
+if(!orbStage)return;
+orbStage.append(grid);
+grid.classList.add('orb-stream-card-overlay');
 function node(tag,cls,txt){const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n}
 function makeCard(d){
-const slot=node('div','oct-slot');slot.dataset.type=d.type;
+const slot=node('div','oct-slot');slot.dataset.type=d.type;slot.style.setProperty('--stream-index',d.streamIndex);
 const floating=node('div','oct-float');floating.style.setProperty('--d',(-d.i*.9)+'s');
 const card=node('div','oct-card');card.id='oct-card-'+d.i;card.style.setProperty('--c',d.streamColor);card.dataset.stream=String(d.streamIndex+1);
 card.append(node('div','oct-bg'),node('i','oct-gl'));
@@ -1256,6 +1259,30 @@ window.addEventListener('resize',updateScrollDepth,{passive:true});
 @media(max-width:760px){.center-stage.orb-original-stage{grid-column:1!important;grid-row:1!important;order:-1;min-height:0!important;height:clamp(300px,48vh,460px)!important}}
 </style>
 <style>
+
+/* Seven cards align with the seven stream entry heights on the orb canvas. */
+#octopusMarketCardGrid.orb-stream-card-overlay{position:absolute;z-index:3;left:0;top:0;bottom:0;width:clamp(132px,19%,220px);max-height:none;height:100%;overflow:visible;display:block;padding:0;pointer-events:none;perspective:none}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{position:absolute;left:7px;right:5px;top:calc(12% + var(--stream-index)*12%);padding:0;transform:translateY(-50%);perspective:700px;pointer-events:auto}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-float{animation:none}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-shadow{display:none}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-card{min-height:0;height:clamp(43px,7.5vh,58px);padding:6px 8px;border-radius:10px;display:grid;grid-template-columns:minmax(0,1fr);align-content:center;gap:2px;background:rgba(3,15,34,.72);border:1px solid color-mix(in srgb,var(--c) 60%,transparent);box-shadow:0 0 13px color-mix(in srgb,var(--c) 18%,transparent);backdrop-filter:blur(8px)}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-row{gap:5px}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-coin{width:18px;height:18px;flex-basis:18px;font-size:9px;box-shadow:0 0 8px -2px var(--c)}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-sym{font-size:11px;line-height:1.1;white-space:nowrap}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-sym small{font-size:7px;margin-top:2px;white-space:nowrap}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-price,#octopusMarketCardGrid.orb-stream-card-overlay .oct-spark,#octopusMarketCardGrid.orb-stream-card-overlay .oct-hl{display:none}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-l3{transform:none}
+#octopusMarketCardGrid.orb-stream-card-overlay .oct-pct{font-size:7px;padding:1px 4px;line-height:1.1;border:0;background:transparent;color:#8caac4}
+@media(max-width:760px){
+ #octopusMarketCardGrid.orb-stream-card-overlay{width:clamp(104px,29%,142px)}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-slot{left:4px;right:2px}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-card{height:clamp(34px,8vh,46px);padding:4px 5px}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-coin{display:none}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-sym{font-size:10px}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-sym small{font-size:6px}
+ #octopusMarketCardGrid.orb-stream-card-overlay .oct-pct{font-size:6px}
+}
+
 /* Vegas asset pool redesign: one compact sci-fi terminal row per instrument. */
 .market-panel .table-wrap{padding:2px 12px 12px!important;max-height:none!important;overflow-y:auto!important;overflow-x:hidden!important}
 .market-panel .market-table{display:block!important;width:100%!important;white-space:normal!important}
