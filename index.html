@@ -1518,9 +1518,12 @@ fourHourSvg.addEventListener('pointerup',finishFourHourDrag);
 fourHourSvg.addEventListener('pointercancel',finishFourHourDrag);
 fourHourSvg.addEventListener('lostpointercapture',finishFourHourDrag);
 fourHourLayer.addEventListener('click',e=>{
-  // Clicking outside the actual K-line SVG closes the overlay immediately.
   if(e.target!==fourHourSvg&&!fourHourSvg.contains(e.target))hideFourHour();
 });
+// The transparent overlay lets the underlying UI receive clicks; any click outside the K-line closes it.
+document.addEventListener('click',e=>{
+  if(activeFourHourCard&&!fourHourSvg.contains(e.target))hideFourHour();
+},true);
 const SC=[.86,1,1.1],SPD=[.7,1,1.3],PAR=[-9,0,16],OP=[.8,.94,1];
 const SH=['0 10px 16px -12px rgba(0,0,0,.7)','0 18px 28px -12px rgba(0,0,0,.85)','0 32px 44px -14px rgba(0,0,0,.95)'];
 let W,H,zw,w,h,centerX,gap,leftMax,rightMin;
