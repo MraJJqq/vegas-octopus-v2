@@ -943,13 +943,12 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
     
     <div class="top-card settings" aria-label="设置">⚙</div>
     <section class="top-card event-top-card" aria-label="最新事件">
-        <div class="panel-head"><div class="panel-title"><span class="icon">⌁</span>最新事件</div><span class="muted" style="font-size:10px">仅信号期 / 观察期</span></div>
-        <div class="tabs" id="eventTabs"><button class="tab active" data-stage="全部">全部</button><button class="tab" data-stage="信号期">信号期</button><button class="tab" data-stage="观察期">观察期</button></div>
+        <div class="panel-head"><div class="panel-title"><span class="icon">⌁</span>最新事件</div></div>
         <div class="event-list" id="eventList">
-          <div class="event-item" data-stage="信号期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">₿ BTC</span><span class="pill">信号期 · 2H</span></div><div class="event-detail">正式信号已触发</div></div><span class="event-time">12:34</span></div>
-          <div class="event-item" data-stage="观察期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">◆ ETH</span><span class="pill watch">观察期 · 1H</span></div><div class="event-detail">观察状态更新</div></div><span class="event-time">12:15</span></div>
-          <div class="event-item" data-stage="观察期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">≋ SOL</span><span class="pill watch">观察期 · 2H</span></div><div class="event-detail">观察记录更新</div></div><span class="event-time">10:58</span></div>
-          <div class="event-item" data-stage="信号期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">T TSLA</span><span class="pill">信号期 · 1H</span></div><div class="event-detail">正式信号状态更新</div></div><span class="event-time">09:37</span></div>
+          <div class="event-item" data-stage="信号期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">₿ BTC</span><span class="pill">信号期 · 2H</span></div></div></div>
+          <div class="event-item" data-stage="观察期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">◆ ETH</span><span class="pill watch">观察期 · 1H</span></div></div></div>
+          <div class="event-item" data-stage="观察期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">≋ SOL</span><span class="pill watch">观察期 · 2H</span></div></div></div>
+          <div class="event-item" data-stage="信号期"><span class="timeline"></span><div class="event-main"><div class="event-line"><span class="event-symbol">T TSLA</span><span class="pill">信号期 · 1H</span></div></div></div>
         </div>
       </section>
   </header>
@@ -1140,3 +1139,14 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 </script>
 </body>
 </html>
+
+<style>
+/* Minimal latest-events panel: show only qualifying symbols and their stage/timeframe. */
+.event-top-card .panel-head{padding:10px 12px 5px}
+.event-top-card .event-item{grid-template-columns:7px minmax(0,1fr)!important;gap:7px;padding:6px 0!important;align-items:center}
+.event-top-card .event-main{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+.event-top-card .event-line{display:flex;align-items:center;gap:7px;min-width:0}
+.event-top-card .event-symbol{font-size:12px;font-weight:750}
+.event-top-card .pill{font-size:10px;padding:2px 6px;white-space:nowrap}
+.event-top-card .event-detail,.event-top-card .event-time,.event-top-card .tabs{display:none!important}
+</style>
