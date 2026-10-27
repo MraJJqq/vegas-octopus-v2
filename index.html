@@ -415,6 +415,22 @@ body:before{
 .us-pool-item em{font-style:normal;font-size:8px;color:#6990b4;white-space:nowrap}
 .us-pool-foot{padding:5px 12px 10px;color:#527594;font-size:9px}
 @media(max-width:760px){.us-pool-grid{grid-template-columns:1fr 1fr;gap:0 8px}.us-pool-item{grid-template-columns:20px minmax(0,1fr);gap:5px}.us-pool-item em{display:none}}
+
+/* V9 stock-pool market overview and reference indices. */
+.market-table td:first-child{min-width:102px}
+.market-company{display:block;font-size:9px;color:var(--muted);font-weight:400;margin-top:1px}
+.market-placeholder{color:#527594;letter-spacing:.12em}
+.market-count{font-size:10px;white-space:nowrap}
+.index-panel{min-height:0;flex:1}
+.index-list{padding:0 13px 7px;display:grid;grid-template-columns:1fr;gap:0}
+.index-item{display:grid;grid-template-columns:minmax(0,1fr) auto 36px;align-items:center;gap:9px;padding:10px 0;border-bottom:1px solid rgba(80,145,208,.08)}
+.index-item:last-child{border-bottom:0}
+.index-item div{display:flex;flex-direction:column;min-width:0}
+.index-item b{font-size:11px;color:#e2f4ff}
+.index-item small{font-size:9px;color:var(--muted);margin-top:3px}
+.index-item strong{font-size:10px;color:#6edcff;letter-spacing:.05em}
+.index-spark{font-size:18px;text-align:right;letter-spacing:-.12em;color:#559fd0;text-shadow:0 0 9px rgba(49,217,255,.2)}
+@media(max-width:760px){.index-list{grid-template-columns:1fr 1fr;column-gap:12px}.index-item{grid-template-columns:minmax(0,1fr) auto;gap:5px}.index-spark{display:none}.market-table td{padding:7px 3px}}
 </style>
 </head>
 <body>
@@ -434,47 +450,46 @@ body:before{
   <main class="main-grid">
     <section class="left-col">
       <section class="panel market-panel">
-        <div class="panel-head"><div class="panel-title"><span class="icon">◈</span>市场概览</div><button class="panel-action" type="button">详情 ↗</button></div>
-        <div class="tabs" id="marketTabs"><button class="tab active" data-market="全部">全部</button><button class="tab" data-market="美股">美股</button><button class="tab" data-market="加密">加密</button><button class="tab" data-market="外汇">外汇</button><button class="tab" data-market="黄金">黄金</button><button class="tab" data-market="原油">原油</button></div>
+        <div class="panel-head"><div class="panel-title"><span class="icon">◈</span>市场概览</div><span class="muted market-count">V9 美股池 · 23 只</span></div>
+        <div class="tabs" id="marketTabs"><button class="tab active" data-market="全部">全部</button><button class="tab" data-market="美股">美股</button></div>
         <div class="table-wrap"><table class="market-table"><thead><tr><th>品种</th><th>价格</th><th>涨跌幅</th><th>成交量</th><th>走势</th></tr></thead><tbody id="marketRows">
-          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon">S</span>S&amp;P 500</span></td><td>6,735.28</td><td class="positive">+2.31%</td><td>48.7B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 12 L7 8 L11 10 L16 4 L21 7 L27 2 L35 1" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
-          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon">N</span>纳斯达克</span></td><td>22,872.01</td><td class="positive">+3.42%</td><td>32.1B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 13 L7 10 L11 11 L17 5 L22 7 L29 2 L35 1" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
-          <tr data-type="外汇"><td><span class="symbol"><span class="asset-icon aqua">¥</span>USDJPY</span></td><td>149.82</td><td class="positive">+0.38%</td><td>—</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 11 L7 9 L12 10 L18 6 L24 7 L30 3 L35 2" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
-          <tr data-type="加密"><td><span class="symbol"><span class="asset-icon orange">₿</span>BTC</span></td><td>$67,432</td><td class="positive">+2.13%</td><td>12.6B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 12 L6 9 L12 11 L17 5 L23 7 L29 2 L35 3" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
-          <tr data-type="加密"><td><span class="symbol"><span class="asset-icon purple">◆</span>ETH</span></td><td>$2,498.76</td><td class="positive">+3.24%</td><td>8.3B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 12 L7 9 L12 10 L17 4 L22 7 L29 2 L35 1" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
-          <tr data-type="加密"><td><span class="symbol"><span class="asset-icon purple">S</span>SOL</span></td><td>$178.32</td><td class="positive">+2.17%</td><td>5.8B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 11 L7 8 L12 10 L18 4 L24 6 L30 2 L35 3" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
-          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon red">T</span>TSLA</span></td><td>$251.34</td><td class="positive">+1.92%</td><td>6.4B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 13 L8 9 L13 11 L19 6 L24 7 L30 3 L35 2" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
-          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon green">N</span>NVDA</span></td><td>$138.76</td><td class="positive">+1.36%</td><td>5.2B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 12 L7 10 L12 11 L18 5 L24 7 L29 3 L35 1" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
-          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon aqua">A</span>AAPL</span></td><td>$228.54</td><td class="positive">+1.28%</td><td>4.8B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 13 L7 8 L12 10 L18 5 L24 7 L30 2 L35 3" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
-          <tr data-type="黄金"><td><span class="symbol"><span class="asset-icon goldicon">Au</span>XAUUSD</span></td><td>$2,734.21</td><td class="positive">+0.78%</td><td>2.8B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 12 L7 11 L12 7 L18 8 L24 4 L30 5 L35 1" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
-          <tr data-type="原油"><td><span class="symbol"><span class="asset-icon aqua">◉</span>USOIL</span></td><td>$71.36</td><td class="positive">+0.62%</td><td>2.3B</td><td><svg class="spark" viewBox="0 0 36 14"><path d="M1 11 L7 8 L12 10 L18 5 L24 7 L30 4 L35 2" fill="none" stroke="#22e5d2" stroke-width="1.5"/></svg></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon green">A</span><span><b>AAPL</b><small class="market-company">苹果</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon aqua">M</span><span><b>MSFT</b><small class="market-company">微软</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon purple">G</span><span><b>GOOGL</b><small class="market-company">谷歌</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon red">A</span><span><b>AMZN</b><small class="market-company">亚马逊</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon ">N</span><span><b>NVDA</b><small class="market-company">英伟达</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon green">T</span><span><b>TSLA</b><small class="market-company">特斯拉</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon aqua">M</span><span><b>META</b><small class="market-company">Meta</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon purple">I</span><span><b>INTC</b><small class="market-company">英特尔</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon red">Q</span><span><b>QCOM</b><small class="market-company">高通</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon ">A</span><span><b>AMD</b><small class="market-company">超微半导体</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon green">T</span><span><b>TSM</b><small class="market-company">台积电</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon aqua">A</span><span><b>AVGO</b><small class="market-company">博通</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon purple">O</span><span><b>ORCL</b><small class="market-company">甲骨文</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon red">A</span><span><b>ARM</b><small class="market-company">Arm</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon ">M</span><span><b>MU</b><small class="market-company">美光科技</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon green">A</span><span><b>ASML</b><small class="market-company">阿斯麦</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon aqua">S</span><span><b>SNDK</b><small class="market-company">闪迪</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon purple">S</span><span><b>SKHYNIX</b><small class="market-company">SK 海力士</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon red">M</span><span><b>MRVL</b><small class="market-company">迈威尔科技</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon ">G</span><span><b>GLW</b><small class="market-company">康宁</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon green">H</span><span><b>HOOD</b><small class="market-company">Robinhood</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon aqua">C</span><span><b>CBRS</b><small class="market-company">CBRS（按 V9 代码）</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
+          <tr data-type="美股"><td><span class="symbol"><span class="asset-icon purple">S</span><span><b>SPCX</b><small class="market-company">SPCX（按 V9 代码）</small></span></td><td>—</td><td class="muted">待接入</td><td>—</td><td><span class="market-placeholder">···</span></td></tr>
         </tbody></table></div>
+        <div class="us-pool-foot">品种与 V9 扫描池代码保持一致；价格、涨跌幅、成交量及走势尚未接入实时数据。</div>
       </section>
-      <section class="panel us-pool-panel">
-        <div class="panel-head"><div class="panel-title"><span class="icon">▦</span>美股资金池</div><span class="muted us-pool-note">重点观察 · 20 只</span></div>
-        <div class="us-pool-grid">
-          <div class="us-pool-item"><span class="asset-icon green">N</span><div><b>NVDA</b><small>英伟达</small></div><em>半导体</em></div>
-          <div class="us-pool-item"><span class="asset-icon aqua">A</span><div><b>AAPL</b><small>苹果</small></div><em>消费电子</em></div>
-          <div class="us-pool-item"><span class="asset-icon">M</span><div><b>MSFT</b><small>微软</small></div><em>软件 / 云</em></div>
-          <div class="us-pool-item"><span class="asset-icon">G</span><div><b>GOOGL</b><small>谷歌</small></div><em>互联网</em></div>
-          <div class="us-pool-item"><span class="asset-icon red">T</span><div><b>TSLA</b><small>特斯拉</small></div><em>电动车</em></div>
-          <div class="us-pool-item"><span class="asset-icon">A</span><div><b>AMZN</b><small>亚马逊</small></div><em>电商 / 云</em></div>
-          <div class="us-pool-item"><span class="asset-icon purple">M</span><div><b>META</b><small>Meta</small></div><em>社交平台</em></div>
-          <div class="us-pool-item"><span class="asset-icon">B</span><div><b>BRK.B</b><small>伯克希尔</small></div><em>综合控股</em></div>
-          <div class="us-pool-item"><span class="asset-icon aqua">A</span><div><b>AVGO</b><small>博通</small></div><em>半导体</em></div>
-          <div class="us-pool-item"><span class="asset-icon green">W</span><div><b>WMT</b><small>沃尔玛</small></div><em>零售</em></div>
-          <div class="us-pool-item"><span class="asset-icon">J</span><div><b>JPM</b><small>摩根大通</small></div><em>银行</em></div>
-          <div class="us-pool-item"><span class="asset-icon red">E</span><div><b>LLY</b><small>礼来</small></div><em>制药</em></div>
-          <div class="us-pool-item"><span class="asset-icon purple">N</span><div><b>NFLX</b><small>奈飞</small></div><em>流媒体</em></div>
-          <div class="us-pool-item"><span class="asset-icon">V</span><div><b>V</b><small>Visa</small></div><em>支付</em></div>
-          <div class="us-pool-item"><span class="asset-icon aqua">X</span><div><b>AMD</b><small>超微半导体</small></div><em>半导体</em></div>
-          <div class="us-pool-item"><span class="asset-icon orange">C</span><div><b>COIN</b><small>Coinbase</small></div><em>加密交易</em></div>
-          <div class="us-pool-item"><span class="asset-icon">P</span><div><b>PLTR</b><small>Palantir</small></div><em>数据软件</em></div>
-          <div class="us-pool-item"><span class="asset-icon green">U</span><div><b>UBER</b><small>优步</small></div><em>出行平台</em></div>
-          <div class="us-pool-item"><span class="asset-icon goldicon">X</span><div><b>XOM</b><small>埃克森美孚</small></div><em>能源</em></div>
-          <div class="us-pool-item"><span class="asset-icon">C</span><div><b>CRM</b><small>赛富时</small></div><em>企业软件</em></div>
+      <section class="panel us-pool-panel index-panel">
+        <div class="panel-head"><div class="panel-title"><span class="icon">⌁</span>核心市场指数</div><span class="muted us-pool-note">指数观察 · 6 项</span></div>
+        <div class="index-list">
+          <div class="index-item"><div><b>S&amp;P 500</b><small>标普 500 · 美股大盘</small></div><strong>SPX</strong><span class="index-spark">╱╲╱</span></div>
+          <div class="index-item"><div><b>NASDAQ 100</b><small>纳斯达克 100 · 大型成长股</small></div><strong>NDX</strong><span class="index-spark">╱╱╲</span></div>
+          <div class="index-item"><div><b>Dow Jones</b><small>道琼斯工业平均指数</small></div><strong>DJI</strong><span class="index-spark">╱╲╱</span></div>
+          <div class="index-item"><div><b>Russell 2000</b><small>罗素 2000 · 小盘股</small></div><strong>RUT</strong><span class="index-spark">╲╱╲</span></div>
+          <div class="index-item"><div><b>PHLX Semiconductor</b><small>费城半导体指数 · 芯片周期</small></div><strong>SOX</strong><span class="index-spark">╱╱╱</span></div>
+          <div class="index-item"><div><b>CBOE Volatility</b><small>VIX · 市场隐含波动率</small></div><strong>VIX</strong><span class="index-spark">╲╱╲</span></div>
         </div>
-        <div class="us-pool-foot">观察名单 · 当前为界面演示，未接入实时行情</div>
+        <div class="us-pool-foot">指数报价与走势尚未接入实时数据。</div>
       </section>
     </section>
 
