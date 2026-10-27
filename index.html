@@ -847,6 +847,33 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
  .center-stage{grid-column:1!important;grid-row:1!important}
 }
 
+
+/* Market Dynamics: larger compact tiles in a vertically scrolling 27-symbol pool. */
+.market-panel{display:flex;flex-direction:column;min-height:0;max-height:660px}
+.market-panel .panel-head{flex:0 0 auto}
+.market-panel #marketTabs{flex:0 0 auto}
+.market-panel .table-wrap{padding:0 9px 8px;overflow-y:auto;overflow-x:hidden;max-height:500px;scrollbar-width:thin;scrollbar-color:rgba(49,217,255,.5) rgba(4,18,38,.4)}
+.market-panel .table-wrap::-webkit-scrollbar{width:5px}
+.market-panel .table-wrap::-webkit-scrollbar-thumb{background:rgba(49,217,255,.45);border-radius:8px}
+.market-table{display:block;width:100%;white-space:normal}
+.market-table thead{display:none}
+.market-table tbody#marketRows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.market-table tr{min-width:0;min-height:70px;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto 1fr;align-items:center;gap:2px 5px;padding:9px 8px;border:1px solid rgba(42,151,222,.28);border-radius:10px;background:linear-gradient(135deg,rgba(8,31,61,.72),rgba(4,15,34,.68));transition:border-color .2s,background .2s,box-shadow .2s}
+.market-table tr:hover{border-color:rgba(49,217,255,.7);background:rgba(9,42,77,.88);box-shadow:0 0 12px rgba(0,155,255,.12)}
+.market-table td{padding:0;border:0;text-align:left;min-width:0}
+.market-table td:first-child{grid-column:1;grid-row:1}
+.market-table td:nth-child(2){grid-column:2;grid-row:1;text-align:right;font-size:11px;white-space:nowrap}
+.market-table td:nth-child(3){grid-column:1/-1;grid-row:2}
+.market-table .symbol{gap:6px}
+.market-table .asset-icon{width:23px;height:23px;flex-basis:23px}
+.market-placeholder{display:flex;align-items:center;gap:4px;height:19px;width:100%;padding-left:2px}
+.market-placeholder i{display:block;width:5px;height:var(--h,7px);min-height:4px;border-radius:1px;background:linear-gradient(180deg,#39dcff,#287cff);box-shadow:0 0 5px rgba(39,174,255,.25)}
+.market-placeholder i:nth-child(3n){background:linear-gradient(180deg,#ff8fae,#e94b7c)}
+.us-pool-foot{padding:0 11px 10px;font-size:9px;line-height:1.45;color:#6688a8}
+@media(min-width:1500px){.market-panel .table-wrap{max-height:520px}.market-table tr{min-height:74px;padding:10px}.market-placeholder{gap:5px}.market-placeholder i{width:6px}}
+@media(max-width:1180px){.market-panel{max-height:620px}.market-panel .table-wrap{max-height:460px}}
+@media(max-width:760px){.market-panel{max-height:600px}.market-panel .table-wrap{max-height:410px}.market-table tbody#marketRows{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.market-table tr{min-height:68px;padding:8px 7px}.market-table .asset-icon{width:21px;height:21px;flex-basis:21px}.market-table td:nth-child(2){font-size:10px}.market-placeholder{gap:3px}.market-placeholder i{width:4px}}
+
 </style>
 </head>
 <body>
@@ -875,9 +902,9 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
   <main class="main-grid">
     <section class="left-col">
       <section class="panel market-panel">
-        <div class="panel-head"><div class="panel-title"><span class="icon">◈</span>市场动态</div><span class="muted market-count">V9 扫描池 · 23 只</span></div>
+        <div class="panel-head"><div class="panel-title"><span class="icon">◈</span>市场动态</div><span class="muted market-count">资金池 · 27 个品种</span></div>
         
-        <div class="tabs" id="marketTabs"><button class="tab active" data-market="全部">全部</button><button class="tab" data-market="美股">美股</button></div>
+        <div class="tabs" id="marketTabs"><button class="tab active" data-market="全部">全部</button><button class="tab" data-market="美股">美股</button><button class="tab" data-market="加密资产">加密</button><button class="tab" data-market="大宗商品">商品</button></div>
         <div class="table-wrap"><table class="market-table"><thead><tr><th>品种</th><th>涨跌幅</th><th>走势 K 线</th></tr></thead><tbody id="marketRows">
           <tr data-type="美股"><td><span class="symbol"><span class="asset-icon green">A</span><span><b>AAPL</b></span></span></td><td class="muted">待接入</td><td><span class="market-placeholder" aria-label="K线占位，行情数据尚未接入"><i style="--h:5px"></i><i style="--h:9px"></i><i style="--h:6px"></i><i style="--h:11px"></i><i style="--h:7px"></i><i style="--h:4px"></i></span></td></tr>
           <tr data-type="美股"><td><span class="symbol"><span class="asset-icon aqua">M</span><span><b>MSFT</b></span></span></td><td class="muted">待接入</td><td><span class="market-placeholder" aria-label="K线占位，行情数据尚未接入"><i style="--h:5px"></i><i style="--h:9px"></i><i style="--h:6px"></i><i style="--h:11px"></i><i style="--h:7px"></i><i style="--h:4px"></i></span></td></tr>
@@ -902,8 +929,12 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
           <tr data-type="美股"><td><span class="symbol"><span class="asset-icon green">H</span><span><b>HOOD</b></span></span></td><td class="muted">待接入</td><td><span class="market-placeholder" aria-label="K线占位，行情数据尚未接入"><i style="--h:5px"></i><i style="--h:9px"></i><i style="--h:6px"></i><i style="--h:11px"></i><i style="--h:7px"></i><i style="--h:4px"></i></span></td></tr>
           <tr data-type="美股"><td><span class="symbol"><span class="asset-icon aqua">C</span><span><b>CBRS</b></span></span></td><td class="muted">待接入</td><td><span class="market-placeholder" aria-label="K线占位，行情数据尚未接入"><i style="--h:5px"></i><i style="--h:9px"></i><i style="--h:6px"></i><i style="--h:11px"></i><i style="--h:7px"></i><i style="--h:4px"></i></span></td></tr>
           <tr data-type="美股"><td><span class="symbol"><span class="asset-icon purple">S</span><span><b>SPCX</b></span></span></td><td class="muted">待接入</td><td><span class="market-placeholder" aria-label="K线占位，行情数据尚未接入"><i style="--h:5px"></i><i style="--h:9px"></i><i style="--h:6px"></i><i style="--h:11px"></i><i style="--h:7px"></i><i style="--h:4px"></i></span></td></tr>
+          <tr data-type="加密资产"><td><span class="symbol"><span class="asset-icon orange">₿</span><span><b>BTC</b></span></span></td><td class="muted">待接入</td><td><span class="market-placeholder" aria-label="K线占位，行情数据尚未接入"><i style="--h:8px"></i><i style="--h:5px"></i><i style="--h:11px"></i><i style="--h:7px"></i><i style="--h:13px"></i><i style="--h:9px"></i></span></td></tr>
+          <tr data-type="加密资产"><td><span class="symbol"><span class="asset-icon purple">H</span><span><b>HYPE</b></span></span></td><td class="muted">待接入</td><td><span class="market-placeholder" aria-label="K线占位，行情数据尚未接入"><i style="--h:6px"></i><i style="--h:10px"></i><i style="--h:8px"></i><i style="--h:13px"></i><i style="--h:7px"></i><i style="--h:11px"></i></span></td></tr>
+          <tr data-type="大宗商品"><td><span class="symbol"><span class="asset-icon goldicon">Au</span><span><b>XAUUSD</b></span></span></td><td class="muted">待接入</td><td><span class="market-placeholder" aria-label="K线占位，行情数据尚未接入"><i style="--h:11px"></i><i style="--h:8px"></i><i style="--h:6px"></i><i style="--h:12px"></i><i style="--h:9px"></i><i style="--h:14px"></i></span></td></tr>
+          <tr data-type="大宗商品"><td><span class="symbol"><span class="asset-icon orange">O</span><span><b>USOIL</b></span></span></td><td class="muted">待接入</td><td><span class="market-placeholder" aria-label="K线占位，行情数据尚未接入"><i style="--h:7px"></i><i style="--h:12px"></i><i style="--h:9px"></i><i style="--h:5px"></i><i style="--h:11px"></i><i style="--h:8px"></i></span></td></tr>
         </tbody></table></div>
-        <div class="us-pool-foot">品种与 V9 扫描池代码保持一致；涨跌幅与 K 线走势尚未接入实时数据。</div>
+        <div class="us-pool-foot">共 27 个品种；当前涨跌幅与 K 线为占位，尚未接入实时行情。</div>
       </section>
 
     </section>
@@ -962,7 +993,7 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
     const chosen=btn.dataset.market;
     document.querySelectorAll('#marketRows tr').forEach(row=>{
       const type=row.dataset.type;
-      row.hidden=chosen!=='全部' && type!==chosen && !(chosen==='外汇' && type==='外汇');
+      row.hidden=chosen!=='全部' && type!==chosen && !(chosen==='美股' && type==='美股');
     });
   }));
   const newsTabs=document.querySelectorAll('#newsTabs [data-news]');
