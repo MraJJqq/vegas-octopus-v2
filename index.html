@@ -1861,6 +1861,41 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   window.setInterval(refreshV9State,15*60*1000);
 })();
 </script>
+
+<style id="octopus-fan-sphere-layout">
+#octopusMarketCardGrid.orb-stream-card-overlay{perspective:1400px!important;overflow:hidden!important;transform-style:preserve-3d!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .pos{position:absolute!important;left:0!important;top:0!important;padding:0!important;min-width:0!important;transform-style:preserve-3d!important;will-change:transform!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .float{position:absolute!important;inset:0!important;animation:none!important;transform-style:preserve-3d!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .card{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important;box-sizing:border-box!important;border-radius:50%!important;padding:7%!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:2px!important;text-align:center!important;transform:perspective(700px) rotateX(var(--sphere-rx,2deg)) rotateY(var(--sphere-ry,-5deg))!important;background:radial-gradient(circle at 28% 22%,rgba(255,255,255,.25),transparent 23%),radial-gradient(circle at 35% 30%,rgba(22,125,255,.38),rgba(4,20,48,.96) 58%,#010816 100%)!important;border:1px solid rgba(99,214,255,.72)!important;box-shadow:inset -9px -11px 20px rgba(0,0,0,.7),inset 4px 4px 12px rgba(133,225,255,.22),0 0 12px rgba(0,159,255,.25),0 12px 20px rgba(0,0,0,.38)!important;backdrop-filter:blur(5px)!important;-webkit-backdrop-filter:blur(5px)!important;transform-style:preserve-3d!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .bg{position:absolute!important;inset:0!important;border-radius:50%!important;background:radial-gradient(circle at 25% 20%,rgba(255,255,255,.22),transparent 25%),linear-gradient(145deg,rgba(23,111,181,.2),rgba(2,12,31,.3))!important;border:1px solid rgba(255,255,255,.14)!important;box-shadow:inset -7px -8px 16px rgba(0,0,0,.4)!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .gl{border-radius:50%!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .coin{width:clamp(13px,1.3vw,21px)!important;height:clamp(13px,1.3vw,21px)!important;flex:0 0 auto!important;font-size:clamp(7px,.7vw,10px)!important;margin-bottom:1px!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .sym{display:block!important;max-width:94%!important;font-size:clamp(8px,.8vw,12px)!important;line-height:1.05!important;overflow-wrap:anywhere!important;text-align:center!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .sym small{display:none!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .price{display:block!important;max-width:96%!important;font-size:clamp(9px,1vw,15px)!important;line-height:1.1!important;white-space:nowrap!important;overflow:hidden!important;margin:2px 0 0!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .spark{display:block!important;width:64%!important;height:12px!important;flex:0 0 12px!important;margin:1px auto!important;overflow:hidden!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .pct{display:inline-block!important;max-width:88%!important;padding:2px 5px!important;margin-top:1px!important;border-radius:99px!important;font-size:clamp(7px,.65vw,10px)!important;line-height:1.05!important;white-space:nowrap!important}
+#octopusMarketCardGrid.orb-stream-card-overlay .pos:hover{filter:brightness(1.18) drop-shadow(0 0 8px rgba(44,193,255,.35))!important}
+@media(max-width:760px){#octopusMarketCardGrid.orb-stream-card-overlay .card{padding:5%!important;gap:1px!important}#octopusMarketCardGrid.orb-stream-card-overlay .coin{width:12px!important;height:12px!important;font-size:7px!important}#octopusMarketCardGrid.orb-stream-card-overlay .sym{font-size:clamp(7px,2.1vw,9px)!important}#octopusMarketCardGrid.orb-stream-card-overlay .price{font-size:clamp(8px,2.5vw,11px)!important}#octopusMarketCardGrid.orb-stream-card-overlay .spark{height:8px!important;flex-basis:8px!important;width:60%!important}#octopusMarketCardGrid.orb-stream-card-overlay .pct{font-size:clamp(6px,1.8vw,8px)!important;padding:1px 3px!important}}
+@media(prefers-reduced-motion:reduce){#octopusMarketCardGrid.orb-stream-card-overlay .pos{transition:none!important}}
+</style>
+<script id="octopus-fan-sphere-layout-script">
+(function(){
+function start(){
+const grid=document.getElementById('octopusMarketCardGrid'),stage=grid&&grid.closest('.center-stage');if(!grid||!stage)return;
+const cards=[...grid.querySelectorAll('.pos')];if(!cards.length)return;
+const name=e=>(e.querySelector('.sym')?.textContent||'').trim().split(/\s+/)[0].toUpperCase();
+cards.sort((a,b)=>name(a).localeCompare(name(b)));const left=[],right=[];cards.forEach((e,i)=>(i%2===0?left:right).push(e));
+const cfg=new Map(),caps=[4,4,3,3];
+function assign(list,side){let n=0;caps.forEach((cap,col)=>{for(let j=0;j<cap&&n<list.length;j++,n++){const f=cap===1?.5:j/(cap-1),lo=[.09,.18,.28,.39][col],hi=[.91,.82,.72,.61][col];cfg.set(list[n],{side,col,y:lo+(hi-lo)*f,seed:n*1.73+(side==='left'?.4:1.9)});}})}
+assign(left,'left');assign(right,'right');const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;let W=1,H=1,D=70;
+function size(){W=Math.max(1,stage.clientWidth);H=Math.max(1,stage.clientHeight);D=W<=760?Math.max(38,Math.min(54,W*.12)):Math.max(62,Math.min(98,W*.064));cards.forEach(e=>{e.style.setProperty('width',D+'px','important');e.style.setProperty('height',D+'px','important');e.style.setProperty('opacity','1','important')})}
+function frame(ms){const t=ms/1000;cards.forEach(e=>{const c=cfg.get(e);if(!c)return;const xf=(W<=760?[.06,.17,.28,.39]:[.055,.16,.275,.39])[c.col],x=W*(c.side==='left'?xf:1-xf),y=H*c.y,dx=reduced?0:Math.sin(t*.34+c.seed)*Math.min(5,W*.004),dy=reduced?0:Math.sin(t*.43+c.seed*1.3)*Math.min(7,H*.009),z=reduced?0:Math.sin(t*.55+c.seed)*8;e.style.setProperty('transform','translate3d('+(x+dx)+'px,'+(y+dy)+'px,'+z+'px) translate(-50%,-50%)','important');e.style.setProperty('z-index',String(30+Math.round(z+8)),'important');const card=e.querySelector('.card');if(card){card.style.setProperty('--sphere-rx',(reduced?0:Math.sin(t*.28+c.seed)*4)+'deg');card.style.setProperty('--sphere-ry',((c.side==='left'?-1:1)*(reduced?4:5+Math.sin(t*.31+c.seed)*4))+'deg')}});requestAnimationFrame(frame)}
+size();if(window.ResizeObserver)new ResizeObserver(size).observe(stage);window.addEventListener('resize',size,{passive:true});requestAnimationFrame(frame)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
+</script>
+
 </body>
 </html>
 
