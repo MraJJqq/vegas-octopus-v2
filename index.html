@@ -902,7 +902,7 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 .market-panel .market-table tr:nth-child(3n+2) .market-placeholder i,.market-panel .market-table tr:nth-child(4n+1) .market-placeholder i{background:linear-gradient(180deg,rgba(255,153,112,.95),rgba(255,91,125,.4))}
 .market-panel .us-pool-foot{padding:0 16px 13px;color:#6f849d;font-size:10px}
 @media(max-width:1100px){.market-panel .market-table tbody{grid-template-columns:repeat(2,minmax(0,1fr))}.market-panel .table-wrap{max-height:500px}}
-@media(max-width:560px){.market-panel .market-table tbody{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.market-panel .table-wrap{padding:0 9px 10px;max-height:490px}.market-panel .market-table tr{min-height:124px;padding:10px 9px;gap:10px 4px}.market-panel .symbol{gap:6px}.market-panel .symbol b{font-size:11px}.market-panel .asset-icon{width:23px;height:23px;flex-basis:23px}.market-panel .market-placeholder{min-width:55px;gap:2px}.market-panel .market-placeholder i{width:4px}}
+@media(max-width:560px){.market-panel .market-table tbody{grid-template-columns:minmax(0,1fr);gap:7px}.market-panel .table-wrap{padding:0 9px 10px;max-height:490px}.market-panel .market-table tr{min-height:124px;padding:10px 9px;gap:10px 4px}.market-panel .symbol{gap:6px}.market-panel .symbol b{font-size:11px}.market-panel .asset-icon{width:23px;height:23px;flex-basis:23px}.market-panel .market-placeholder{min-width:55px;gap:2px}.market-panel .market-placeholder i{width:4px}}
 
 
 /* Pull-down-to-refresh: mouse drag or touch gesture while the page is at the top. */
@@ -917,6 +917,19 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 .bottom-system-status .status-row{display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;}
 .bottom-system-status .status-item{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
 .bottom-system-status .dot{width:6px;height:6px;border-radius:50%;background:#45e4b0;box-shadow:0 0 8px rgba(69,228,176,.55);}
+
+/* Asset pool: one full-width item per row; stretch market panel to the ticker boundary. */
+.left-col{min-height:0;height:100%}
+.market-panel{flex:1 1 auto!important;min-height:0!important;max-height:none!important}
+.market-panel .table-wrap{flex:1 1 auto!important;min-height:0;max-height:none!important}
+.market-panel .market-table tbody{grid-template-columns:minmax(0,1fr)!important}
+.market-panel .market-table tr{min-height:76px!important;grid-template-columns:minmax(0,1fr) minmax(70px,.72fr)!important;grid-template-rows:auto auto!important;padding:10px 12px!important;gap:8px 8px!important}
+@media(max-width:760px){
+ .left-col{height:auto;min-height:0}
+ .market-panel{max-height:none!important}
+ .market-panel .table-wrap{max-height:52vh!important;flex:0 1 auto!important}
+}
+
 </style>
 </head>
 <body>
