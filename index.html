@@ -1185,17 +1185,17 @@ requestAnimationFrame(frame);
 @media(max-width:760px){#octopusMarketCardGrid .pos{font-size:clamp(6px,1.5vw,9px)!important}}
 
 #octopusFourHourHover{
-  position:fixed;inset:3vh 3vw;z-index:9999;display:block;box-sizing:border-box;
+  position:fixed;inset:0;z-index:9999;display:block;box-sizing:border-box;
   padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;
   backdrop-filter:none;-webkit-backdrop-filter:none;
   opacity:0;visibility:hidden;pointer-events:none;
-  transform:scale(.995);transition:opacity .12s ease,transform .12s ease,visibility .12s;
+  transform:none;transition:opacity .12s ease,visibility .12s;
 }
-#octopusFourHourHover.is-visible{opacity:1;visibility:visible;transform:scale(1)}
+#octopusFourHourHover.is-visible{opacity:1;visibility:visible}
 #octopusFourHourHover .o4-chart{display:block;width:100%;height:100%;min-height:100px;overflow:visible}
 #octopusFourHourHover .o4-candles line{stroke-width:1.5;vector-effect:non-scaling-stroke}
 #octopusFourHourHover .o4-candles rect{stroke-width:1.25;vector-effect:non-scaling-stroke;filter:none}
-@media(max-width:760px){#octopusFourHourHover{inset:2vh 2vw}#octopusFourHourHover .o4-chart{min-height:90px}}
+@media(max-width:760px){#octopusFourHourHover .o4-chart{min-height:90px}}
 
 </style>
 
