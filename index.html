@@ -1203,8 +1203,8 @@ requestAnimationFrame(frame);
 #octopusFourHourHover .o4-change{font-size:clamp(12px,1.1vw,16px);font-weight:700;margin-top:4px}
 #octopusFourHourHover .o4-change.up{color:#2ee6a6}#octopusFourHourHover .o4-change.dn{color:#ff6686}
 #octopusFourHourHover .o4-chart{width:100%;height:100%;min-height:100px;overflow:visible}
-#octopusFourHourHover .o4-area{fill:url(#octopusO4Gradient);opacity:.24}
-#octopusFourHourHover .o4-line{fill:none;stroke:#61c5ff;stroke-width:2.5;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round;filter:drop-shadow(0 0 5px rgba(70,180,255,.65))}
+#octopusFourHourHover .o4-candles line{stroke-width:2;vector-effect:non-scaling-stroke}
+#octopusFourHourHover .o4-candles rect{stroke-width:1;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 3px rgba(70,180,255,.18))}
 #octopusFourHourHover .o4-meta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:#8da8c8;font-size:clamp(10px,.9vw,13px)}
 #octopusFourHourHover .o4-status{color:#8da8c8}
 @media(max-width:760px){#octopusFourHourHover{inset:8% 4%;padding:12px;gap:8px;border-radius:12px}#octopusFourHourHover .o4-chart{min-height:90px}}
@@ -1224,7 +1224,7 @@ const centerStage=stage.closest('.center-stage');
 const fourHourLayer=document.createElement('div');
 fourHourLayer.id='octopusFourHourHover';
 fourHourLayer.setAttribute('aria-hidden','true');
-fourHourLayer.innerHTML=`<div class="o4-head"><div><div class="o4-kicker">LIVE MARKET · 4H</div><div class="o4-symbol">--</div></div><div class="o4-pricebox"><div class="o4-price">--</div><div class="o4-change">--</div></div></div><svg class="o4-chart" viewBox="0 0 1000 300" preserveAspectRatio="none" role="img" aria-label="4小时K线收盘走势"><defs><linearGradient id="octopusO4Gradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#61c5ff"/><stop offset="100%" stop-color="#61c5ff" stop-opacity="0"/></linearGradient></defs><path class="o4-area" d=""/><path class="o4-line" d=""/></svg><div class="o4-meta"><span class="o4-status">等待4H行情数据</span><span>真实4小时K线 · Bitget</span></div>`;
+fourHourLayer.innerHTML=`<div class="o4-head"><div><div class="o4-kicker">LIVE MARKET · 4H</div><div class="o4-symbol">--</div></div><div class="o4-pricebox"><div class="o4-price">--</div><div class="o4-change">--</div></div></div><svg class="o4-chart" viewBox="0 0 1000 300" preserveAspectRatio="none" role="img" aria-label="真实4小时K线图"><g class="o4-candles"></g></svg><div class="o4-meta"><span class="o4-status">等待4H行情数据</span><span>真实4小时K线 · Bitget</span></div>`;
 centerStage.appendChild(fourHourLayer);
 let activeFourHourCard=null,fourHourHideTimer=null;
 const fourHourCache=new WeakMap();
@@ -1235,14 +1235,24 @@ function hideFourHour(o){
   fourHourLayer.classList.remove('is-visible');
   fourHourLayer.setAttribute('aria-hidden','true');
 }
-function drawFourHour(values){
-  const line=fourHourLayer.querySelector('.o4-line'),area=fourHourLayer.querySelector('.o4-area');
-  const vals=values.filter(v=>Number.isFinite(v)&&v>0);
-  if(vals.length<2){line.setAttribute('d','');area.setAttribute('d','');return}
-  const min=Math.min(...vals),max=Math.max(...vals),range=max-min||Math.max(Math.abs(max)*.001,1);
-  const points=vals.map((v,i)=>[i*1000/(vals.length-1),280-(v-min)/range*250-15]);
-  const path='M'+points.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join('L');
-  line.setAttribute('d',path);area.setAttribute('d',path+'L1000 300L0 300Z');
+function drawFourHour(candles){
+  const group=fourHourLayer.querySelector('.o4-candles');
+  group.replaceChildren();
+  const rows=candles.filter(c=>c&&[c.o,c.h,c.l,c.c].every(v=>Number.isFinite(v)&&v>0));
+  if(rows.length<2)return;
+  const min=Math.min(...rows.map(c=>c.l)),max=Math.max(...rows.map(c=>c.h));
+  const range=max-min||Math.max(Math.abs(max)*.001,1),y=v=>285-(v-min)/range*260;
+  const slot=1000/rows.length,bodyW=Math.max(2,Math.min(12,slot*.58));
+  const ns='http://www.w3.org/2000/svg';
+  rows.forEach((c,i)=>{
+    const x=(i+.5)*slot,up=c.c>=c.o,color=up?'#2ee6a6':'#ff6686';
+    const wick=document.createElementNS(ns,'line');
+    wick.setAttribute('x1',x);wick.setAttribute('x2',x);wick.setAttribute('y1',y(c.h));wick.setAttribute('y2',y(c.l));wick.setAttribute('stroke',color);group.appendChild(wick);
+    const body=document.createElementNS(ns,'rect');
+    const top=Math.min(y(c.o),y(c.c)),height=Math.max(1.5,Math.abs(y(c.o)-y(c.c)));
+    body.setAttribute('x',x-bodyW/2);body.setAttribute('y',top);body.setAttribute('width',bodyW);body.setAttribute('height',height);
+    body.setAttribute('fill',color);body.setAttribute('stroke',color);group.appendChild(body);
+  });
 }
 async function loadFourHourData(o){
   const cache=fourHourCache.get(o);
@@ -1256,8 +1266,9 @@ async function loadFourHourData(o){
     :new URLSearchParams({symbol,productType:'USDT-FUTURES',granularity:'4H',limit:'60'});
   const path=isStock?'/api/v3/market/candles':'/api/v2/mix/market/candles';
   const promise=bitgetJson(path+'?'+params).then(rows=>rows
-    .filter(row=>Array.isArray(row)&&Number(row[4])>0)
-    .sort((a,b)=>Number(a[0])-Number(b[0])).map(row=>Number(row[4])));
+    .filter(row=>Array.isArray(row)&&[1,2,3,4].every(i=>Number(row[i])>0&&Number.isFinite(Number(row[i]))))
+    .sort((a,b)=>Number(a[0])-Number(b[0]))
+    .map(row=>({o:Number(row[1]),h:Number(row[2]),l:Number(row[3]),c:Number(row[4])})));
   fourHourCache.set(o,{at:0,values:[],promise});
   setFourHourStatus('正在获取真实4H K线…');
   try{
@@ -1271,7 +1282,7 @@ async function loadFourHourData(o){
 }
 function showFourHour(o){
   clearTimeout(fourHourHideTimer);
-  if(activeFourHourCard!==o){fourHourLayer.querySelector('.o4-line').setAttribute('d','');fourHourLayer.querySelector('.o4-area').setAttribute('d','')}
+  if(activeFourHourCard!==o){fourHourLayer.querySelector('.o4-candles').replaceChildren()}
   activeFourHourCard=o;
   fourHourLayer.classList.add('is-visible');
   fourHourLayer.setAttribute('aria-hidden','false');
