@@ -145,7 +145,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 
 
 /* Keep each dashboard region anchored to its original column while resizing. */
-.main-grid{grid-template-columns:minmax(0,1.02fr) minmax(0,1.62fr) minmax(0,1.08fr);align-items:stretch}
+.main-grid{grid-template-columns:minmax(280px,.88fr) minmax(0,1.62fr);align-items:stretch}
 .left-col,.right-col{grid-column:auto;display:flex;flex-direction:column;min-width:0;min-height:0}
 .center-stage{grid-column:auto;grid-row:auto;order:initial;min-width:0;min-height:0;height:auto}
 .bottom-grid{grid-template-columns:minmax(0,1.5fr) minmax(0,1.05fr) minmax(0,1fr)}
@@ -157,7 +157,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 @media(max-width:1180px){
   .topbar{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.25fr) auto}
   .status-card{display:none}
-  .main-grid{grid-template-columns:minmax(0,1.02fr) minmax(0,1.62fr) minmax(0,1.08fr)}
+  .main-grid{grid-template-columns:minmax(260px,.82fr) minmax(0,1.5fr)}
   .right-col{grid-column:auto;display:flex}
   .center-stage{grid-column:auto;grid-row:auto;order:initial;min-height:0}
   .bottom-grid{grid-template-columns:minmax(0,1.5fr) minmax(0,1.05fr) minmax(0,1fr)}
@@ -989,12 +989,11 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
         </tbody></table></div>
         <div class="us-pool-foot">共 27 个品种；当前涨跌幅与 K 线为占位，尚未接入实时行情。</div>
       </section>
+    </section>
 
-      <section class="center-stage orb-original-stage" aria-label="中央发光球核心区域">
-        <div class="orb-stage-label"><strong>VEGAS ORB</strong><span>CORE PARTICLE SYSTEM</span></div>
-        <canvas id="orb-core-canvas" aria-label="动态发光粒子球"></canvas>
-      </section>
-
+    <section class="center-stage orb-original-stage" aria-label="中央发光球核心区域">
+      <div class="orb-stage-label"><strong>VEGAS ORB</strong><span>CORE PARTICLE SYSTEM</span></div>
+      <canvas id="orb-core-canvas" aria-label="动态发光粒子球"></canvas>
     </section>
 
 
