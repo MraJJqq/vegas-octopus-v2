@@ -1133,11 +1133,7 @@ var R=Math.random,PI=Math.PI,stage=document.querySelector(".center-stage"),cv=do
 function $(i){return document.getElementById(i)}
 function rs(){var d=window.devicePixelRatio||1;W=stage.clientWidth;H=stage.clientHeight;cv.width=W*d;cv.height=H*d;x.setTransform(d,0,0,d,0,0)}
 rs();addEventListener("resize",rs);
-var ids=["spd","zm","ln","ps","fl"],V={};
-try{var sv=JSON.parse(localStorage.getItem("orbv3")||"{}");ids.forEach(function(k){if(sv[k]!=null)$(k).value=sv[k]})}catch(e){}
-function rd(){var o=[];ids.forEach(function(k){var e=$(k);V[k]=+e.value;e.parentNode.querySelector("b").textContent=(+e.value).toFixed(2);o.push(k+"="+(+e.value).toFixed(2))});$("ro").textContent="当前参数 "+o.join(" · ");try{localStorage.setItem("orbv3",JSON.stringify(V))}catch(e){}}
-ids.forEach(function(k){$(k).addEventListener("input",rd)});rd();
-$("hd").addEventListener("click",function(){var u=$("ui");u.classList.toggle("min");$("tg").textContent=u.classList.contains("min")?"展开 ▸":"收起 ▾"});
+var V={spd:.2,zm:1,ln:1,ps:1,fl:1};
 /* glow sprites */
 var SG=[];
 for(i=0;i<36;i++){(function(h){var c=document.createElement("canvas");c.width=c.height=64;var g=c.getContext("2d"),q=g.createRadialGradient(32,32,0,32,32,32);q.addColorStop(0,"hsla("+h+",100%,85%,1)");q.addColorStop(.25,"hsla("+h+",100%,62%,.5)");q.addColorStop(1,"hsla("+h+",100%,50%,0)");g.fillStyle=q;g.fillRect(0,0,64,64);SG.push(c)})(i*10)}
