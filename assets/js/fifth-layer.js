@@ -186,24 +186,19 @@
     if(!length) return {start:0,end:0};
     const count=Math.max(1,Math.min(length,Math.round(state.viewCount||180)));
     const first=data[0].t,last=data[length-1].t;
-    let start,end;
     if(state.startTime==null || state.endTime==null) {
-      end=length;
-      start=Math.max(0,end-count);
-      return {start,end};
+      return {start:Math.max(0,length-count),end:length};
     }
-    // Keep a valid, non-empty viewport even when the requested time window
-    // temporarily falls outside the currently loaded candles.
+    // When a time window is explicitly set, honor it exactly. Do not let a
+    // stale viewCount silently truncate the initial 90-day historical range.
     if(state.endTime<first) return {start:0,end:Math.min(length,count)};
     if(state.startTime>last) return {start:Math.max(0,length-count),end:length};
-    start=data.findIndex(c=>c.t>=state.startTime);
-    if(start<0) start=length-1;
-    end=data.findIndex(c=>c.t>state.endTime);
+    let start=data.findIndex(c=>c.t>=state.startTime);
+    if(start<0) start=0;
+    let end=data.findIndex(c=>c.t>state.endTime);
     if(end<0) end=length;
     start=Math.max(0,Math.min(length-1,start));
     end=Math.max(start+1,Math.min(length,end));
-    if(end-start>count) end=start+count;
-    else if(end-start<count) start=Math.max(0,end-count);
     return {start,end};
   }
   function fitCanvas() {
@@ -313,6 +308,8 @@
         }
       } else {
         state.candles=rows;
+        // The 90-day window is based on candle timestamps, not on the
+        // current request/cache size. Include the newest candle in the range.
         state.endTime=rows[rows.length-1].t;
         state.startTime=state.endTime-INITIAL_HISTORY_MS;
         const firstVisible=rows.findIndex(c=>c.t>=state.startTime);
