@@ -1,0 +1,66 @@
+name: Temporary Kline Asset Coverage Audit
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/kline-asset-audit.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  kline-asset-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Verify Reality stock and futures K-line WebSockets
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch({headless:true});
+            const page = await browser.newPage({viewport:{width:1440,height:1000}});
+            const errors=[];
+            await page.addInitScript(() => {
+              window.__wsAudit=[];
+              const Native=window.WebSocket;
+              function Tracked(...args){
+                const ws=new Native(...args);
+                ws.addEventListener('message',e=>window.__wsAudit.push({url:args[0],data:String(e.data).slice(0,300)}));
+                return ws;
+              }
+              Tracked.prototype=Native.prototype;
+              Object.setPrototypeOf(Tracked,Native);
+              window.WebSocket=Tracked;
+            });
+            page.on('pageerror',e=>errors.push(String(e)));
+            await page.goto('https://mrajjqq.github.io/vegas-octopus-v2/',{waitUntil:'domcontentloaded',timeout:60000});
+            await page.waitForSelector('#mc-c26',{timeout:30000});
+            const results=[];
+            for (const item of [{symbol:'AAPL',id:'#mc-c0',expected:'RAAPLUSDT'},{symbol:'SKHYNIX',id:'#mc-c17',expected:'RSKHYUSDT'},{symbol:'BTC',id:'#mc-c23',expected:'BTCUSDT'}]) {
+              await page.locator(item.id).click({force:true});
+              await page.waitForFunction(symbol=>{
+                const s=window.VegasFifthLayer?.getState?.();
+                return !!s&&s.visible&&s.symbol===symbol&&s.candles>=2&&s.websocket;
+              },item.symbol,{timeout:60000}).catch(()=>{});
+              await page.waitForFunction(()=>window.__wsAudit.length>0,{timeout:15000}).catch(()=>{});
+              const state=await page.evaluate(()=>({state:window.VegasFifthLayer?.getState?.()||null,messages:window.__wsAudit.slice()}));
+              const wsMessagesForExpected=state.messages.filter(m=>m.data.includes(item.expected)||m.data.includes('"channel":"candle4H"')).length;
+              results.push({requested:item.symbol,expectedExchangeSymbol:item.expected,state:state.state,wsMessages:state.messages.length,subscribedStreamMessageObserved:wsMessagesForExpected>0});
+              await page.keyboard.press('Escape');
+              await page.waitForFunction(()=>!window.VegasFifthLayer?.getState?.()?.visible,{timeout:5000}).catch(()=>{});
+              await page.waitForTimeout(500);
+              window;
+            }
+            console.log('KLINE_ASSET_AUDIT_RESULT='+JSON.stringify({results,pageErrors:errors}));
+            await browser.close();
+            if(results.some(r=>!r.state||r.state.symbol!==r.requested||r.state.contractSymbol!==r.expectedExchangeSymbol||!r.state.websocket||!r.state.candles||!r.subscribedStreamMessageObserved)||errors.length)process.exit(1);
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
