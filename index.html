@@ -254,7 +254,7 @@ function updatePageFade(){
 }
 function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(()=>{updateFocusScale();updatePageFade();focusFrame=0})}
 let wheelLock=false;
-left.addEventListener('wheel',e=>{if(Math.abs(e.deltaY)<4)return;e.preventDefault();if(wheelLock)return;wheelLock=true;const slot=focusSlots.find(el=>el.getBoundingClientRect().bottom>left.getBoundingClientRect().top+2);const gap=parseFloat(getComputedStyle(left).rowGap)||10;left.scrollBy({top:(slot?slot.getBoundingClientRect().height:150)+gap*(e.deltaY>0?1:-1),behavior:'smooth'});setTimeout(()=>{wheelLock=false},420)},{passive:false});
+left.addEventListener('wheel',e=>{if(Math.abs(e.deltaY)<4)return;e.preventDefault();if(wheelLock)return;wheelLock=true;const slot=focusSlots.find(el=>el.getBoundingClientRect().bottom>left.getBoundingClientRect().top+2);const gap=parseFloat(getComputedStyle(left).rowGap)||10;left.scrollBy({top:((slot?slot.getBoundingClientRect().height:150)+gap)*(e.deltaY>0?1:-1),behavior:'smooth'});setTimeout(()=>{wheelLock=false},420)},{passive:false});
 left.addEventListener('scroll',queueFocusScale,{passive:true});
 window.addEventListener('resize',queueFocusScale,{passive:true});
 queueFocusScale();
