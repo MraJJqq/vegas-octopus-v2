@@ -817,14 +817,12 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     return Math.hypot(p.x-(s.x1+t*dx),p.y-(s.y1+t*dy));
   }
   function pointerUp(e) {
+    // A tap on empty chart space must not close the overlay. The full-screen
+    // canvas is also the interaction surface for zooming/panning on touch
+    // devices; closing on a non-candle tap caused the chart to disappear
+    // during ordinary gestures and made users reopen/reload the same symbol.
     if(!state.drag) return;
-    const moved=state.drag.moved;state.drag=null;
-    if(!moved) {
-      const rect=canvas.getBoundingClientRect();
-      const p={x:e.clientX-rect.left,y:e.clientY-rect.top};
-      const nearest=state.hitSegments.reduce((best,s)=>Math.min(best,pointDistance(p,s)),Infinity);
-      if(nearest>12) close();
-    }
+    state.drag=null;
   }
   // Capture clicks before page-level handlers; pointer events also cover touch devices.
   function findCard(event) {
