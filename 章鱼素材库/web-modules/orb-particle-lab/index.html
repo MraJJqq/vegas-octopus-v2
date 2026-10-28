@@ -28,7 +28,7 @@ input[type=range]{width:100%;accent-color:#3fc8ff;margin:0}
 <div class="r"><span>自转速度</span><input id="spd" type="range" min="0" max="1" step=".01" value=".2"><b></b></div>
 <div class="r"><span>缩放</span><input id="zm" type="range" min=".6" max="1.6" step=".01" value="1"><b></b></div>
 <div class="r"><span>球心连线</span><input id="ln" type="range" min="0" max="2.5" step=".05" value="1"><b></b></div>
-<div class="r"><span>粒子大小</span><input id="ps" type="range" min=".5" max="2.2" step=".05" value="1"><b></b></div>
+<div class="r"><span>粒子大小</span><input id="ps" type="range" min=".5" max="2.2" step=".05" value="1.2"><b></b></div>
 <div class="r"><span>数据流强度</span><input id="fl" type="range" min=".3" max="3" step=".05" value="1"><b></b></div>
 <div id="ro"></div></div>
 <script>
@@ -37,7 +37,7 @@ function $(i){return document.getElementById(i)}
 function rs(){var d=window.devicePixelRatio||1;W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;x.setTransform(d,0,0,d,0,0)}
 rs();addEventListener("resize",rs);
 var ids=["spd","zm","ln","ps","fl"],V={};
-try{var sv=JSON.parse(localStorage.getItem("orbv3")||"{}");ids.forEach(function(k){if(sv[k]!=null)$(k).value=sv[k]})}catch(e){}
+try{var sv=JSON.parse(localStorage.getItem("orbv3")||"{}");ids.forEach(function(k){if(sv[k]!=null)$(k).value=sv[k]})}catch(e){}$("ps").value="1.2";
 function rd(){var o=[];ids.forEach(function(k){var e=$(k);V[k]=+e.value;e.parentNode.querySelector("b").textContent=(+e.value).toFixed(2);o.push(k+"="+(+e.value).toFixed(2))});$("ro").textContent="当前参数 "+o.join(" · ");try{localStorage.setItem("orbv3",JSON.stringify(V))}catch(e){}}
 ids.forEach(function(k){$(k).addEventListener("input",rd)});rd();
 $("hd").addEventListener("click",function(){var u=$("ui");u.classList.toggle("min");$("tg").textContent=u.classList.contains("min")?"展开 ▸":"收起 ▾"});
