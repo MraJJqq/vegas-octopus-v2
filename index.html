@@ -34,28 +34,42 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 #orb-core-canvas:active{cursor:grabbing}
 @media(max-width:600px){.topbar{top:12px;right:12px;width:clamp(132px,42vw,250px);max-height:calc(100dvh - 24px)}.v9-notification{gap:10px;max-height:calc(100dvh - 64px)}.v9-group{padding-left:6px}.panel-head{padding-bottom:5px}.v9-symbols{gap:4px 5px}}
 
-/* 第三层：卡片样式按原始素材文件恢复；仅限定在卡片模块作用域。 */
-#market-cards-layer{--bg:#02040a;--ink:#e8f0ff;--mute:#7f8db0;--up:#2ee6a6;--dn:#ff5c7c;position:absolute;z-index:2;inset:0;min-width:0;min-height:0;overflow:hidden;pointer-events:none;color:var(--ink);font-family:'Chakra Petch',ui-sans-serif,system-ui,-apple-system,'PingFang SC',sans-serif}
-#market-cards-layer #market-stage{position:absolute;inset:0;pointer-events:none}
-#market-cards-layer .pos{position:absolute;left:0;top:0;will-change:transform;cursor:pointer;pointer-events:auto}
-#market-cards-layer .card{--c:var(--up);position:absolute;inset:0;border-radius:.9em;padding:.55em .75em;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:1fr auto;column-gap:.5em;row-gap:.2em;align-items:center;isolation:isolate}
-#market-cards-layer .card.dn{--c:var(--dn)}
-#market-cards-layer .bg{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:var(--sh),inset 0 1px 0 rgba(255,255,255,.25);pointer-events:none}
-#market-cards-layer .bg::after{content:"";position:absolute;inset:0;border-radius:inherit;background:rgba(14,20,38,.9);border:1px solid rgba(255,255,255,.5);box-shadow:0 44px 60px -18px rgba(0,0,0,.95),0 0 34px -6px var(--c);opacity:var(--hv,0);pointer-events:none}
-#market-cards-layer .gl{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:var(--hv,0);background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.26),transparent 55%)}
-#market-cards-layer .dim{position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:var(--bg);opacity:0}
-#market-cards-layer .coin,#market-cards-layer .sym,#market-cards-layer .price,#market-cards-layer .spark,#market-cards-layer .pct{position:relative;min-width:0}
-#market-cards-layer .coin{width:1.8em;height:1.8em;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.9em;color:#07101f;background:var(--c);box-shadow:0 0 .9em -.15em var(--c)}
-#market-cards-layer .sym{font-weight:700;line-height:1.1;white-space:nowrap}
-#market-cards-layer .sym small{display:block;font-size:.62em;color:var(--mute);font-weight:500}
-#market-cards-layer .price{font-size:.95em;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;transition:color .3s}
-#market-cards-layer .price.flash{color:var(--c)}
-#market-cards-layer .spark{grid-column:1/3;width:100%;height:1.5em;overflow:visible}
-#market-cards-layer .spark .ln{fill:none;stroke:var(--c);stroke-width:1.5;vector-effect:non-scaling-stroke}
-#market-cards-layer .spark .ar{fill:var(--c);opacity:.14}
-#market-cards-layer .pct{font-size:.8em;font-weight:700;color:var(--c);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
-@media(prefers-reduced-motion:reduce){#market-cards-layer .pos{will-change:auto}}
-
+/* 第三层：小卡片行情模块，独立叠加，不改动第一、二层。 */
+#market-cards-layer{--up:#2ee6a6;--dn:#ff5c7c;--mute:#7f8db0;--ink:#e8f0ff;position:absolute;z-index:2;inset:0;min-width:0;min-height:0;pointer-events:none;overflow:hidden}
+#market-cards-layer .mc-columns{position:absolute;top:clamp(66px,10vh,110px);right:auto;bottom:clamp(12px,2vh,28px);left:0;width:36%;height:auto;max-height:none;min-width:0;min-height:0;box-sizing:border-box;overflow:visible;pointer-events:auto;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+#market-cards-layer .mc-columns::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;background:linear-gradient(to bottom,#02040a 0%,rgba(2,4,10,.72) 3%,rgba(2,4,10,0) 17%,rgba(2,4,10,0) 83%,rgba(2,4,10,.72) 97%,#02040a 100%),linear-gradient(to right,#02040a 0%,rgba(2,4,10,.72) 3%,rgba(2,4,10,0) 18%,rgba(2,4,10,0) 82%,rgba(2,4,10,.72) 97%,#02040a 100%);}
+#market-cards-layer .mc-side{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:clamp(8px,1.2vh,16px);min-width:0;min-height:0;width:100%;height:100%;max-height:100%;box-sizing:border-box;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;padding-block:28px;scrollbar-width:none;-ms-overflow-style:none;pointer-events:auto;cursor:default;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}#market-cards-layer .mc-side::-webkit-scrollbar{display:none;width:0;height:0}
+#market-cards-layer .mc-slot{position:relative;flex:0 0 auto;perspective:900px;width:min(100%,clamp(126px,18vw,238px));min-width:0;max-width:100%;box-sizing:border-box;padding:5px 4px 16px;pointer-events:auto;opacity:var(--mc-page-opacity,1);filter:blur(var(--mc-page-blur,0px));transition:transform .12s linear,opacity .28s ease,filter .28s ease;transform:scale(var(--mc-focus-scale,1));transform-origin:center center;will-change:transform}
+#market-cards-layer .mc-float{transform-style:preserve-3d;animation:mc-bob 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
+@keyframes mc-bob{0%{transform:translateY(0) rotateY(-5deg) rotateX(2deg)}100%{transform:translateY(-7px) rotateY(5deg) rotateX(-2deg)}}
+#market-cards-layer .mc-gshadow{position:absolute;left:14%;right:14%;bottom:0;height:14px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.65),transparent);filter:blur(5px);animation:mc-sh 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
+@keyframes mc-sh{0%{transform:scale(1);opacity:.9}100%{transform:scale(.82);opacity:.5}}
+#market-cards-layer .mc-card{--mc-c:var(--up);position:relative;transform-style:preserve-3d;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .14s ease-out;border-radius:22px;padding:clamp(10px,1.1vw,15px);min-height:clamp(122px,17vh,172px);touch-action:pan-y;cursor:default}
+#market-cards-layer .mc-card.up{--mc-c:var(--up)}
+#market-cards-layer .mc-card.dn{--mc-c:var(--dn)}
+#market-cards-layer .mc-bg{position:absolute;inset:0;border-radius:inherit;background:rgba(8,14,32,.88);border:1.5px solid var(--mc-c);box-shadow:0 0 26px -6px var(--mc-c),inset 0 0 26px -14px var(--mc-c);transition:border-color .4s,box-shadow .4s}
+#market-cards-layer .mc-g1,#market-cards-layer .mc-g2{position:absolute;inset:0;border-radius:inherit;border:1.5px solid var(--mc-c);pointer-events:none;transition:border-color .4s}
+#market-cards-layer .mc-g1{transform:translateZ(-18px);opacity:.55}
+#market-cards-layer .mc-g2{transform:translateZ(-36px);opacity:.25}
+#market-cards-layer .mc-gl{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transform:translateZ(52px);background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.28),transparent 55%);transition:opacity .18s ease}
+#market-cards-layer .mc-card.hot .mc-gl{opacity:1}
+#market-cards-layer .mc-l1,#market-cards-layer .mc-l2,#market-cards-layer .mc-l3,#market-cards-layer .mc-l4{position:relative}
+#market-cards-layer .mc-l1{transform:translateZ(14px)}
+#market-cards-layer .mc-l2{transform:translateZ(30px)}
+#market-cards-layer .mc-l3{transform:translateZ(39px)}
+#market-cards-layer .mc-l4{transform:translateZ(50px)}
+#market-cards-layer .mc-row{display:flex;align-items:center;gap:8px;min-width:0}
+#market-cards-layer .mc-coin{flex:0 0 27px;width:27px;height:27px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;color:#07101f;background:var(--mc-c);box-shadow:0 0 16px -2px var(--mc-c);transition:background .4s}
+#market-cards-layer .mc-sym{font-size:clamp(12px,1vw,15px);font-weight:700;white-space:nowrap}
+#market-cards-layer .mc-sym small{font-size:10px;color:var(--mute);font-weight:500;margin-left:4px}
+#market-cards-layer .mc-price{font-size:clamp(19px,1.8vw,27px);font-weight:700;margin:9px 0 4px;font-variant-numeric:tabular-nums;transition:color .3s;white-space:nowrap}
+#market-cards-layer .mc-price.flash{color:var(--mc-c)}
+#market-cards-layer .mc-pct{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;color:#07101f;background:var(--mc-c);transition:background .4s}
+#market-cards-layer .mc-kline{display:block;width:100%;height:34px;margin-top:7px}
+#market-cards-layer .mc-hl{margin-top:5px;font-size:10px;color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
+#market-cards-layer .mc-hl span{color:var(--ink);margin:0 5px 0 2px}
+@media(max-width:700px){#market-cards-layer .mc-columns{top:clamp(76px,12vh,112px);bottom:8px}#market-cards-layer .mc-side{gap:10px}#market-cards-layer .mc-slot{width:min(100%,clamp(126px,43vw,190px));padding:3px 2px 12px}#market-cards-layer .mc-card{padding:9px;border-radius:16px;min-height:clamp(112px,15vh,145px)}#market-cards-layer .mc-sym small{font-size:9px}#market-cards-layer .mc-price{font-size:clamp(17px,4.4vw,23px)}#market-cards-layer .mc-hl{font-size:9px}}
+@media(prefers-reduced-motion:reduce){#market-cards-layer .mc-float,#market-cards-layer .mc-gshadow{animation:none}}
 
 </style>
 </head>
@@ -69,7 +83,11 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 <section class="v9-group"><div class="v9-group-title">🔸 核心能源</div><div class="v9-symbols" id="v9Core"><span class="v9-nochange">▰ No change ▰</span></div></section>
 </div></section></header>
 <main class="main-grid"><section class="center-stage" aria-label="中央发光球核心区域"><canvas id="orb-core-canvas" aria-label="动态发光粒子球"></canvas></section></main>
-<section id="market-cards-layer" aria-label="27个品种实时行情卡片"><div id="market-stage"></div></section>
+<section id="market-cards-layer" aria-label="27个品种实时行情卡片">
+  <div class="mc-columns">
+    <div class="mc-side left" id="mc-left" aria-label="全部27个行情卡片，纵向滚动"></div>
+  </div>
+</section>
 </div>
 <script>
 /* 第二层：中央发光球模块。 */
@@ -201,105 +219,181 @@ else if(!orbFrame){last=0;orbFrame=requestAnimationFrame(frame)}
 })();
 </script>
 <script>
-/* 第三层：沿用原始卡片的 DOM、弧形排布、漂浮、悬停与缓动逻辑；行情源继续使用网页实时接口。 */
+/* 第三层：27张行情卡片。单列纵向滚动，焦点卡片清晰显示，其余卡片渐隐模糊。 */
 (()=>{
 const P=[
  ["AAPL","AAPLUSDT"],["MSFT","MSFTUSDT"],["GOOGL","GOOGLUSDT"],["AMZN","AMZNUSDT"],["NVDA","NVDAUSDT"],["TSLA","TSLAUSDT"],["META","METAUSDT"],["INTC","INTCUSDT"],["QCOM","QCOMUSDT"],["AMD","AMDUSDT"],["TSM","TSMUSDT"],["AVGO","AVGOUSDT"],["ORCL","ORCLUSDT"],["ARM","ARMUSDT"],["MU","MUUSDT"],["ASML","ASMLUSDT"],["SNDK","SNDKUSDT"],["SKHYNIX","SKHYNIXUSDT"],["MRVL","MRVLUSDT"],["GLW","GLWUSDT"],["HOOD","HOODUSDT"],["CBRS","CBRSUSDT"],["SPCX","SPCXUSDT"],["BTC","BTCUSDT"],["HYPE","HYPEUSDT"],["XAUUSD","XAUUSDT"],["USOIL","CLUSDT"]
 ];
 const REALITY_STOCKS=new Set(P.slice(0,23).map(x=>x[0]));
-const rnd=Math.random,TAU=6.283,dpr=Math.min(window.devicePixelRatio||1,2);
-const fmt=p=>p>=1000?p.toLocaleString('en-US',{maximumFractionDigits:1}):p>=100?p.toFixed(2):p>=1?p.toFixed(3):p>=.01?p.toFixed(4):p.toFixed(6);
-const stage=document.getElementById('market-stage');
-let W,H,w,h,Cx,Cy,RX,RY,Re,S,ARC;
-function geom(){
- W=window.innerWidth;H=window.innerHeight;const topY=H*.18;
- w=Math.max(92,Math.min(170,W*.096));h=w*.46;Re=Math.min(W,H)*.14;S=Re*4.6;
- Cx=W/2;Cy=(topY+H)/2;
- const Rm=W/2-w*.6-30,Ym=(H-topY)/2-h/2-14,y0=Math.min(Ym*.75,Re+h/2+34);
- RX=[.47,.73,1].map(u=>u*Rm);RY=[y0,(y0+Ym)/2,Ym];
- ARC=RX.map((a,k)=>{const b=RY[k],th=Math.min(1.4,Math.acos(Math.max(-1,Math.min(1,(w*.6+10)/a)))),cum=[0];let px=a*Math.cos(-th),py=-b*Math.sin(th);for(let i=1;i<=120;i++){const q=-th+2*th*i/120,x=a*Math.cos(q),y=b*Math.sin(q);cum.push(cum[i-1]+Math.hypot(x-px,y-py));px=x;py=y}return{th,cum}});
+const fmt=p=>p>=100?p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):p>=1?p.toFixed(3):p.toFixed(4);
+const S=P.map(([s,api],i)=>({s,api,i,p:0,o:0,h:[],candles:[],candleUpdatedAt:0,ready:false}));
+const left=document.getElementById('mc-left');
+S.forEach(d=>{
+ left.insertAdjacentHTML('beforeend',`<div class="mc-slot"><div class="mc-float" style="--d:${-d.i*.9}s"><div class="mc-card" id="mc-c${d.i}"><div class="mc-bg"></div><i class="mc-g1"></i><i class="mc-g2"></i><i class="mc-gl"></i><div class="mc-row mc-l2"><span class="mc-coin">${d.s[0]}</span><b class="mc-sym">${d.s}<small>${REALITY_STOCKS.has(d.s)?'/USDT 现货':'/USDT 永续'}</small></b></div><div class="mc-price mc-l4">加载中</div><div class="mc-l3"><span class="mc-pct">--</span></div><canvas class="mc-kline mc-l1" aria-label="${d.s} K线图"></canvas><div class="mc-hl mc-l2">高<span class="mc-hi">--</span>低<span class="mc-lo">--</span></div></div></div><div class="mc-gshadow" style="--d:${-d.i*.9}s"></div></div>`);
+});
+function drawKline(d,canvas){
+ const ctx=canvas.getContext('2d'),rect=canvas.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),ratio=window.devicePixelRatio||1;
+ if(canvas.width!==Math.round(w*ratio))canvas.width=Math.round(w*ratio);
+ if(canvas.height!==Math.round(h*ratio))canvas.height=Math.round(h*ratio);
+ ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,w,h);
+ const rows=d.candles||[];if(rows.length<2)return;
+ let mn=Infinity,mx=-Infinity;
+ rows.forEach(c=>{mn=Math.min(mn,c.low);mx=Math.max(mx,c.high)});
+ if(!Number.isFinite(mn)||!Number.isFinite(mx))return;
+ const range=mx-mn||1,y=v=>h-3-(v-mn)/range*(h-6),step=w/rows.length,bw=Math.max(1,step*.58);
+ ctx.strokeStyle='rgba(255,255,255,.08)';ctx.lineWidth=1;
+ for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke()}
+ rows.forEach((c,i)=>{
+  const up=c.close>=c.open,col=up?'#2ee6a6':'#ff5c7c',x=i*step+step/2,top=y(Math.max(c.open,c.close)),bottom=y(Math.min(c.open,c.close));
+  ctx.strokeStyle=col;ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=2;
+  ctx.beginPath();ctx.moveTo(x,y(c.high));ctx.lineTo(x,y(c.low));ctx.stroke();
+  ctx.fillRect(x-bw/2,top,bw,Math.max(1,bottom-top));
+ });
+ if(d.ready&&Number.isFinite(d.p)&&d.p>0){const col=d.p>=d.o?'#2ee6a6':'#ff5c7c';ctx.shadowBlur=0;ctx.setLineDash([3,4]);ctx.strokeStyle=col;ctx.globalAlpha=.5;ctx.beginPath();ctx.moveTo(0,y(d.p));ctx.lineTo(w,y(d.p));ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1}
+ ctx.shadowBlur=0;
 }
-geom();
-const lengths=()=>ARC.map(a=>a.cum[120]);
-const alloc=N=>{const l=lengths(),total=l.reduce((a,b)=>a+b),q=l.map(x=>N*x/total),n=q.map(Math.floor);q.map((v,i)=>[v-n[i],i]).sort((a,b)=>b[0]-a[0]).slice(0,N-n.reduce((a,b)=>a+b,0)).forEach(([,i])=>n[i]++);return n};
-const syms=P.slice(),C=[];
-const cardsHost=stage;
-[14,13].forEach((N,s)=>alloc(N).forEach((n,k)=>{for(let i=0;i<n;i++){
- const [name,api]=syms[C.length],hh=[];
- const pos=document.createElement('div');pos.className='pos';
- pos.innerHTML='<div class="card"><div class="bg"></div><i class="gl"></i><i class="dim"></i><span class="coin">'+name[0]+'</span><b class="sym">'+name+'<small>'+(REALITY_STOCKS.has(name)?'/USDT 现货':'/USDT 永续')+'</small></b><span class="price">加载中</span><svg class="spark" viewBox="0 0 100 26" preserveAspectRatio="none"><path class="ar"></path><path class="ln"></path></svg><span class="pct">--</span></div>';
- cardsHost.appendChild(pos);const card=pos.firstElementChild;
- C.push({s:name,api,i:C.length,pos,card,dim:card.children[2],side:s,k,t:(i+.5+(k-1)*.3+(rnd()-.5)*.2)/n,jr:rnd()-.5,v:.0015,hist:hh,p:0,op:0,o:0,candles:[],candleUpdatedAt:0,ready:false,ox:0,oy:0,fx:0,fy:0,u:0,w1:.35+rnd()*.4,w2:.35+rnd()*.4,w3:.7+rnd()*.5,w5:.5+rnd()*.5,wd:.06+rnd()*.1,p1:rnd()*TAU,p2:rnd()*TAU,p3:rnd()*TAU,p5:rnd()*TAU,pd:rnd()*TAU,on:false,hv:0,rx:0,ry:0,hx:0,hy:0,sx:0,sy:0,z:0,q:-1,lh:-1});
-}}));
-function qAt(k,t){const {th,cum}=ARC[k],sl=t*cum[120];let i=1;while(i<120&&cum[i]<sl)i++;return-th+2*th*((i-1)+(sl-cum[i-1])/(cum[i]-cum[i-1]||1))/120}
-function homeOf(o){const q=qAt(o.k,o.t),sg=o.side?1:-1,j=1+o.jr*.03,a=RX[o.k]*j,b=RY[o.k]*j;return{q,x:Cx+sg*a*Math.cos(q),y:Cy+b*Math.sin(q),tx:-sg*a*Math.sin(q),ty:b*Math.cos(q)}}
-function relax(){for(let it=0;it<90;it++){const hm=C.map(homeOf),mv=C.map(()=>0);for(let i=0;i<C.length;i++)for(let j=i+1;j<C.length;j++){if(C[i].side!==C[j].side)continue;const dx=hm[i].x-hm[j].x,dy=hm[i].y-hm[j].y,ox=w*1.22-Math.abs(dx),oy=h*1.4-Math.abs(dy);if(ox<=0||oy<=0)continue;const px=ox/(w*1.22)<oy/(h*1.4)?Math.sign(dx||1)*ox:0,py=px?0:Math.sign(dy||1)*oy;for(const [n,f] of [[i,.5],[j,-.5]])mv[n]+=f*(px*hm[n].tx+py*hm[n].ty)/(Math.hypot(hm[n].tx,hm[n].ty)||1)}C.forEach((o,n)=>{o.t=Math.min(.98,Math.max(.02,o.t+mv[n]*.6/ARC[o.k].cum[120]))})}}
-function layout(){geom();relax();for(const o of C){const m=homeOf(o),st=o.pos.style;o.ox=m.x-w/2;o.oy=m.y-h/2;o.fx=Math.sin(m.q)*10;o.fy=-(o.side?1:-1)*12;st.width=w+'px';st.height=h+'px';st.fontSize=w/12.4+'px'}}
-layout();window.addEventListener('resize',layout,{passive:true});
-let tx=0,ty=0,cx=0,cy=0,last=0;
-window.addEventListener('pointermove',e=>{tx=e.clientX/W-.5;ty=e.clientY/H-.5},{passive:true});
-const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
-function frame(t){
- const dt=reduced?0:Math.min(.05,(t-last)/1000||0);last=t;
- const E=r=>1-Math.exp(-dt*r),kIn=E(9),kOut=E(6),kT=E(12),kS=E(10),kp=E(4),Ax=w*.075,Ay=h*.2;
- cx+=(tx-cx)*kp;cy+=(ty-cy)*kp;
- for(const o of C){const st=o.pos.style;o.hv+=((o.on?1:0)-o.hv)*(o.on?kIn:kOut);if(!o.on&&o.hv<.002)o.hv=0;
- const e=o.hv*o.hv*(3-2*o.hv),a=1-e;o.u+=dt*a;const u=o.u,d=.5+.5*Math.sin(u*o.wd+o.pd),Sd=.88+.24*d,St=Sd+(1.65-Sd)*e,kc=St/Sd;
- const X=o.ox+Ax*(Math.sin(u*o.w1+o.p1)+.4*Math.sin(u*o.w3+o.p3))+cx*(d-.5)*50,Y=o.oy+Ay*(Math.sin(u*o.w2+o.p2)+.4*Math.cos(u*o.w3*1.3+o.p1))+cy*(d-.5)*30;
- let fx=0,fy=0;if(e>0){const gx=w*St/2+4,gy=h*St/2+4,mx=X+w/2,my=Y+h/2;fx=Math.max(gx-mx,0)+Math.min(W-gx-mx,0);fy=Math.max(gy-my,0)+Math.min(H-gy-my,0)}
- o.sx+=(fx-o.sx)*kS;o.sy+=(fy-o.sy)*kS;o.rx+=(o.hx-o.rx)*kT;o.ry+=(o.hy-o.ry)*kT;
- const bob=Math.sin(u*o.w5+o.p5)*h*.08,b2=Math.sin(u*1.3+o.p1)*.012*a;st.transform='translate3d('+(X+o.sx)+'px,'+(Y+o.sy+bob)+'px,0) scale('+Sd+')';
- o.card.style.transform='perspective(700px) rotateX('+(o.fx*a+o.rx)+'deg) rotateY('+(o.fy*a+o.ry)+'deg) scale('+(kc*(1+b2))+','+(kc*(1-b2*.8))+')';
- o.dim.style.opacity=(1-d)*.4*a;const z=e>.01||o.on?100:10+Math.round(d*20);if(o.z!==z){o.z=z;st.zIndex=z}if(o.lh!==e){o.lh=e;st.setProperty('--hv',e)}const q=Math.round(d*25)/25;if(o.q!==q){o.q=q;st.setProperty('--sh','0 '+(10+34*q|0)+'px '+(16+34*q|0)+'px -12px rgba(0,0,0,'+(.5+.4*q).toFixed(2)+')')}}
- requestAnimationFrame(frame)
-}
-requestAnimationFrame(frame);
 function paint(d){
- const c=d.card,q=s=>c.querySelector(s),up=d.p>=d.o;c.classList.toggle('dn',!up);
- if(!d.ready||!Number.isFinite(d.p)||d.p<=0){q('.price').textContent='加载中';q('.pct').textContent='--';return}
- q('.price').textContent=fmt(d.p);q('.pct').textContent=(up?'+':'')+((d.p/d.o-1)*100).toFixed(2)+'%';
- const vals=d.candles.map(v=>v.close).filter(v=>Number.isFinite(v)&&v>0);
- if(vals.length>1){const mn=Math.min(...vals),mx=Math.max(...vals),range=mx-mn||1,ln='M'+vals.map((v,k)=>(k*100/(vals.length-1)).toFixed(1)+' '+(23-(v-mn)/range*20).toFixed(1)).join('L');q('.ln').setAttribute('d',ln);q('.ar').setAttribute('d',ln+'L100 26L0 26Z')}
+ const c=document.getElementById('mc-c'+d.i),q=s=>c.querySelector(s),priceEl=q('.mc-price');
+ if(!d.ready||!Number.isFinite(d.p)||d.p<=0){q('.mc-price').textContent='加载中';q('.mc-pct').textContent='--';q('.mc-hi').textContent='--';q('.mc-lo').textContent='--';drawKline(d,q('.mc-kline'));return}
+ const up=d.p>=d.o;c.classList.toggle('up',up);c.classList.toggle('dn',!up);
+ const nextPrice=fmt(d.p);if(priceEl.textContent!==nextPrice&&priceEl.textContent!=='加载中'){priceEl.classList.add('flash');window.setTimeout(()=>priceEl.classList.remove('flash'),250)}priceEl.textContent=nextPrice;q('.mc-pct').textContent=(up?'+':'')+((d.p/d.o-1)*100).toFixed(2)+'%';
+ const values=d.h.filter(v=>Number.isFinite(v)&&v>0);
+ if(values.length>1){const mn=Math.min(...values),mx=Math.max(...values);q('.mc-hi').textContent=fmt(mx);q('.mc-lo').textContent=fmt(mn)}
+ drawKline(d,q('.mc-kline'));
 }
-const API='https://api.bitget.com',CANDLE_REFRESH_MS=5*60*1000;
+window.addEventListener('resize',()=>S.forEach(d=>drawKline(d,document.querySelector('#mc-c'+d.i+' .mc-kline'))),{passive:true});
+let focusSlots=Array.from(left.querySelectorAll('.mc-slot'));
+let focusFrame=0;
+function updateFocusScale(){
+ focusFrame=0;
+ const view=left.getBoundingClientRect(),center=view.top+view.height/2,range=Math.max(1,view.height*.52),fadeRange=Math.max(1,view.height*.46),available=Math.max(1,left.clientWidth-8);
+ const metrics=focusSlots.map(slot=>{
+  const r=slot.getBoundingClientRect(),distance=Math.abs((r.top+r.height/2)-center),t=Math.min(1,distance/range),ease=t*t*(3-2*t),fadeT=Math.min(1,distance/fadeRange),fadeEase=fadeT*fadeT*(3-2*fadeT);
+  const visible=Math.max(0,Math.min(r.bottom,view.bottom)-Math.max(r.top,view.top)),ratio=Math.min(1,visible/Math.max(1,r.height)),focused=distance<view.height*.23&&ratio>=.98;
+  return {slot,scale:1+(Math.min(1.34,available/Math.max(1,slot.offsetWidth))-1)*(1-ease),opacity:focused?1:(1-.72*fadeEase)*Math.min(1,ratio*1.8),blur:focused?0:2.8*fadeEase+(1-ratio)*1.2};
+ });
+ metrics.forEach(({slot,scale,opacity,blur})=>{
+  slot.style.setProperty('--mc-focus-scale',scale.toFixed(3));
+  slot.style.setProperty('--mc-page-opacity',Math.max(.025,opacity).toFixed(3));
+  slot.style.setProperty('--mc-page-blur',Math.max(0,blur).toFixed(2)+'px');
+ });
+}
+function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(updateFocusScale)}
+let wheelTarget=left.scrollTop,wheelFrame=0,wheelVelocity=0,wheelLastTime=0,loopDirection=1;
+function cardStep(){
+ const first=left.firstElementChild;
+ return first?first.getBoundingClientRect().height+(parseFloat(getComputedStyle(left).rowGap)||0):0;
+}
+function normalizeLoopPosition(){
+ if(focusSlots.length<2)return;
+ const step=cardStep();
+ if(step<1)return;
+ let top=left.scrollTop,guard=0;
+ const count=focusSlots.length;
+ if(loopDirection<0){
+  while(top<=0&&guard++<count){
+   const last=focusSlots.pop();
+   left.insertBefore(last,left.firstElementChild);
+   focusSlots.unshift(last);
+   top+=step;
+   wheelTarget+=step;
+  }
+ }else{
+  while(top>=step&&guard++<count){
+   const first=focusSlots.shift();
+   left.appendChild(first);
+   focusSlots.push(first);
+   top-=step;
+   wheelTarget-=step;
+  }
+ }
+ if(Math.abs(top-left.scrollTop)>.1)left.scrollTop=top;
+}
+function smoothWheelStep(now){
+ if(!wheelLastTime)wheelLastTime=now;
+ const dt=Math.min(32,Math.max(1,now-wheelLastTime));
+ wheelLastTime=now;
+ const current=left.scrollTop,diff=wheelTarget-current;
+ left.scrollTop=current+diff*(1-Math.exp(-dt/55));
+ normalizeLoopPosition();
+ wheelVelocity*=Math.exp(-dt/260);
+ if(Math.abs(wheelVelocity)>.01)wheelTarget+=wheelVelocity*dt;
+ else wheelVelocity=0;
+ queueFocusScale();
+ if(Math.abs(wheelTarget-left.scrollTop)<.6&&Math.abs(wheelVelocity)<.01){
+  wheelTarget=left.scrollTop;wheelFrame=0;wheelLastTime=0;return;
+ }
+ wheelFrame=requestAnimationFrame(smoothWheelStep);
+}
+left.addEventListener('wheel',e=>{
+ if(Math.abs(e.deltaY)<.1)return;
+ e.preventDefault();
+ const unit=e.deltaMode===1?16:e.deltaMode===2?left.clientHeight:1;
+ const delta=e.deltaY*unit;
+ loopDirection=delta<0?-1:1;
+ if(!wheelFrame)wheelTarget=left.scrollTop;
+ wheelTarget+=delta*1.05;
+ wheelVelocity=Math.max(-1.2,Math.min(1.2,wheelVelocity+delta*.016));
+ if(!wheelFrame)wheelFrame=requestAnimationFrame(smoothWheelStep);
+},{passive:false});
+left.addEventListener('scroll',()=>{
+ if(!wheelFrame){wheelTarget=left.scrollTop;wheelVelocity=0}
+ queueFocusScale();
+},{passive:true});
+left.addEventListener('touchstart',()=>{wheelVelocity=0;wheelTarget=left.scrollTop},{passive:true});
+left.addEventListener('touchend',()=>{wheelTarget=left.scrollTop;wheelVelocity=0},{passive:true});
+window.addEventListener('resize',queueFocusScale,{passive:true});
+left.style.scrollBehavior='auto';
+queueFocusScale();
+const API='https://api.bitget.com';
+const CANDLE_REFRESH_MS=5*60*1000;
 async function bitgetJson(path){const r=await fetch(API+path,{cache:'no-store'});if(!r.ok)throw new Error('Bitget HTTP '+r.status);const p=await r.json();if(p.code!=='00000'||!Array.isArray(p.data))throw new Error(p.msg||'Bitget response invalid');return p.data}
 async function loadSparkline(d,symbol,isStock){
- try{const params=isStock?new URLSearchParams({category:'SPOT',symbol,interval:'1H',limit:'40'}):new URLSearchParams({symbol,productType:'USDT-FUTURES',granularity:'1H',limit:'40'}),path=isStock?'/api/v3/market/candles':'/api/v2/mix/market/candles',rows=await bitgetJson(path+'?'+params);
- d.candles=rows.filter(r=>Array.isArray(r)&&Number(r[1])>0&&Number(r[2])>0&&Number(r[3])>0&&Number(r[4])>0).sort((a,b)=>Number(a[0])-Number(b[0])).slice(-40).map(r=>({open:Number(r[1]),high:Number(r[2]),low:Number(r[3]),close:Number(r[4])}));d.candleUpdatedAt=Date.now();
- }catch(error){if(!d.candles.length)d.candles=[];d.candleUpdatedAt=Date.now()-CANDLE_REFRESH_MS+60000;console.warn('[Vegas Octopus] 1H candles failed for '+d.s+':',error)}paint(d)
+ try{
+  const params=isStock?new URLSearchParams({category:'SPOT',symbol,interval:'1H',limit:'30'}):new URLSearchParams({symbol,productType:'USDT-FUTURES',granularity:'1H',limit:'30'});
+  const path=isStock?'/api/v3/market/candles':'/api/v2/mix/market/candles';
+  const rows=await bitgetJson(path+'?'+params);
+  d.candles=rows.filter(r=>Array.isArray(r)&&Number(r[1])>0&&Number(r[2])>0&&Number(r[3])>0&&Number(r[4])>0).sort((a,b)=>Number(a[0])-Number(b[0])).slice(-30).map(r=>({open:Number(r[1]),high:Number(r[2]),low:Number(r[3]),close:Number(r[4])}));
+  d.h=d.candles.flatMap(c=>[c.high,c.low]);
+  d.candleUpdatedAt=Date.now();
+ }catch(error){if(!d.candles.length){d.h=[];d.candles=[]}d.candleUpdatedAt=Date.now()-CANDLE_REFRESH_MS+60000;console.warn('[Vegas Octopus] 1H candles failed for '+d.s+':',error)}
+ paint(d)
 }
 let marketLoadInFlight=false;
 async function loadMarketData(){
  if(marketLoadInFlight)return;marketLoadInFlight=true;
  try{
- const results=await Promise.allSettled([bitgetJson('/api/v2/mix/market/tickers?productType=USDT-FUTURES'),bitgetJson('/api/v3/market/tickers?category=SPOT'),bitgetJson('/api/v3/reality/market/stock-info')]);
- const [futureResult,spotResult,stockResult]=results,futures=futureResult.status==='fulfilled'?new Map(futureResult.value.map(t=>[String(t.symbol).toUpperCase(),t])):null,spots=spotResult.status==='fulfilled'?new Map(spotResult.value.map(t=>[String(t.symbol).toUpperCase(),t])):null;
- const realitySymbols=stockResult.status==='fulfilled'?new Map(stockResult.value.filter(s=>s&&s.code&&s.symbol).map(s=>[String(s.code).toUpperCase(),String(s.symbol)])):null;
- if(realitySymbols){const sk=stockResult.value.find(s=>s&&s.symbol&&(String(s.code||'').toUpperCase().replace(/[^A-Z0-9]/g,'')==='SKHY'||/SK\s*HYNIX/i.test(String(s.name||''))||/RSKHYUSDT/i.test(String(s.symbol||''))));if(sk)realitySymbols.set('SKHYNIX',String(sk.symbol))}
- const jobs=[];
- for(const d of C){
-  if(REALITY_STOCKS.has(d.s)){
-   if(!spots||!realitySymbols){if(!d.ready)d.card.querySelector('.price').textContent='行情暂不可用';continue}
-   const symbol=realitySymbols.get(d.s),ticker=symbol&&spots.get(symbol.toUpperCase());if(!ticker){if(!d.ready)d.card.querySelector('.price').textContent='暂无行情';continue}
-   const last=Number(ticker.lastPrice),open=Number(ticker.openPrice24h);if(!(last>0&&open>0)){if(!d.ready)d.card.querySelector('.price').textContent='数据无效';continue}
-   d.api=symbol;d.p=last;d.o=open;d.ready=true;paint(d);if(Date.now()-d.candleUpdatedAt>=CANDLE_REFRESH_MS)jobs.push(()=>loadSparkline(d,symbol,true));
-  }else{
-   if(!futures){if(!d.ready)d.card.querySelector('.price').textContent='行情暂不可用';continue}
-   const ticker=futures.get(d.api.toUpperCase());if(!ticker){if(!d.ready)d.card.querySelector('.price').textContent='暂无行情';continue}
-   const last=Number(ticker.lastPr),open=Number(ticker.open24h);if(!(last>0&&open>0)){if(!d.ready)d.card.querySelector('.price').textContent='数据无效';continue}
-   d.p=last;d.o=open;d.ready=true;paint(d);if(Date.now()-d.candleUpdatedAt>=CANDLE_REFRESH_MS)jobs.push(()=>loadSparkline(d,d.api,false));
-  }
- }
- for(let i=0;i<jobs.length;i+=8)await Promise.allSettled(jobs.slice(i,i+8).map(job=>job()));
+  const results=await Promise.allSettled([bitgetJson('/api/v2/mix/market/tickers?productType=USDT-FUTURES'),bitgetJson('/api/v3/market/tickers?category=SPOT'),bitgetJson('/api/v3/reality/market/stock-info')]);
+  const [futureResult,spotResult,stockResult]=results;
+  const futures=futureResult.status==='fulfilled'?new Map(futureResult.value.map(t=>[String(t.symbol).toUpperCase(),t])):null;
+  const spots=spotResult.status==='fulfilled'?new Map(spotResult.value.map(t=>[String(t.symbol).toUpperCase(),t])):null;
+  const realitySymbols=stockResult.status==='fulfilled'?new Map(stockResult.value.filter(s=>s&&s.code&&s.symbol).map(s=>[String(s.code).toUpperCase(),String(s.symbol)])):null;
+  if(realitySymbols){const sk=stockResult.value.find(s=>s&&s.symbol&&(String(s.code||'').toUpperCase().replace(/[^A-Z0-9]/g,'')==='SKHY'||/SK\s*HYNIX/i.test(String(s.name||''))||/RSKHYUSDT/i.test(String(s.symbol||''))));if(sk)realitySymbols.set('SKHYNIX',String(sk.symbol))}
+  const sparkJobs=[];
+  S.forEach(d=>{
+   if(REALITY_STOCKS.has(d.s)){
+    if(!spots||!realitySymbols){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='行情暂不可用';return}
+    const symbol=realitySymbols.get(d.s),ticker=symbol&&spots.get(symbol.toUpperCase());
+    if(!ticker){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='暂无行情';return}
+    const last=Number(ticker.lastPrice),open=Number(ticker.openPrice24h);
+    if(!(last>0&&open>0)){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='数据无效';return}
+    d.api=symbol;d.p=last;d.o=open;d.ready=true;paint(d);if(Date.now()-d.candleUpdatedAt>=CANDLE_REFRESH_MS)sparkJobs.push(()=>loadSparkline(d,symbol,true));
+   }else{
+    if(!futures){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='行情暂不可用';return}
+    const ticker=futures.get(d.api.toUpperCase());
+    if(!ticker){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='暂无行情';return}
+    const last=Number(ticker.lastPr),open=Number(ticker.open24h);
+    if(!(last>0&&open>0)){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='数据无效';return}
+    d.p=last;d.o=open;d.ready=true;paint(d);if(Date.now()-d.candleUpdatedAt>=CANDLE_REFRESH_MS)sparkJobs.push(()=>loadSparkline(d,d.api,false));
+   }
+  });
+  for(let i=0;i<sparkJobs.length;i+=8)await Promise.allSettled(sparkJobs.slice(i,i+8).map(job=>job()));
  }catch(error){console.warn('[Vegas Octopus] market feed failed:',error)}finally{marketLoadInFlight=false}
 }
-C.forEach(o=>{let timer;const off=e=>{clearTimeout(timer);timer=setTimeout(()=>{o.on=false;o.hx=o.hy=0},e.pointerType==='touch'?1500:80)};
- o.pos.addEventListener('pointerenter',()=>{clearTimeout(timer);o.on=true});
- o.pos.addEventListener('pointerleave',off);o.pos.addEventListener('pointercancel',off);
- o.pos.addEventListener('pointermove',e=>{const r=o.card.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;o.hy=(x-.5)*14;o.hx=(.5-y)*16;o.card.style.setProperty('--mx',x*100+'%');o.card.style.setProperty('--my',y*100+'%')})
-});
-loadMarketData();window.setInterval(loadMarketData,15000);
-})();</script>
+loadMarketData();setInterval(loadMarketData,15000);
+document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=el.querySelector('.mc-card');const off=()=>{c.style.setProperty('--rx','0deg');c.style.setProperty('--ry','0deg');c.classList.remove('hot')};el.addEventListener('pointermove',e=>{const r=el.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;c.style.setProperty('--ry',((x-.5)*24)+'deg');c.style.setProperty('--rx',((.5-y)*20)+'deg');c.style.setProperty('--mx',x*100+'%');c.style.setProperty('--my',y*100+'%');c.classList.add('hot')});['pointerleave','pointerup','pointercancel'].forEach(t=>el.addEventListener(t,off))});
+})();
+</script>
 
 </body>
 </html>
