@@ -394,7 +394,6 @@
     const nextStart=Math.max(0,anchorIndex-next+1);
     const actualCount=anchorIndex-nextStart+1;
     state.viewCount=actualCount;
-    state.panX=0;
     state.startTime=state.candles[nextStart].t;
     state.endTime=state.candles[anchorIndex].t;
     draw();
@@ -430,7 +429,6 @@
     state.endTime=data[nextEnd-1].t;
     // The visible time range already accounts for horizontal movement. A separate
     // pixel translation would push candles off-screen after repeated drag/zoom cycles.
-    state.panX=0;
     // Bound vertical movement to the reserved safety band so the chart stays on-screen.
     const verticalLimit=Math.max(0,Math.min(120,state.height*.15));
     state.priceShift=Math.max(-verticalLimit,Math.min(verticalLimit,d.basePriceShift+dy));
