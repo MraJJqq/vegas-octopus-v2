@@ -51,12 +51,13 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 #market-cards-layer .mc-g1,#market-cards-layer .mc-g2{position:absolute;inset:0;border-radius:inherit;border:1.5px solid var(--mc-c);pointer-events:none;transition:border-color .4s}
 #market-cards-layer .mc-g1{transform:translateZ(-18px);opacity:.55}
 #market-cards-layer .mc-g2{transform:translateZ(-36px);opacity:.25}
-#market-cards-layer .mc-gl{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transform:translateZ(48px);background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.28),transparent 55%)}
+#market-cards-layer .mc-gl{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transform:translateZ(52px);background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.28),transparent 55%);transition:opacity .18s ease}
+#market-cards-layer .mc-card.hot .mc-gl{opacity:1}
 #market-cards-layer .mc-l1,#market-cards-layer .mc-l2,#market-cards-layer .mc-l3,#market-cards-layer .mc-l4{position:relative}
 #market-cards-layer .mc-l1{transform:translateZ(14px)}
-#market-cards-layer .mc-l2{transform:translateZ(22px)}
-#market-cards-layer .mc-l3{transform:translateZ(28px)}
-#market-cards-layer .mc-l4{transform:translateZ(34px)}
+#market-cards-layer .mc-l2{transform:translateZ(30px)}
+#market-cards-layer .mc-l3{transform:translateZ(39px)}
+#market-cards-layer .mc-l4{transform:translateZ(50px)}
 #market-cards-layer .mc-row{display:flex;align-items:center;gap:8px;min-width:0}
 #market-cards-layer .mc-coin{flex:0 0 27px;width:27px;height:27px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;color:#07101f;background:var(--mc-c);box-shadow:0 0 16px -2px var(--mc-c);transition:background .4s}
 #market-cards-layer .mc-sym{font-size:clamp(12px,1vw,15px);font-weight:700;white-space:nowrap}
@@ -223,11 +224,11 @@ const P=[
  ["AAPL","AAPLUSDT"],["MSFT","MSFTUSDT"],["GOOGL","GOOGLUSDT"],["AMZN","AMZNUSDT"],["NVDA","NVDAUSDT"],["TSLA","TSLAUSDT"],["META","METAUSDT"],["INTC","INTCUSDT"],["QCOM","QCOMUSDT"],["AMD","AMDUSDT"],["TSM","TSMUSDT"],["AVGO","AVGOUSDT"],["ORCL","ORCLUSDT"],["ARM","ARMUSDT"],["MU","MUUSDT"],["ASML","ASMLUSDT"],["SNDK","SNDKUSDT"],["SKHYNIX","SKHYNIXUSDT"],["MRVL","MRVLUSDT"],["GLW","GLWUSDT"],["HOOD","HOODUSDT"],["CBRS","CBRSUSDT"],["SPCX","SPCXUSDT"],["BTC","BTCUSDT"],["HYPE","HYPEUSDT"],["XAUUSD","XAUUSDT"],["USOIL","CLUSDT"]
 ];
 const REALITY_STOCKS=new Set(P.slice(0,23).map(x=>x[0]));
-const fmt=p=>p>=1000?p.toLocaleString('en-US',{maximumFractionDigits:1}):p>=100?p.toFixed(2):p>=1?p.toFixed(3):p>=.01?p.toFixed(4):p.toFixed(6);
+const fmt=p=>p>=100?p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):p>=1?p.toFixed(3):p.toFixed(4);
 const S=P.map(([s,api],i)=>({s,api,i,p:0,o:0,h:[],candles:[],ready:false}));
 const left=document.getElementById('mc-left');
 S.forEach(d=>{
- left.insertAdjacentHTML('beforeend',`<div class="mc-slot"><div class="mc-float" style="--d:${-d.i*.9}s"><div class="mc-card" id="mc-c${d.i}"><div class="mc-bg"></div><i class="mc-g1"></i><i class="mc-g2"></i><i class="mc-gl"></i><div class="mc-row mc-l2"><span class="mc-coin">${d.s[0]}</span><b class="mc-sym">${d.s}<small>/USDT 永续</small></b></div><div class="mc-price mc-l4">加载中</div><div class="mc-l3"><span class="mc-pct">--</span></div><canvas class="mc-kline mc-l1" aria-label="${d.s} K线图"></canvas><div class="mc-hl mc-l2">高<span class="mc-hi">--</span>低<span class="mc-lo">--</span></div></div></div><div class="mc-gshadow" style="--d:${-d.i*.9}s"></div></div>`);
+ left.insertAdjacentHTML('beforeend',`<div class="mc-slot"><div class="mc-float" style="--d:${-d.i*.9}s"><div class="mc-card" id="mc-c${d.i}"><div class="mc-bg"></div><i class="mc-g1"></i><i class="mc-g2"></i><i class="mc-gl"></i><div class="mc-row mc-l2"><span class="mc-coin">${d.s[0]}</span><b class="mc-sym">${d.s}<small>${REALITY_STOCKS.has(d.s)?'/USDT 现货':'/USDT 永续'}</small></b></div><div class="mc-price mc-l4">加载中</div><div class="mc-l3"><span class="mc-pct">--</span></div><canvas class="mc-kline mc-l1" aria-label="${d.s} K线图"></canvas><div class="mc-hl mc-l2">高<span class="mc-hi">--</span>低<span class="mc-lo">--</span></div></div></div><div class="mc-gshadow" style="--d:${-d.i*.9}s"></div></div>`);
 });
 function drawKline(d,canvas){
  const ctx=canvas.getContext('2d'),rect=canvas.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),ratio=window.devicePixelRatio||1;
@@ -247,13 +248,14 @@ function drawKline(d,canvas){
   ctx.beginPath();ctx.moveTo(x,y(c.high));ctx.lineTo(x,y(c.low));ctx.stroke();
   ctx.fillRect(x-bw/2,top,bw,Math.max(1,bottom-top));
  });
+ if(d.ready&&Number.isFinite(d.p)&&d.p>0){const col=d.p>=d.o?'#2ee6a6':'#ff5c7c';ctx.shadowBlur=0;ctx.setLineDash([3,4]);ctx.strokeStyle=col;ctx.globalAlpha=.5;ctx.beginPath();ctx.moveTo(0,y(d.p));ctx.lineTo(w,y(d.p));ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1}
  ctx.shadowBlur=0;
 }
 function paint(d){
- const c=document.getElementById('mc-c'+d.i),q=s=>c.querySelector(s);
+ const c=document.getElementById('mc-c'+d.i),q=s=>c.querySelector(s),priceEl=q('.mc-price');
  if(!d.ready||!Number.isFinite(d.p)||d.p<=0){q('.mc-price').textContent='加载中';q('.mc-pct').textContent='--';q('.mc-hi').textContent='--';q('.mc-lo').textContent='--';drawKline(d,q('.mc-kline'));return}
  const up=d.p>=d.o;c.classList.toggle('up',up);c.classList.toggle('dn',!up);
- q('.mc-price').textContent=fmt(d.p);q('.mc-pct').textContent=(up?'+':'')+((d.p/d.o-1)*100).toFixed(2)+'%';
+ const nextPrice=fmt(d.p);if(priceEl.textContent!==nextPrice&&priceEl.textContent!=='加载中'){priceEl.classList.add('flash');window.setTimeout(()=>priceEl.classList.remove('flash'),250)}priceEl.textContent=nextPrice;q('.mc-pct').textContent=(up?'+':'')+((d.p/d.o-1)*100).toFixed(2)+'%';
  const values=d.h.filter(v=>Number.isFinite(v)&&v>0);
  if(values.length>1){const mn=Math.min(...values),mx=Math.max(...values);q('.mc-hi').textContent=fmt(mx);q('.mc-lo').textContent=fmt(mn)}
  drawKline(d,q('.mc-kline'));
@@ -346,10 +348,10 @@ const API='https://api.bitget.com';
 async function bitgetJson(path){const r=await fetch(API+path,{cache:'no-store'});if(!r.ok)throw new Error('Bitget HTTP '+r.status);const p=await r.json();if(p.code!=='00000'||!Array.isArray(p.data))throw new Error(p.msg||'Bitget response invalid');return p.data}
 async function loadSparkline(d,symbol,isStock){
  try{
-  const params=isStock?new URLSearchParams({category:'SPOT',symbol,interval:'1H',limit:'40'}):new URLSearchParams({symbol,productType:'USDT-FUTURES',granularity:'1H',limit:'40'});
+  const params=isStock?new URLSearchParams({category:'SPOT',symbol,interval:'1H',limit:'30'}):new URLSearchParams({symbol,productType:'USDT-FUTURES',granularity:'1H',limit:'30'});
   const path=isStock?'/api/v3/market/candles':'/api/v2/mix/market/candles';
   const rows=await bitgetJson(path+'?'+params);
-  d.candles=rows.filter(r=>Array.isArray(r)&&Number(r[1])>0&&Number(r[2])>0&&Number(r[3])>0&&Number(r[4])>0).sort((a,b)=>Number(a[0])-Number(b[0])).slice(-40).map(r=>({open:Number(r[1]),high:Number(r[2]),low:Number(r[3]),close:Number(r[4])}));
+  d.candles=rows.filter(r=>Array.isArray(r)&&Number(r[1])>0&&Number(r[2])>0&&Number(r[3])>0&&Number(r[4])>0).sort((a,b)=>Number(a[0])-Number(b[0])).slice(-30).map(r=>({open:Number(r[1]),high:Number(r[2]),low:Number(r[3]),close:Number(r[4])}));
   d.h=d.candles.flatMap(c=>[c.high,c.low]);
  }catch(error){d.h=[];d.candles=[];console.warn('[Vegas Octopus] 1H candles failed for '+d.s+':',error)}
  paint(d)
