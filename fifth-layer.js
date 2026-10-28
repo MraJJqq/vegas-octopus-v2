@@ -23,13 +23,8 @@
   `;
   document.head.appendChild(style);
 
-  // 临时故障诊断标记：确认脚本初始化、点击是否被捕获、卡片选择器是否匹配。
-  const diagnostic = document.createElement('div');
-  diagnostic.id = 'v5-diagnostic';
-  diagnostic.textContent = '第五层诊断：脚本已启动，等待点击小卡片';
-  diagnostic.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:2147482999;max-width:calc(100vw - 24px);padding:7px 10px;border:1px solid rgba(49,217,255,.55);border-radius:6px;background:rgba(2,8,18,.88);color:#8fe9ff;font:12px/1.4 sans-serif;pointer-events:none;white-space:normal';
-  document.body.appendChild(diagnostic);
-  function diagnosticMessage(message) { diagnostic.textContent = '第五层诊断：' + message; }
+  // 已移除临时诊断条，避免在正式界面显示调试文字。
+  function diagnosticMessage(_message) {}
 
   const overlay = document.createElement('div');
   overlay.id = 'v5-chart-overlay';
@@ -59,8 +54,10 @@
     if (json.code !== '00000' || !Array.isArray(json.data)) throw new Error(json.msg || '行情数据格式异常');
     return json.data;
   }
+  let stockInfoPromise = null;
   async function resolveStock(symbol) {
-    const rows = await getJson('/api/v3/reality/market/stock-info');
+    if (!stockInfoPromise) stockInfoPromise = getJson('/api/v3/reality/market/stock-info').catch(error => { stockInfoPromise = null; throw error; });
+    const rows = await stockInfoPromise;
     const wanted = symbol.toUpperCase();
     const found = rows.find(row => row && (
       String(row.code || '').toUpperCase() === wanted ||
@@ -237,7 +234,8 @@
   }
   function pointerDown(e) {
     if(overlay.hidden || !state.candles.length) return;
-    state.drag={x:e.clientX,y:e.clientY,startTime:state.startTime,endTime:state.endTime,moved:false};
+    const range=visibleIndices();
+    state.drag={x:e.clientX,y:e.clientY,startIndex:range.start,endIndex:range.end-1,count:range.end-range.start,moved:false};
     try{canvas.setPointerCapture(e.pointerId);}catch(_){}
   }
   function pointerMove(e) {
@@ -245,13 +243,15 @@
     const dx=e.clientX-state.drag.x,dy=e.clientY-state.drag.y;
     if(Math.hypot(dx,dy)>5) state.drag.moved=true;
     if(!state.drag.moved) return;
-    const {start,end}=visibleIndices(), step=(state.width-16)/Math.max(1,end-start);
+    const plotW=Math.max(1,state.width-16);
+    const step=plotW/Math.max(1,state.drag.count);
     const shift=Math.round(dx/Math.max(1,step));
-    const startIndex=Math.max(0,Math.min(state.candles.length-1,start-shift));
-    const count=end-start;
-    const endIndex=Math.max(count-1,Math.min(state.candles.length-1,startIndex+count-1));
-    state.startTime=state.candles[Math.max(0,endIndex-count+1)].t;
+    const maxStart=Math.max(0,state.candles.length-state.drag.count);
+    const startIndex=Math.max(0,Math.min(maxStart,state.drag.startIndex+shift));
+    const endIndex=Math.min(state.candles.length-1,startIndex+state.drag.count-1);
+    state.startTime=state.candles[startIndex].t;
     state.endTime=state.candles[endIndex].t;
+    state.viewCount=endIndex-startIndex+1;
     draw();
   }
   function pointDistance(p,s) {
