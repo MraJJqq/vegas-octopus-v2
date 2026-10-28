@@ -459,7 +459,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   const state = {
     symbol:'', stock:false, candles:[], series:[],
     startTime:null, endTime:null, viewCount:720,
-    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, priceShift:0, panX:0, error:''
+    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, priceShift:0, panX:0, autoFitView:true, error:''
   };
 
   function candlePath(symbol, stock, endTime) {
@@ -608,8 +608,13 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   }
   function fitCanvas() {
     const rect=canvas.getBoundingClientRect();
+    const oldWidth=state.width,oldHeight=state.height;
     state.dpr=Math.max(1,window.devicePixelRatio||1);
     state.width=Math.max(1,rect.width); state.height=Math.max(1,rect.height);
+    // Keep the chart proportions responsive while preserving the user's pan position.
+    if(oldWidth>1) state.panX*=state.width/oldWidth;
+    if(oldHeight>1) state.priceShift*=state.height/oldHeight;
+    if(state.autoFitView) state.viewCount=Math.max(90,Math.min(360,Math.round((state.width-16)*0.86/4)));
     const pixelW=Math.round(state.width*state.dpr),pixelH=Math.round(state.height*state.dpr);
     if(canvas.width!==pixelW) canvas.width=pixelW;
     if(canvas.height!==pixelH) canvas.height=pixelH;
@@ -717,7 +722,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     state.dataRequest++;
     state.symbol=symbol;
     state.stock=STOCKS.has(symbol);
-    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=720;state.drag=null;state.priceShift=0;state.panX=0;state.error='';
+    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=720;state.drag=null;state.priceShift=0;state.panX=0;state.autoFitView=true;state.error='';
     overlay.hidden=false;
     fitCanvas();
     showCachedCandles(symbol);
@@ -732,6 +737,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   }
   function changeZoom(delta) {
     if(!state.candles.length) return;
+    state.autoFitView=false;
     const {start,end}=visibleIndices();
     const oldCount=Math.max(1,end-start);
     const next=Math.max(12,Math.min(state.candles.length,Math.round(oldCount*(delta<0?.82:1.22))));
