@@ -51,8 +51,10 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 /* 第二层：中央发光球模块。 */
 
 var R=Math.random,PI=Math.PI,cv=document.getElementById("orb-core-canvas"),x=cv.getContext("2d"),W,H,i;
-function rs(){var d=window.devicePixelRatio||1,r=cv.getBoundingClientRect();W=Math.max(1,r.width);H=Math.max(1,r.height);cv.width=Math.round(W*d);cv.height=Math.round(H*d);x.setTransform(d,0,0,d,0,0)}
-rs();window.addEventListener("resize",rs);if(window.ResizeObserver)new ResizeObserver(rs).observe(cv.parentElement);
+var resizeFrame=0,lastPixelW=0,lastPixelH=0,lastDpr=0;
+function rs(){var d=Math.max(1,window.devicePixelRatio||1),r=cv.getBoundingClientRect(),nw=Math.max(1,r.width),nh=Math.max(1,r.height),pw=Math.round(nw*d),ph=Math.round(nh*d);W=nw;H=nh;if(pw!==lastPixelW||ph!==lastPixelH||d!==lastDpr){lastPixelW=pw;lastPixelH=ph;lastDpr=d;if(cv.width!==pw)cv.width=pw;if(cv.height!==ph)cv.height=ph;x.setTransform(d,0,0,d,0,0)}}
+function scheduleResize(){if(resizeFrame)return;resizeFrame=requestAnimationFrame(function(){resizeFrame=0;rs()})}
+rs();window.addEventListener("resize",scheduleResize,{passive:true});if(window.ResizeObserver)new ResizeObserver(scheduleResize).observe(cv.parentElement);
 var V={spd:.13,zm:.83,ln:2.5,ps:1.6,fl:3};
 /* 发光粒子纹理 */
 var SG=[];
