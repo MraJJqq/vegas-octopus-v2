@@ -755,7 +755,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     const dx=e.clientX-state.drag.x,dy=e.clientY-state.drag.y;
     if(Math.hypot(dx,dy)>3) state.drag.moved=true;
     if(!state.drag.moved) return;
-    // 横向拖动真正平移时间窗口：向左拖动浏览更早行情；纵向仍可自由平移。
+    // 横向拖动时图表内容跟随指针：向右拖动浏览更早行情；纵向仍可自由平移。
     const count=Math.max(1,state.viewCount);
     const plotW=Math.max(1,(state.width-16)*0.86);
     const step=plotW/count;
