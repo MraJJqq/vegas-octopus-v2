@@ -19,9 +19,11 @@
     canvas.id = 'octopusDynamicDataStreams';
     Object.assign(canvas.style, {
       position: 'absolute', inset: '0', width: '100%', height: '100%',
-      pointerEvents: 'none', zIndex: '1'
+      pointerEvents: 'none', zIndex: '2'
     });
-    app.appendChild(canvas);
+    const cardLayer = document.getElementById('market-cards-layer');
+    if (cardLayer && cardLayer.parentElement === app) app.insertBefore(canvas, cardLayer);
+    else app.appendChild(canvas);
     const ctx = canvas.getContext('2d');
     let width = 1, height = 1, dpr = 1;
 
