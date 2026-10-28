@@ -1078,6 +1078,22 @@ loadMarketData();
 setInterval(loadMarketData,15000);
 
 // 悬停只负责卡片放大、发光和倾斜；单击一次才打开大卡片。离开后的收起规则保持不变。
+// Robust delegated click routing: survives emergency card DOM reconstruction.
+const marketGridForCardClicks=document.getElementById('octopusMarketCardGrid');
+if(marketGridForCardClicks&&!marketGridForCardClicks.dataset.octopusDelegatedCardClick){
+  marketGridForCardClicks.dataset.octopusDelegatedCardClick='1';
+  marketGridForCardClicks.addEventListener('click',function(e){
+    const pos=e.target instanceof Element?e.target.closest('.pos'):null;
+    if(!pos||!marketGridForCardClicks.contains(pos))return;
+    const symEl=pos.querySelector('.sym');
+    const symbol=(symEl&&symEl.childNodes[0]?symEl.childNodes[0].textContent:'').trim().toUpperCase();
+    const item=C.find(o=>o.n===symbol);
+    if(!item)return;
+    e.preventDefault();
+    e.stopPropagation();
+    showFourHour(item);
+  },true);
+}
 C.forEach(o=>{const el=o.pos,c=o.card;let t,moveFrame=0,lastMove=null;
   el.addEventListener('pointerenter',()=>{clearTimeout(t);o.on=true});
   el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(e.detail>1)return;showFourHour(o)});
