@@ -37,8 +37,9 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 /* 第三层：小卡片行情模块，独立叠加，不改动第一、二层。 */
 #market-cards-layer{--up:#2ee6a6;--dn:#ff5c7c;--mute:#7f8db0;--ink:#e8f0ff;position:absolute;z-index:2;inset:0;min-width:0;min-height:0;pointer-events:none;overflow:hidden}
 #market-cards-layer .mc-columns{position:absolute;top:clamp(66px,10vh,110px);right:auto;bottom:clamp(12px,2vh,28px);left:clamp(8px,1.2vw,20px);width:min(48vw,calc(100% - 16px));height:auto;max-height:none;min-width:0;min-height:0;box-sizing:border-box;overflow:hidden;pointer-events:auto;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-#market-cards-layer .mc-side{display:flex;flex-direction:column;justify-content:flex-start;align-items:flex-start;gap:clamp(8px,1.2vh,16px);min-width:0;min-height:0;width:100%;height:100%;max-height:100%;box-sizing:border-box;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;-ms-overflow-style:none;pointer-events:auto;cursor:default;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}#market-cards-layer .mc-side::-webkit-scrollbar{display:none;width:0;height:0}
-#market-cards-layer .mc-slot{position:relative;flex:0 0 auto;perspective:900px;width:min(100%,clamp(126px,18vw,238px));min-width:0;max-width:100%;box-sizing:border-box;padding:5px 4px 16px;pointer-events:auto;transform:scale(var(--mc-focus-scale,1));transform-origin:left center;transition:transform .12s linear;will-change:transform}
+#market-cards-layer .mc-columns::before{content:"";position:absolute;top:0;bottom:0;left:50%;width:1px;transform:translateX(-.5px);background:linear-gradient(to bottom,transparent,rgba(120,190,255,.22) 12%,rgba(120,190,255,.22) 88%,transparent);pointer-events:none;z-index:0}
+#market-cards-layer .mc-side{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:flex-start;align-items:flex-start;gap:clamp(8px,1.2vh,16px);min-width:0;min-height:0;width:100%;height:100%;max-height:100%;box-sizing:border-box;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;-ms-overflow-style:none;pointer-events:auto;cursor:default;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}#market-cards-layer .mc-side::-webkit-scrollbar{display:none;width:0;height:0}
+#market-cards-layer .mc-slot{position:relative;flex:0 0 auto;perspective:900px;width:min(100%,clamp(126px,18vw,238px));min-width:0;max-width:100%;box-sizing:border-box;padding:5px 4px 16px;pointer-events:auto;transform:scale(var(--mc-focus-scale,1));transform-origin:center center;transition:transform .12s linear;will-change:transform}
 #market-cards-layer .mc-float{transform-style:preserve-3d;animation:mc-bob 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
 @keyframes mc-bob{0%{transform:translateY(0) rotateY(-5deg) rotateX(2deg)}100%{transform:translateY(-7px) rotateY(5deg) rotateX(-2deg)}}
 #market-cards-layer .mc-gshadow{position:absolute;left:14%;right:14%;bottom:0;height:14px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.65),transparent);filter:blur(5px);animation:mc-sh 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
@@ -241,10 +242,10 @@ const focusSlots=Array.from(left.querySelectorAll('.mc-slot'));
 let focusFrame=0;
 function updateFocusScale(){
  focusFrame=0;
- const view=left.getBoundingClientRect(),center=view.top+view.height/2,range=Math.max(1,view.height*.52);
+ const view=left.getBoundingClientRect(),center=view.top+view.height/2,range=Math.max(1,view.height*.52),available=Math.max(1,left.clientWidth-8);
  focusSlots.forEach(slot=>{
-  const r=slot.getBoundingClientRect(),distance=Math.abs((r.top+r.height/2)-center),t=Math.min(1,distance/range),ease=t*t*(3-2*t);
-  slot.style.setProperty('--mc-focus-scale',(1.34-.34*ease).toFixed(3));
+  const r=slot.getBoundingClientRect(),distance=Math.abs((r.top+r.height/2)-center),t=Math.min(1,distance/range),ease=t*t*(3-2*t),maxScale=Math.min(1.34,available/Math.max(1,slot.offsetWidth));
+  slot.style.setProperty('--mc-focus-scale',(1+(maxScale-1)*(1-ease)).toFixed(3));
  });
 }
 function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(updateFocusScale)}
