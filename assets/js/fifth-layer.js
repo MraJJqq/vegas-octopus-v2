@@ -132,13 +132,27 @@
   }
   const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+  // Use Bitget's current unified V3 market-data endpoints for both futures and Reality stocks.
+  // V3 history-candles is limited to 100 records per request; keep the page size consistent below.
   function candlePath(symbol,endTime,isReality=false){
-    if(isReality){const q=new URLSearchParams({category:'SPOT',symbol,interval:'4H',limit:'1000',...(Number.isFinite(endTime)?{endTime:String(endTime)}:{})});return '/api/v3/market/candles?'+q;}
-    const q=new URLSearchParams({productType:'USDT-FUTURES',symbol,granularity:'4H',limit:'1000',...(Number.isFinite(endTime)?{endTime:String(endTime)}:{})});return '/api/v2/mix/market/candles?'+q;
+    const q=new URLSearchParams({
+      category:isReality?'SPOT':'USDT-FUTURES',
+      symbol,
+      interval:'4H',
+      limit:'1000',
+      ...(Number.isFinite(endTime)?{endTime:String(endTime)}:{})
+    });
+    return '/api/v3/market/candles?'+q;
   }
   function historyCandlePath(symbol,endTime,isReality=false){
-    if(isReality){const q=new URLSearchParams({category:'SPOT',symbol,interval:'4H',limit:'200',endTime:String(endTime)});return '/api/v3/market/history-candles?'+q;}
-    const q=new URLSearchParams({productType:'USDT-FUTURES',symbol,granularity:'4H',limit:'200',endTime:String(endTime)});return '/api/v2/mix/market/history-candles?'+q;
+    const q=new URLSearchParams({
+      category:isReality?'SPOT':'USDT-FUTURES',
+      symbol,
+      interval:'4H',
+      limit:'100',
+      endTime:String(endTime)
+    });
+    return '/api/v3/market/history-candles?'+q;
   }
 
   async function loadCandlesWithWarmup(apiSymbol,isReality=false) {
@@ -158,7 +172,7 @@
     if (latest.length < 2 && (!stored || stored.length < 2)) throw new Error('交易所返回的4H K线不足');
     let combined = normalize([...(stored || []), ...latest]);
     let pages = 0;
-    const maxPages = Math.ceil(EMA_WARMUP_BARS / 200) + 2;
+    const maxPages = Math.ceil(EMA_WARMUP_BARS / 100) + 2;
     while (combined.length < EMA_WARMUP_BARS && pages < maxPages) {
       const oldest = combined[0];
       if (!oldest || !Number.isFinite(oldest.t)) break;
@@ -175,7 +189,7 @@
       const next = normalize(page.concat(combined));
       if (next.length <= combined.length || next[0].t >= oldest.t) break;
       combined = next;
-      if (page.length < 200) break;
+      if (page.length < 100) break;
       // Keep page-by-page requests paced to reduce exchange rate-limit pressure.
       await delay(120);
     }
