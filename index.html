@@ -501,14 +501,14 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   const CACHE_TTL=24*60*60*1000;
   function writeCandleCache(symbol, rows) {
     try {
-      const payload={savedAt:Date.now(),rows:rows.slice(-700)};
+      const payload={savedAt:Date.now(),rows:rows.slice(-700).map(c=>[c.t,c.o,c.h,c.l,c.c])};
       localStorage.setItem(CACHE_PREFIX+symbol,JSON.stringify(payload));
     } catch (_) {}
   }
   function readCandleCache(symbol) {
     try {
       const payload=JSON.parse(localStorage.getItem(CACHE_PREFIX+symbol)||'null');
-      if(!payload||!Array.isArray(payload.rows)||!payload.rows.length) return null;
+      if(!payload||!Array.isArray(payload.rows)||!payload.rows.length||Date.now()-Number(payload.savedAt||0)>CACHE_TTL) return null;
       return normalize(payload.rows);
     } catch (_) { return null; }
   }
