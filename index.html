@@ -560,7 +560,8 @@ function drawFourHour(candles){
   rows.forEach((c,i)=>{
     const x=(i+.5)*slot,prevClose=i>0?rows[i-1].c:c.o;
     const risingBody=c.c>c.o,fallingBody=c.c<c.o;
-    const color=c.c>prevClose?'#00c087':c.c<prevClose?'#f6465d':'#9aa4b2';
+    // Exchange-native hollow-up mode: bullish candles are hollow green, bearish candles are filled red.
+    const color=risingBody?'#00c087':fallingBody?'#f6465d':c.c>prevClose?'#00c087':c.c<prevClose?'#f6465d':'#9aa4b2';
     const wick=document.createElementNS(ns,'line');
     wick.setAttribute('x1',x);wick.setAttribute('x2',x);wick.setAttribute('y1',y(c.h));wick.setAttribute('y2',y(c.l));wick.setAttribute('stroke',color);candleGroup.appendChild(wick);
     const body=document.createElementNS(ns,'rect');
