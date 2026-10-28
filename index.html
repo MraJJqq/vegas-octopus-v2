@@ -571,18 +571,28 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   }
   function visibleIndices() {
     const data=state.candles;
-    if (!data.length) return {start:0,end:0};
-    const first=data[0].t,last=data[data.length-1].t;
-    if(state.endTime!=null && state.endTime<first) return {start:0,end:0};
-    if(state.startTime!=null && state.startTime>last) return {start:data.length,end:data.length};
-    let start=state.startTime==null ? Math.max(0,data.length-state.viewCount) : data.findIndex(c=>c.t>=state.startTime);
-    if(start<0) start=data.length;
-    let end=state.endTime==null ? data.length : data.findIndex(c=>c.t>state.endTime);
-    if(end<0) end=data.length;
-    if(end<=start) {
-      if(start===data.length) return {start:data.length,end:data.length};
-      start=Math.max(0,end-state.viewCount);
+    const length=data.length;
+    if(!length) return {start:0,end:0};
+    const count=Math.max(1,Math.min(length,Math.round(state.viewCount||180)));
+    const first=data[0].t,last=data[length-1].t;
+    let start,end;
+    if(state.startTime==null || state.endTime==null) {
+      end=length;
+      start=Math.max(0,end-count);
+      return {start,end};
     }
+    // Keep a valid, non-empty viewport even when the requested time window
+    // temporarily falls outside the currently loaded candles.
+    if(state.endTime<first) return {start:0,end:Math.min(length,count)};
+    if(state.startTime>last) return {start:Math.max(0,length-count),end:length};
+    start=data.findIndex(c=>c.t>=state.startTime);
+    if(start<0) start=length-1;
+    end=data.findIndex(c=>c.t>state.endTime);
+    if(end<0) end=length;
+    start=Math.max(0,Math.min(length-1,start));
+    end=Math.max(start+1,Math.min(length,end));
+    if(end-start>count) end=start+count;
+    else if(end-start<count) start=Math.max(0,end-count);
     return {start,end};
   }
   function fitCanvas() {
@@ -723,16 +733,16 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   function changeZoom(delta) {
     if(!state.candles.length) return;
     const {start,end}=visibleIndices();
-    const oldCount=end-start;
+    const oldCount=Math.max(1,end-start);
     const next=Math.max(12,Math.min(state.candles.length,Math.round(oldCount*(delta<0?.82:1.22))));
     if(next===oldCount) return;
-    // Anchor zoom at the latest visible candles on the right edge.
-    const anchorTime=state.candles[end-1].t;
-    const anchorIndex=state.candles.findIndex(c=>c.t===anchorTime);
+    // Anchor zoom at the right edge of the current viewport, clamped to loaded data.
+    const anchorIndex=Math.max(0,Math.min(state.candles.length-1,end-1));
     const nextStart=Math.max(0,anchorIndex-next+1);
+    const actualCount=anchorIndex-nextStart+1;
+    state.viewCount=actualCount;
     state.startTime=state.candles[nextStart].t;
-    state.endTime=anchorTime;
-    state.viewCount=anchorIndex-nextStart+1;
+    state.endTime=state.candles[anchorIndex].t;
     draw();
   }
   function pointerDown(e) {
@@ -749,7 +759,8 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     const count=Math.max(1,state.viewCount);
     const plotW=Math.max(1,(state.width-16)*0.86);
     const step=plotW/count;
-    const timeShift=dx*(4*60*60*1000)/Math.max(.01,step);
+    // Direct manipulation: the chart follows the pointer; dragging right reveals older candles.
+    const timeShift=-dx*(4*60*60*1000)/Math.max(.01,step);
     state.startTime=state.drag.baseStart+timeShift;
     state.endTime=state.drag.baseEnd+timeShift;
     state.priceShift=state.drag.basePriceShift+dy;
