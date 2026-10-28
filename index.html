@@ -407,7 +407,7 @@ var rot=0,pitB=.32,dn=false,lx=0,ly=0;
 cv.addEventListener("pointerdown",function(e){dn=true;lx=e.clientX;ly=e.clientY;try{cv.setPointerCapture(e.pointerId)}catch(_){} });
 window.addEventListener("pointerup",function(){dn=false});
 cv.addEventListener("pointermove",function(e){if(!dn)return;rot+=(e.clientX-lx)*.008;pitB=Math.max(-1.2,Math.min(1.2,pitB+(e.clientY-ly)*.006));lx=e.clientX;ly=e.clientY});
-var last=0;
+var last=0,orbFrame=0;
 function frame(ms){var t=ms/1000,dt=Math.max(0,Math.min(.05,t-last));last=t;if(!dn)rot+=dt*V.spd;
 var cx=W*.5,cy=H*.5,Rr=Math.max(1,Math.min(W*.38,H*.39)*V.zm),pit=pitB+.1*Math.sin(t*.17),cp=Math.cos(pit),spp=Math.sin(pit);
 x.clearRect(0,0,W,H);
@@ -425,8 +425,12 @@ if(k>.45)blit(m>.3?PAL[p.c]:(gw>.5?40:215),q[0],q[1],(4+k*7)*V.ps,.22*(.5+.5*q[4
 if(n%11==0&&gw>.4){x.globalAlpha=1;x.strokeStyle="rgba(255,200,80,"+(.6*gw)+")";x.lineWidth=.8;x.beginPath();x.arc(q[0],q[1],(4+k*3)*V.ps,0,PI*2);x.stroke()}
 });
 x.globalAlpha=1;x.globalCompositeOperation="source-over";
-requestAnimationFrame(frame)}
-requestAnimationFrame(frame);
+orbFrame=requestAnimationFrame(frame)}
+orbFrame=requestAnimationFrame(frame);
+document.addEventListener("visibilitychange",function(){
+if(document.hidden){if(orbFrame){cancelAnimationFrame(orbFrame);orbFrame=0}}
+else if(!orbFrame){last=0;orbFrame=requestAnimationFrame(frame)}
+});
 </script>
 
 
