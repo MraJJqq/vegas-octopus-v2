@@ -455,16 +455,17 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   const state = {
     symbol:'', name:'', stock:false, candles:[], series:[],
     startTime:null, endTime:null, viewCount:180,
-    width:1,height:1,dpr:1, drag:null, request:0, timer:0, generation:0
+    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, priceShift:0, historyLoading:false
   };
 
   function setStatus(message){ status.textContent = message; }
-  function candlePath(symbol, stock) {
+  function candlePath(symbol, stock, endTime) {
     const query = new URLSearchParams({
       category: stock ? 'SPOT' : 'USDT-FUTURES',
       symbol,
       interval: '4H',
-      limit: '1000'
+      limit: '1000',
+      ...(Number.isFinite(endTime) ? {endTime:String(endTime)} : {})
     });
     return '/api/v3/market/candles?' + query;
   }
@@ -533,8 +534,9 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     const rect=canvas.getBoundingClientRect();
     state.dpr=Math.max(1,window.devicePixelRatio||1);
     state.width=Math.max(1,rect.width); state.height=Math.max(1,rect.height);
-    canvas.width=Math.round(state.width*state.dpr);
-    canvas.height=Math.round(state.height*state.dpr);
+    const pixelW=Math.round(state.width*state.dpr),pixelH=Math.round(state.height*state.dpr);
+    if(canvas.width!==pixelW) canvas.width=pixelW;
+    if(canvas.height!==pixelH) canvas.height=pixelH;
     ctx.setTransform(state.dpr,0,0,state.dpr,0,0);
     draw();
   }
@@ -556,7 +558,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     if(!Number.isFinite(min)||!Number.isFinite(max)) return;
     const margin=(max-min)*.055 || Math.max(max*.004,0.0001); min-=margin; max+=margin;
     const xAt=i=>pad.left+(i-start+.5)*step;
-    const yAt=v=>pad.top+(max-v)/(max-min)*plotH;
+    const yAt=v=>pad.top+(max-v)/(max-min)*plotH+state.priceShift;
 
     rows.forEach((c,j)=>{
       const i=start+j,x=xAt(i),up=c.c>=c.o,color=up?'#2ee6a6':'#ff5c7c';
@@ -578,14 +580,6 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
         if(!begun){ctx.moveTo(x,y);begun=true;}else ctx.lineTo(x,y);
       }
       ctx.stroke();ctx.globalAlpha=1;
-      let previous=null;
-      for(let i=start;i<end;i++){
-        const value=s.values[i];
-        if(!Number.isFinite(value)){previous=null;continue;}
-        const point={x:pad.left+(i-start+.5)*step,y:yAt(value)};
-        if(previous) state.hitSegments.push({x1:previous.x,y1:previous.y,x2:point.x,y2:point.y});
-        previous=point;
-      }
     });
   }
   async function loadData(isRefresh) {
@@ -613,13 +607,41 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
       }
       const range=visibleIndices();
       state.viewCount=Math.max(1,range.end-range.start);
-      setStatus(state.name+' · 4H · '+state.candles.length+' 根K线 · EMA 12/36/43/144/169/576/676 · 点击留白退出');
+      setStatus(state.name+' · 4H · '+state.candles.length+' 根K线 · EMA 12/36/43/144/169/576/676 · 拖动平移，滚轮缩放，点击留白退出');
       draw();
+      if(!isRefresh && rows.length >= 900) loadOlderHistory(generation,apiSymbol);
     } catch(error) {
       if(generation!==state.generation || overlay.hidden) return;
       setStatus(state.name+' · 加载失败：'+String(error&&error.message||error));
       diagnosticMessage('大卡片已打开，但行情请求失败：' + String(error&&error.message||error));
       console.error('[Vegas Fifth Layer]',error);
+    }
+  }
+  async function loadOlderHistory(generation, apiSymbol) {
+    if(state.historyLoading || !state.candles.length) return;
+    state.historyLoading=true;
+    try {
+      // Bitget caps each response at 1000 bars; render the newest page first,
+      // then fetch three older pages in the background.
+      for(let page=0;page<3;page++) {
+        if(generation!==state.generation || overlay.hidden) return;
+        const oldest=state.candles[0]?.t;
+        if(!Number.isFinite(oldest) || oldest<=0) break;
+        const older=normalize(await getJson(candlePath(apiSymbol,state.stock,oldest-1)));
+        if(!older.length) break;
+        const before=state.candles.length;
+        state.candles=normalize(older.concat(state.candles));
+        if(state.candles.length<=before) break;
+        rebuildSeries();
+      }
+      if(generation===state.generation && !overlay.hidden) {
+        setStatus(state.name+' · 4H · 已预载 '+state.candles.length+' 根K线 · EMA 12/36/43/144/169/576/676 · 拖动平移，滚轮缩放');
+        draw();
+      }
+    } catch(error) {
+      console.warn('[Vegas Fifth Layer] 历史K线补载失败：',error);
+    } finally {
+      if(generation===state.generation) state.historyLoading=false;
     }
   }
   function open(card) {
@@ -629,7 +651,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     state.symbol=symbol;
     state.name=(card.querySelector('.mc-sym')?.childNodes[0]?.textContent||symbol).trim();
     state.stock=STOCKS.has(symbol);
-    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=180;state.drag=null;
+    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=180;state.drag=null;state.priceShift=0;state.historyLoading=false;
     overlay.hidden=false;
     diagnosticMessage('已打开大卡片：' + symbol + '，正在请求行情');
     fitCanvas();
@@ -660,7 +682,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   function pointerDown(e) {
     if(overlay.hidden || !state.candles.length) return;
     const range=visibleIndices();
-    state.drag={x:e.clientX,y:e.clientY,startIndex:range.start,endIndex:range.end-1,count:range.end-range.start,moved:false};
+    state.drag={x:e.clientX,y:e.clientY,startIndex:range.start,endIndex:range.end-1,count:range.end-range.start,basePanY:state.priceShift,moved:false};
     try{canvas.setPointerCapture(e.pointerId);}catch(_){}
   }
   function pointerMove(e) {
@@ -677,6 +699,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     state.startTime=state.candles[startIndex].t;
     state.endTime=state.candles[endIndex].t;
     state.viewCount=endIndex-startIndex+1;
+    state.priceShift=state.drag.basePanY+dy;
     draw();
   }
   function pointDistance(p,s) {
