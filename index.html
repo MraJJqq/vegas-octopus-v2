@@ -1165,11 +1165,13 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       W=Math.max(1,stage.clientWidth);
       H=Math.max(1,stage.clientHeight);
       const mobile=W<=760,cols=4,rows=Math.ceil(cards.length/cols);
-      const sideMargin=mobile?W*.015:W*.008;
-      const cardW=mobile?Math.min(W*.215,108):Math.min(W*.145,188);
-      const rowStep=H/rows;
-      const cardH=Math.max(34,Math.min(mobile?54:78,rowStep*.78));
+      const sideMargin=mobile?W*.012:W*.006;
       const centers=mobile?[.12,.35,.65,.88]:[.08,.245,.755,.92];
+      const rowStep=H/rows;
+      // Fit each card inside its responsive grid cell; never enforce a height that causes row overlap.
+      const nearestColGap=Math.min(...centers.slice(1).map((v,i)=>(v-centers[i])*W));
+      const cardW=Math.max(24,Math.min(mobile?W*.215:W*.145,mobile?108:188,nearestColGap*.86,W-sideMargin*2));
+      const cardH=Math.max(16,Math.min(mobile?54:78,rowStep*.72,H/rows*.72));
       const ordered=cards.slice().sort((a,b)=>{
         const na=(a.querySelector('.sym')?.textContent||'').trim().toUpperCase();
         const nb=(b.querySelector('.sym')?.textContent||'').trim().toUpperCase();
@@ -1179,7 +1181,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         const col=i%cols,row=Math.floor(i/cols);
         const seed=(i*37+11)%17;
         const jitterX=(seed/16-.5)*(mobile?W*.012:W*.018);
-        const jitterY=(((i*13+5)%11)/10-.5)*Math.min(8,rowStep*.12);
+        const jitterY=(((i*13+5)%11)/10-.5)*Math.min(3,rowStep*.05);
         const x=Math.max(sideMargin+cardW/2,Math.min(W-sideMargin-cardW/2,W*centers[col]+jitterX));
         const y=Math.max(cardH/2+5,Math.min(H-cardH/2-5,(row+.5)*rowStep+jitterY));
         const st=el.style;
