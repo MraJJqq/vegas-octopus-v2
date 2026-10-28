@@ -1,10 +1,11 @@
-/* 第五层：原生 4H USDT 本位合约 K 线悬浮图表。 */
+/* 第五层：Bitget 原生 4H K 线悬浮图表；Reality 美股使用现货 rToken，其他品种使用 U 本位合约。 */
 (function () {
   'use strict';
   if (window.__VEGAS_FIFTH_LAYER_READY__) return;
 
   const CARD_SELECTOR = '#market-cards-layer .mc-card[data-symbol]';
   // 先使用与卡片名称完全对应的合约；别名仅作为交易所实际代码不一致时的后备。
+  const REALITY_STOCKS = new Set(['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','QCOM','AMD','TSM','AVGO','ORCL','ARM','MU','ASML','SNDK','SKHYNIX','MRVL','GLW','HOOD','CBRS','SPCX']);
   const CONTRACT_ALIASES={SKHYNIX:['SKHYNIXUSDT','SKHYUSDT']};
   const CONTRACT_CANDIDATES=symbol=>{const name=String(symbol||'').trim().toUpperCase();return [...(CONTRACT_ALIASES[name]||[]),name.endsWith('USDT')?name:name+'USDT'].filter((value,index,list)=>value&&list.indexOf(value)===index);};
   const EMA = [
@@ -62,11 +63,17 @@
   const EMA_WARMUP_BARS = 1400;
   const MAX_CANDLE_BARS = 1600;
 
-  function candlePath(symbol,endTime){const q=new URLSearchParams({productType:'USDT-FUTURES',symbol,granularity:'4H',limit:'1000',...(Number.isFinite(endTime)?{endTime:String(endTime)}:{})});return '/api/v2/mix/market/candles?'+q;}
-  function historyCandlePath(symbol,endTime){const q=new URLSearchParams({productType:'USDT-FUTURES',symbol,granularity:'4H',limit:'200',endTime:String(endTime)});return '/api/v2/mix/market/history-candles?'+q;}
+  function candlePath(symbol,endTime,isReality=false){
+    if(isReality){const q=new URLSearchParams({category:'SPOT',symbol,interval:'4H',limit:'1000',...(Number.isFinite(endTime)?{endTime:String(endTime)}:{})});return '/api/v3/market/candles?'+q;}
+    const q=new URLSearchParams({productType:'USDT-FUTURES',symbol,granularity:'4H',limit:'1000',...(Number.isFinite(endTime)?{endTime:String(endTime)}:{})});return '/api/v2/mix/market/candles?'+q;
+  }
+  function historyCandlePath(symbol,endTime,isReality=false){
+    if(isReality){const q=new URLSearchParams({category:'SPOT',symbol,interval:'4H',limit:'200',endTime:String(endTime)});return '/api/v3/market/history-candles?'+q;}
+    const q=new URLSearchParams({productType:'USDT-FUTURES',symbol,granularity:'4H',limit:'200',endTime:String(endTime)});return '/api/v2/mix/market/history-candles?'+q;
+  }
 
-  async function loadCandlesWithWarmup(apiSymbol) {
-    const latest = normalize(await getJson(candlePath(apiSymbol)));
+  async function loadCandlesWithWarmup(apiSymbol,isReality=false) {
+    const latest = normalize(await getJson(candlePath(apiSymbol,undefined,isReality)));
     if (latest.length < 2) throw new Error('交易所返回的4H K线不足');
 
     // EMA_WARMUP_BARS 是总目标根数，不是额外追加的历史根数。
@@ -79,7 +86,7 @@
       if (!oldest || !Number.isFinite(oldest.t)) break;
       let rawPage;
       try {
-        rawPage = await getJson(historyCandlePath(apiSymbol, oldest.t - 1));
+        rawPage = await getJson(historyCandlePath(apiSymbol, oldest.t - 1,isReality));
       } catch (error) {
         // 历史预热属于可选增强；历史端点失败时仍使用已经成功取得的原生4H K线。
         console.warn('[Vegas Fifth Layer] 历史预热请求失败，继续使用已有4H K线：' + apiSymbol, error);
@@ -111,7 +118,16 @@
     return json.data;
   }
   let contractInfoPromise=null;
-  async function resolveContract(symbol){if(!contractInfoPromise)contractInfoPromise=getJson('/api/v2/mix/market/contracts?productType=USDT-FUTURES').catch(e=>{contractInfoPromise=null;throw e;});const rows=await contractInfoPromise,candidates=CONTRACT_CANDIDATES(symbol);const found=rows.find(row=>{if(!row||!candidates.includes(String(row.symbol||'').toUpperCase()))return false;const status=String(row.symbolStatus||row.status||'').toLowerCase();return !status||['normal','online','listed'].includes(status);});if(!found)throw new Error('Bitget 无对应的在线 USDT 本位合约：'+symbol+'；未回退到现货或其他交易所');return String(found.symbol).toUpperCase();}
+  let realityInfoPromise=null;
+  async function resolveRealitySymbol(symbol){
+    if(!realityInfoPromise)realityInfoPromise=getJson('/api/v3/reality/market/stock-info').catch(error=>{realityInfoPromise=null;throw error;});
+    const rows=await realityInfoPromise;
+    let found=rows.find(row=>row&&String(row.code||'').trim().toUpperCase()===symbol);
+    if(symbol==='SKHYNIX'&&!found)found=rows.find(row=>row&&(/SK\\s*HYNIX/i.test(String(row.name||''))||/RSKHYUSDT/i.test(String(row.symbol||''))));
+    if(!found||!found.symbol)throw new Error('Bitget Reality 未返回该股票的交易所代码：'+symbol);
+    return String(found.symbol).trim();
+  }
+  async function resolveContract(symbol){if(!contractInfoPromise)contractInfoPromise=getJson('/api/v2/mix/market/contracts?productType=USDT-FUTURES').catch(e=>{contractInfoPromise=null;throw e;});const rows=await contractInfoPromise,candidates=CONTRACT_CANDIDATES(symbol);const found=rows.find(row=>{if(!row||!candidates.includes(String(row.symbol||'').toUpperCase()))return false;const status=String(row.symbolStatus||row.status||'').toLowerCase();return !status||['normal','online','listed'].includes(status);});if(!found)throw new Error('Bitget 无对应的在线 USDT 本位合约：'+symbol);return String(found.symbol).toUpperCase();}
   function normalize(rows) {
     const byTime = new Map();
     for (const row of Array.isArray(rows) ? rows : []) {
@@ -255,9 +271,10 @@
     const generation=state.generation;
     const request=++state.dataRequest;
     try {
-      const apiSymbol=state.contractSymbol||await resolveContract(state.symbol);
+      const isReality=REALITY_STOCKS.has(state.symbol);
+      const apiSymbol=state.contractSymbol||(isReality?await resolveRealitySymbol(state.symbol):await resolveContract(state.symbol));
       state.contractSymbol=apiSymbol;
-      const rows=isRefresh?normalize(await getJson(candlePath(apiSymbol))):await loadCandlesWithWarmup(apiSymbol);
+      const rows=isRefresh?normalize(await getJson(candlePath(apiSymbol,undefined,isReality))):await loadCandlesWithWarmup(apiSymbol,isReality);
       if(generation!==state.generation || request!==state.dataRequest || overlay.hidden) return;
       // A request may have started just before the user began dragging.
       // Never let its response replace/redraw candles during an active gesture.
@@ -294,11 +311,11 @@
       const range=visibleIndices();
       if(range.end>range.start) state.viewCount=range.end-range.start;
       draw();
-      if(state.contractSymbol && (!state.ws || state.ws.readyState===WebSocket.CLOSED)) connectContractKline(state.contractSymbol);
+      if(state.contractSymbol && (!state.ws || state.ws.readyState===WebSocket.CLOSED)) connectKline(state.contractSymbol,REALITY_STOCKS.has(state.symbol));
     } catch(error) {
       if(generation!==state.generation || request!==state.dataRequest || overlay.hidden) return;
       if(!state.candles.length) {
-        state.error='Bitget合约4H行情加载失败：'+String(error&&error.message||error).slice(0,90);
+        state.error=(REALITY_STOCKS.has(state.symbol)?'Bitget Reality 4H股票行情加载失败：':'Bitget 4H行情加载失败：')+String(error&&error.message||error).slice(0,90);
         draw();
       }
       console.error('[Vegas Fifth Layer]',error);
@@ -317,8 +334,9 @@
     if(state.drag){state.pendingDraw=true;return;}
     draw();
   }
-  function connectContractKline(symbol){stopContractKline();if(overlay.hidden||!symbol||!('WebSocket'in window))return;const gen=state.generation;let w;try{w=new WebSocket('wss://ws.bitget.com/v2/ws/public');}catch(e){console.warn('[Vegas Fifth Layer] WebSocket连接失败',e);return;}state.ws=w;
-    w.onopen=()=>{if(gen!==state.generation||overlay.hidden||state.ws!==w){w.close();return;}w.send(JSON.stringify({op:'subscribe',args:[{instType:'USDT-FUTURES',channel:'candle4H',instId:symbol}]}));state.wsHeartbeat=setInterval(()=>{if(w.readyState===WebSocket.OPEN)w.send('ping');},25000);};
+  function connectKline(symbol,isReality=false){stopContractKline();if(overlay.hidden||!symbol||!('WebSocket'in window))return;const gen=state.generation;let w;try{w=new WebSocket('wss://ws.bitget.com/v2/ws/public');}catch(e){console.warn('[Vegas Fifth Layer] WebSocket连接失败',e);return;}state.ws=w;
+    const instType=isReality?'SPOT':'USDT-FUTURES';
+    w.onopen=()=>{if(gen!==state.generation||overlay.hidden||state.ws!==w){w.close();return;}w.send(JSON.stringify({op:'subscribe',args:[{instType,channel:'candle4H',instId:symbol}]}));state.wsHeartbeat=setInterval(()=>{if(w.readyState===WebSocket.OPEN)w.send('ping');},25000);};
     w.onmessage=e=>{if(gen!==state.generation||state.ws!==w||overlay.hidden||e.data==='pong')return;let m;try{m=JSON.parse(e.data);}catch(_){return;}if(m.event==='error'){console.warn('[Vegas Fifth Layer] Bitget K线订阅失败',m.code,m.msg);return;}if(m.arg&&m.arg.instId===symbol&&m.arg.channel==='candle4H'&&Array.isArray(m.data))m.data.forEach(applyLiveCandle);};
     w.onerror=()=>{try{w.close();}catch(_){}};
     w.onclose=()=>{if(state.ws===w){state.ws=null;if(state.wsHeartbeat)clearInterval(state.wsHeartbeat);state.wsHeartbeat=0;}if(!overlay.hidden&&gen===state.generation&&state.contractSymbol===symbol)state.wsReconnect=setTimeout(()=>connectContractKline(symbol),3000);};
@@ -337,7 +355,7 @@
     state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=720;state.drag=null;state.priceShift=0;state.panX=0;state.autoFitView=true;state.error='';
     overlay.hidden=false;
     fitCanvas();
-    state.error='正在连接 Bitget 原生4H合约行情…';draw();
+    state.error=REALITY_STOCKS.has(symbol)?'正在连接 Bitget Reality 原生4H股票行情…':'正在连接 Bitget 原生4H合约行情…';draw();
     loadData(false);
     if(state.timer) clearInterval(state.timer);
     state.timer=window.setInterval(()=>{if(!overlay.hidden&&!state.drag&&(!state.ws||state.ws.readyState!==WebSocket.OPEN))loadData(true);},15000);
@@ -469,7 +487,7 @@
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!overlay.hidden)close();});
   window.addEventListener('resize',fitCanvas,{passive:true});
   if(window.ResizeObserver) new ResizeObserver(fitCanvas).observe(canvas);
-  window.VegasFifthLayer={open,close,refresh:()=>loadData(true),getState:()=>({symbol:state.symbol,contractSymbol:state.contractSymbol,productType:'USDT-FUTURES',granularity:'4H',websocket:!!(state.ws&&state.ws.readyState===WebSocket.OPEN),visible:!overlay.hidden,candles:state.candles.length})};
+  window.VegasFifthLayer={open,close,refresh:()=>loadData(true),getState:()=>({symbol:state.symbol,contractSymbol:state.contractSymbol,productType:REALITY_STOCKS.has(state.symbol)?'SPOT':'USDT-FUTURES',granularity:'4H',websocket:!!(state.ws&&state.ws.readyState===WebSocket.OPEN),visible:!overlay.hidden,candles:state.candles.length})};
   window.__VEGAS_FIFTH_LAYER_READY__=true;
 
   console.info('[Vegas Fifth Layer] initialized');
