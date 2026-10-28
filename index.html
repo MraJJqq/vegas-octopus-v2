@@ -1119,10 +1119,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   }
   async function fetchStateJson(){
     const urls=[
-      {url:STATE_URL+"?t="+Date.now(),mode:"json"},
-      {url:"https://api.github.com/repos/MraJJqq/vegas-signal-system/contents/v9/.signal-state.json?ref=main",mode:"github"}
+      {url:"https://api.github.com/repos/MraJJqq/vegas-signal-system/contents/v9/.signal-state.json?ref=main&t="+Date.now(),mode:"github"},
+      {url:STATE_URL+"?t="+Date.now(),mode:"json"}
     ];
-    let lastError=null;
+    const errors=[];
     for(const source of urls){
       try{
         const response=await fetch(source.url,{cache:"no-store",headers:source.mode==="github"?{"Accept":"application/vnd.github+json"}:{}});
@@ -1132,9 +1132,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         if(!file||typeof file.content!=="string")throw new Error("GitHub API 返回格式无效");
         const bytes=Uint8Array.from(atob(file.content.replace(/\s/g,"")),c=>c.charCodeAt(0));
         return JSON.parse(new TextDecoder("utf-8").decode(bytes));
-      }catch(error){lastError=error;console.warn("V9 state source failed:",source.mode,error);}
+      }catch(error){
+        errors.push(source.mode+": "+String(error&&error.message||error));
+        console.warn("V9 state source failed:",source.mode,error);
+      }
     }
-    throw lastError||new Error("所有状态源均读取失败");
+    throw new Error(errors.join("；")||"所有状态源均读取失败");
   }
   async function refreshV9State(){
     const status=$("v9SyncStatus");
