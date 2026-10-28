@@ -1,5 +1,4 @@
 /* 第二层：中央发光球模块。 */
-/* 第二层：中央发光球模块。 */
 
 var R=Math.random,PI=Math.PI,cv=document.getElementById("orb-core-canvas"),x=cv.getContext("2d"),W,H,i;
 var resizeFrame=0,lastPixelW=0,lastPixelH=0,lastDpr=0;
