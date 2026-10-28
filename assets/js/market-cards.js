@@ -139,11 +139,7 @@ function autoWaveScroll(now){
  if(!autoLastTime)autoLastTime=now;
  const dt=Math.min(40,Math.max(0,now-autoLastTime))/1000;
  autoLastTime=now;
- if(now>=autoResumeAt){
-  if(wheelFrame){
-   cancelAnimationFrame(wheelFrame);
-   wheelFrame=0;wheelLastTime=0;wheelVelocity=0;
-  }
+ if(!wheelFrame&&now>=autoResumeAt){
   if(!autoWaveScroll.nextChange||now>=autoWaveScroll.nextChange){
    const cycleSpeed=Math.max(1,cardStep()*focusSlots.length/120);
    autoWaveScroll.targetSpeed=cycleSpeed*(.72+Math.random()*.56);
