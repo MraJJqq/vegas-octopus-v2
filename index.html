@@ -1427,23 +1427,7 @@ body{position:fixed;inset:0}
   </section>
   <footer class="footer"><div class="footer-brand">◉ Vegas 章鱼 <span>│ Aether · 3D 数据宇宙</span></div><div>让数据连接市场 · 让交易更简单</div><div class="disclaimer">当前版本为 UI 原型，所有数值与新闻均为演示内容</div></footer>
 </div>
-<script>
-(function(){
 
-    const newsTabs=document.querySelectorAll('#newsTabs [data-news]');
-  newsTabs.forEach(btn=>btn.addEventListener('click',()=>{
-    newsTabs.forEach(b=>b.classList.toggle('active',b===btn));
-    const chosen=btn.dataset.news;
-    document.querySelectorAll('#newsList [data-category]').forEach(item=>item.hidden=chosen!=='全部'&&item.dataset.category!==chosen);
-  }));
-  const eventTabs=document.querySelectorAll('#eventTabs [data-stage]');
-  eventTabs.forEach(btn=>btn.addEventListener('click',()=>{
-    eventTabs.forEach(b=>b.classList.toggle('active',b===btn));
-    const chosen=btn.dataset.stage;
-    document.querySelectorAll('#eventList [data-stage]').forEach(item=>item.hidden=chosen!=='全部'&&item.dataset.stage!==chosen);
-  }));
-})();
-</script>
 
 <script>
 /* ORB v3 core-only port. The original library file is preserved unchanged. */
