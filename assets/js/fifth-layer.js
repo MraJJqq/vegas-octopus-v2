@@ -339,7 +339,7 @@
     w.onopen=()=>{if(gen!==state.generation||overlay.hidden||state.ws!==w){w.close();return;}w.send(JSON.stringify({op:'subscribe',args:[{instType,channel:'candle4H',instId:symbol}]}));state.wsHeartbeat=setInterval(()=>{if(w.readyState===WebSocket.OPEN)w.send('ping');},25000);};
     w.onmessage=e=>{if(gen!==state.generation||state.ws!==w||overlay.hidden||e.data==='pong')return;let m;try{m=JSON.parse(e.data);}catch(_){return;}if(m.event==='error'){console.warn('[Vegas Fifth Layer] Bitget K线订阅失败',m.code,m.msg);return;}if(m.arg&&m.arg.instId===symbol&&m.arg.channel==='candle4H'&&Array.isArray(m.data))m.data.forEach(applyLiveCandle);};
     w.onerror=()=>{try{w.close();}catch(_){}};
-    w.onclose=()=>{if(state.ws===w){state.ws=null;if(state.wsHeartbeat)clearInterval(state.wsHeartbeat);state.wsHeartbeat=0;}if(!overlay.hidden&&gen===state.generation&&state.contractSymbol===symbol)state.wsReconnect=setTimeout(()=>connectContractKline(symbol),3000);};
+    w.onclose=()=>{if(state.ws===w){state.ws=null;if(state.wsHeartbeat)clearInterval(state.wsHeartbeat);state.wsHeartbeat=0;}if(!overlay.hidden&&gen===state.generation&&state.contractSymbol===symbol)state.wsReconnect=setTimeout(()=>connectKline(symbol,isReality),3000);};
   }
 
   function open(card) {
