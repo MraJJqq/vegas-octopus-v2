@@ -529,7 +529,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     state.startTime=state.endTime-90*24*60*60*1000;
     rebuildSeries();
     const range=visibleIndices();
-    state.viewCount=Math.max(1,range.end-range.start);
+    if(range.end>range.start) state.viewCount=range.end-range.start;
     draw();
     return true;
   }
@@ -660,7 +660,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
         rebuildSeries();
       }
       const range=visibleIndices();
-      state.viewCount=Math.max(1,range.end-range.start);
+      if(range.end>range.start) state.viewCount=range.end-range.start;
       draw();
       state.apiSymbol=apiSymbol;
       if(!isRefresh && rows.length >= 900) loadOlderHistory(generation,apiSymbol);
