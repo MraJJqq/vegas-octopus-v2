@@ -52,12 +52,11 @@ jobs:
               },item.symbol,{timeout:60000}).catch(()=>{});
               await page.waitForFunction(()=>window.__wsAudit.length>0,{timeout:15000}).catch(()=>{});
               const state=await page.evaluate(()=>({state:window.VegasFifthLayer?.getState?.()||null,messages:window.__wsAudit.slice()}));
-              const wsMessagesForExpected=state.messages.filter(m=>m.data.includes(item.expected)||m.data.includes('"channel":"candle4H"')).length;
+              const wsMessagesForExpected=state.messages.filter(m=>m.data.includes(item.expected)).length;
               results.push({requested:item.symbol,expectedExchangeSymbol:item.expected,state:state.state,wsMessages:state.messages.length,subscribedStreamMessageObserved:wsMessagesForExpected>0});
               await page.keyboard.press('Escape');
               await page.waitForFunction(()=>!window.VegasFifthLayer?.getState?.()?.visible,{timeout:5000}).catch(()=>{});
               await page.waitForTimeout(500);
-              window;
             }
             console.log('KLINE_ASSET_AUDIT_RESULT='+JSON.stringify({results,pageErrors:errors}));
             await browser.close();
