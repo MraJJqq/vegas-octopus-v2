@@ -24,7 +24,6 @@
     body>#vegas-chart-overlay{
       position:fixed!important;
       inset:0!important;
-      left:0!important;top:0!important;right:0!important;bottom:0!important;
       width:100vw!important;
       height:100vh!important;
       height:100dvh!important;
@@ -36,7 +35,6 @@
       pointer-events:none;
       touch-action:none;overscroll-behavior:contain;
     }
-    body>#vegas-chart-overlay[hidden]{display:none!important}
     #vegas-chart-canvas{
       position:absolute;inset:0;width:100%;height:100%;
       display:block;background:transparent;
@@ -56,7 +54,7 @@
   const state = {
     symbol:'', contractSymbol:'', candles:[], series:[], ws:null, wsReconnect:0, wsHeartbeat:0, pendingDraw:false,
     startTime:null, endTime:null, viewCount:720,
-    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, pendingRefresh:false, priceShift:0, panX:0, autoFitView:true, error:''
+    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, pendingRefresh:false, priceShift:0, panX:0, error:''
   };
 
   const EMA_WARMUP_BARS = 1400;
@@ -302,7 +300,7 @@
         const oldRange=visibleIndices();
         const oldCount=Math.max(1,oldRange.end-oldRange.start);
         const followLatest=Number.isFinite(oldEnd) && oldEnd>=oldLast-4*60*60*1000;
-        state.candles=normalize(state.candles.concat(rows));
+        state.candles=normalize(state.candles.concat(rows)).slice(-MAX_CANDLE_BARS);
         rebuildSeries();
         if(followLatest) {
           const lastIndex=state.candles.length-1;
@@ -319,7 +317,6 @@
         state.startTime=state.endTime-INITIAL_HISTORY_MS;
         const firstVisible=rows.findIndex(c=>c.t>=state.startTime);
         state.viewCount=Math.max(1,rows.length-(firstVisible<0?Math.max(0,rows.length-540):firstVisible));
-        state.autoFitView=false;
         rebuildSeries();
       }
 
@@ -367,7 +364,7 @@
     state.dataRequest++;
     state.symbol=symbol;
     state.contractSymbol='';
-    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=540;state.drag=null;state.priceShift=0;state.panX=0;state.autoFitView=true;state.error='';
+    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=540;state.drag=null;state.priceShift=0;state.panX=0;state.error='';
     overlay.hidden=false;
     fitCanvas();
     state.error=REALITY_STOCKS.has(symbol)?'正在连接 Bitget Reality 原生4H股票行情…':'正在连接 Bitget 原生4H合约行情…';draw();
@@ -384,7 +381,6 @@
   }
   function changeZoom(delta) {
     if(!state.candles.length) return;
-    state.autoFitView=false;
     const {start,end}=visibleIndices();
     const oldCount=Math.max(1,end-start);
     const next=Math.max(12,Math.min(state.candles.length,Math.round(oldCount*(delta<0?.82:1.22))));
@@ -511,7 +507,7 @@
     const job=(async()=>{
       const isReality=REALITY_STOCKS.has(symbol);
       const apiSymbol=isReality?await resolveRealitySymbol(symbol):await resolveContract(symbol);
-      const rows=normalize(await getJson(candlePath(apiSymbol,undefined,isReality)));
+      const rows=await loadCandlesWithWarmup(apiSymbol,isReality);
       if(rows.length<2) throw new Error('预热K线不足');
       const entry={apiSymbol,rows,createdAt:Date.now()};
       PREWARM_CACHE.set(symbol,entry);
