@@ -23,6 +23,9 @@
     else app.appendChild(cv);
     const x = cv.getContext('2d');
     let W=1,H=1,dpr=1,raf=0;
+    const cardStates=new WeakMap();
+    const cardGroups=new WeakMap();
+    let nextGroup=0,lastFrameMs=0;
 
     function rs() {
       const r=app.getBoundingClientRect();
@@ -39,51 +42,76 @@
 
     function frame(ms) {
       const t=ms/1000;
+      const dt=lastFrameMs ? Math.min(.1,Math.max(0,(ms-lastFrameMs)/1000)) : 1/60;
+      lastFrameMs=ms;
       x.clearRect(0,0,W,H);
       const pr=getProjectedOrb();
       const appRect=app.getBoundingClientRect();
-      // 只为当前滚动视口内实际可见的正式信号卡片绘制数据流。
-      // 被滚动到视口之外的卡片不参与连接，滚回可见区域后自动恢复。
       const cards=Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]'));
-      const targets=cards.map(function(card){
+      const active=new Set(cards);
+      const targets=[];
+      cards.forEach(function(card){
         const rect=card.getBoundingClientRect();
         const scroller=card.closest('.mc-side');
         const clip=scroller ? scroller.getBoundingClientRect() : appRect;
-        const visible=rect.width>0 && rect.height>0 &&
-          rect.right>clip.left && rect.left<clip.right &&
-          rect.bottom>clip.top && rect.top<clip.bottom &&
-          rect.right>appRect.left && rect.left<appRect.right &&
-          rect.bottom>appRect.top && rect.top<appRect.bottom;
-        return visible ? {rect:rect} : null;
-      }).filter(Boolean);
+        const left=Math.max(rect.left,clip.left,appRect.left);
+        const right=Math.min(rect.right,clip.right,appRect.right);
+        const top=Math.max(rect.top,clip.top,appRect.top);
+        const bottom=Math.min(rect.bottom,clip.bottom,appRect.bottom);
+        const visibleArea=Math.max(0,right-left)*Math.max(0,bottom-top);
+        const totalArea=Math.max(1,rect.width*rect.height);
+        const ratio=rect.width>0&&rect.height>0 ? Math.min(1,visibleArea/totalArea) : 0;
+        const slot=card.closest('.mc-slot');
+        const slotOpacity=slot ? Number.parseFloat(getComputedStyle(slot).opacity) : 1;
+        let state=cardStates.get(card);
+        if(!state){state={opacity:0};cardStates.set(card,state);}
+        // 与滚动卡片的可见/淡化状态同步；离开滚动视口后平滑消失，滚回后平滑出现。
+        const targetOpacity=ratio>0 ? Math.max(0,Math.min(1,ratio*(Number.isFinite(slotOpacity)?slotOpacity:1))) : 0;
+        const step=Math.min(1,dt/.18);
+        state.opacity+=(targetOpacity-state.opacity)*step;
+        if(state.opacity>.005 && rect.width>0 && rect.height>0) {
+          if(!cardGroups.has(card)){cardGroups.set(card,nextGroup++);}
+          targets.push({card:card,rect:rect,opacity:state.opacity,group:cardGroups.get(card)});
+        }
+      });
       if (pr && targets.length) {
-        // 每张当前可见的正式信号卡片绘制一整组七色数据流，每组七根，避免将全局 150 根铺满屏幕。
-        // 每组使用 F 中同一七色序列的参数；每根流只连接所属卡片与一个实时球面粒子。
+        // 每张卡片固定一组七色数据流，始终绘制七根；不会因球面粒子透明度而随机少线。
         x.globalCompositeOperation='lighter';
         x.lineWidth=.8;
-        targets.forEach(function(target,index){
+        targets.forEach(function(target){
           const cardR=target.rect;
           const cardCenterX=cardR.left+cardR.width/2-appRect.left;
           const cardCenterY=cardR.top+cardR.height/2-appRect.top;
           const cardLeft=cardR.left-appRect.left;
           const cardRight=cardR.right-appRect.left;
-          const groupBase=(index*7)%147;
+          const groupBase=(target.group*7)%147;
           for(let j=0;j<7;j++){
             const f=F[groupBase+j];
-            const q=pr[f.t],fa=q[3];
-            if(!q||fa<.05)continue;
+            let q=pr[f.t];
+            // 球面点过暗时，改用最近的可见投影粒子，避免单组数据流数量缺失。
+            if(!q || q.length<4) continue;
+            if(q[3]<.08){
+              let best=null,bestScore=Infinity;
+              for(let k=0;k<pr.length;k++){
+                const candidate=pr[k];
+                if(!candidate || candidate.length<4 || candidate[3]<.08) continue;
+                const score=Math.abs(candidate[0]-cardCenterX-appRect.left)+Math.abs(candidate[1]-cardCenterY-appRect.top);
+                if(score<bestScore){best=candidate;bestScore=score;}
+              }
+              if(best) q=best;
+            }
+            const fa=Math.max(.12,Math.min(1,q[3]||0));
             const endX=q[0],endY=q[1];
             const startX=endX>=cardCenterX?cardRight:cardLeft;
-            // 七根流围绕卡片垂直中心对称分布，整体连接位置自适应居中。
             const y0=cardCenterY+(j-3)*4;
             const c1x=(startX+endX)*.5;
             const col='hsl('+SH[f.s]+',100%,62%)';
-            x.strokeStyle=col;x.globalAlpha=.26*fa;
+            x.strokeStyle=col;x.globalAlpha=.26*fa*target.opacity;
             x.beginPath();x.moveTo(startX,y0);x.quadraticCurveTo(c1x,y0,endX,endY);x.stroke();
             const u=(t*f.v+f.o)%1,v=1-u;
             const px=v*v*startX+2*v*u*c1x+u*u*endX;
             const py=v*v*y0+2*v*u*y0+u*u*endY;
-            x.globalAlpha=.95*fa;x.fillStyle=col;x.shadowColor=col;x.shadowBlur=8;
+            x.globalAlpha=.95*fa*target.opacity;x.fillStyle=col;x.shadowColor=col;x.shadowBlur=8;
             x.beginPath();x.arc(px,py,1.6,0,Math.PI*2);x.fill();x.shadowBlur=0;
           }
         });
