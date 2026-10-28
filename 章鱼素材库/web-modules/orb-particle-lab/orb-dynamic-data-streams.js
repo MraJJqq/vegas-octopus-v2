@@ -57,12 +57,12 @@
         return visible ? {rect:rect} : null;
       }).filter(Boolean);
       if (pr && targets.length) {
-        // 原版 F 总计 150 根，是全页面总量，不是每张卡片各 150 根。
-        // 将这 150 根分配给当前正式信号卡片，每根只绘制一次，避免按卡片数量倍增。
+        // 每张当前可见的正式信号卡片只绘制一根连接流；不把全局 150 根循环铺满屏幕。
+        // F 仅提供原版粒子参数池，实际绘制数量严格等于可见正式信号卡片数量。
         x.globalCompositeOperation='lighter';
         x.lineWidth=.8;
-        F.forEach(function(f,index){
-          const target=targets[index%targets.length];
+        targets.forEach(function(target,index){
+          const f=F[index%F.length];
           const cardR=target.rect;
           const cardCenterX=cardR.left+cardR.width/2-appRect.left;
           const cardCenterY=cardR.top+cardR.height/2-appRect.top;
