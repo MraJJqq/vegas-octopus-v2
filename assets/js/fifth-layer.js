@@ -282,6 +282,30 @@
     end=Math.max(start+1,Math.min(length,end));
     return {start,end};
   }
+  function getFrameSize() {
+    return {
+      frameW:Math.max(1,Math.min(state.width,state.width*.86)),
+      frameH:Math.max(1,Math.min(state.height,state.height*.78))
+    };
+  }
+  function getViewportBounds() {
+    const {frameW,frameH}=getFrameSize();
+    // Keep a 48px grip visible at each extreme, scaled down on very small screens.
+    const gripX=Math.min(48,Math.max(16,state.width*.08));
+    const gripY=Math.min(48,Math.max(16,state.height*.08));
+    return {
+      minX:Math.min(0,-frameW+gripX),
+      maxX:Math.max(0,state.width-gripX),
+      minY:Math.min(0,-frameH+gripY),
+      maxY:Math.max(0,state.height-gripY)
+    };
+  }
+  function clampViewportOffsets() {
+    const {minX,maxX,minY,maxY}=getViewportBounds();
+    state.offsetX=Math.max(minX,Math.min(maxX,Number.isFinite(state.offsetX)?state.offsetX:0));
+    state.offsetY=Math.max(minY,Math.min(maxY,Number.isFinite(state.offsetY)?state.offsetY:0));
+  }
+
   function fitCanvas() {
     const rect=canvas.getBoundingClientRect();
     const oldWidth=state.width,oldHeight=state.height;
@@ -291,9 +315,7 @@
     else if(oldWidth>1) state.offsetX*=state.width/oldWidth;
     if(state.offsetY==null) state.offsetY=state.height*.11;
     else if(oldHeight>1) state.offsetY*=state.height/oldHeight;
-    const frameW=Math.min(state.width, state.width*.86), frameH=Math.min(state.height, state.height*.78);
-    state.offsetX=Math.max(0,Math.min(Math.max(0,state.width-frameW),state.offsetX));
-    state.offsetY=Math.max(0,Math.min(Math.max(0,state.height-frameH),state.offsetY));
+    clampViewportOffsets();
     // Resize must not reset the user's historical viewport or zoom level.
     const pixelW=Math.round(state.width*state.dpr),pixelH=Math.round(state.height*state.dpr);
     if(canvas.width!==pixelW) canvas.width=pixelW;
@@ -315,13 +337,12 @@
     }
     const {start,end}=visibleIndices(), rows=data.slice(start,end);
     if(!rows.length) return;
-    // Keep the chart viewport inside all four screen edges while the transparent
-    // overlay itself remains fixed above the other visual layers.
-    const frameW=Math.max(1,Math.min(W,W*.86)), frameH=Math.max(1,Math.min(H,H*.78));
+    // The viewport can travel across the full page. At each edge, keep a small
+    // visible grip so the chart can always be dragged back onto the screen.
+    const {frameW,frameH}=getFrameSize();
     const pad={left:Math.min(8,frameW*.03),right:Math.min(8,frameW*.03),
       top:Math.min(30,frameH*.06),bottom:Math.min(12,frameH*.025)};
-    state.offsetX=Math.max(0,Math.min(Math.max(0,W-frameW),state.offsetX||0));
-    state.offsetY=Math.max(0,Math.min(Math.max(0,H-frameH),state.offsetY||0));
+    clampViewportOffsets();
     const plotLeft=state.offsetX+pad.left;
     const plotTop=state.offsetY+pad.top;
     const plotW=Math.max(1,frameW-pad.left-pad.right);
@@ -501,13 +522,12 @@
     if(Math.hypot(dx,dy)>3) state.drag.moved=true;
     if(!state.drag.moved) return;
 
-    // Drag the entire chart viewport; clamp its frame to all four page edges.
-    // Zoom remains independent, and the transparent overlay stays fixed above all layers.
+    // Allow travel across the whole page in every direction. Only a narrow
+    // grip remains visible at the far edges so the chart can always be recovered.
     const d=state.drag;
-    const frameW=Math.max(1,Math.min(state.width,state.width*.86));
-    const frameH=Math.max(1,Math.min(state.height,state.height*.78));
-    state.offsetX=Math.max(0,Math.min(Math.max(0,state.width-frameW),d.baseOffsetX+dx));
-    state.offsetY=Math.max(0,Math.min(Math.max(0,state.height-frameH),d.baseOffsetY+dy));
+    const {minX,maxX,minY,maxY}=getViewportBounds();
+    state.offsetX=Math.max(minX,Math.min(maxX,d.baseOffsetX+dx));
+    state.offsetY=Math.max(minY,Math.min(maxY,d.baseOffsetY+dy));
     draw();
   }
   function hitRenderedChart(x,y) {
