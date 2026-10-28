@@ -164,13 +164,11 @@
             ctx.shadowBlur = 0;
             ctx.stroke();
 
-            const particleOpacity = state.connected
-              ? Math.max(0.85, opacity) * Math.max(0.7, visibility)
-              : opacity * visibility;
-            ctx.globalAlpha = Math.min(1, 1.6 * particleOpacity);
+            // 恢复原版粒子的透明度与辉光样式；连接状态和运动进度逻辑保持不变。
+            ctx.globalAlpha = Math.min(1, 1.35 * visibility * opacity);
             ctx.fillStyle = color;
             ctx.shadowColor = color;
-            ctx.shadowBlur = state.connected ? 22 : 18;
+            ctx.shadowBlur = 18;
             ctx.beginPath();
             ctx.arc(particleX, particleY, 2.7, 0, Math.PI * 2);
             ctx.fill();
