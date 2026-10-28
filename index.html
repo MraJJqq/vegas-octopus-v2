@@ -445,7 +445,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   style.textContent = `
     #v5-chart-overlay[hidden]{display:none!important}
     #v5-chart-overlay{position:fixed;inset:0;z-index:2147483000;display:block;background:transparent;touch-action:none}
-    #v5-chart-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:transparent;touch-action:none;cursor:crosshair}
+    #v5-chart-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:transparent;touch-action:none;cursor:grab} #v5-chart-canvas:active{cursor:grabbing}
   `;
   document.head.appendChild(style);
 
@@ -623,7 +623,10 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     if(!Number.isFinite(min)||!Number.isFinite(max)) return;
     const margin=(max-min)*.055 || Math.max(max*.004,0.0001); min-=margin; max+=margin;
     const xAt=i=>pad.left+(i-start+.5)*step;
-    const yAt=v=>pad.top+(max-v)/(max-min)*plotH+state.priceShift;
+    // Vertical panning is bounded so repeated diagonal drags cannot move all candles off-canvas.
+    const safeShift=Math.max(-H*.32,Math.min(H*.32,state.priceShift));
+    state.priceShift=safeShift;
+    const yAt=v=>pad.top+(max-v)/(max-min)*plotH+safeShift;
 
     rows.forEach((c,j)=>{
       const i=start+j,x=xAt(i),up=c.c>=c.o,color=up?'#2ee6a6':'#ff5c7c';
@@ -756,14 +759,16 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     if(Math.hypot(dx,dy)>3) state.drag.moved=true;
     if(!state.drag.moved) return;
     // 横向拖动时图表内容跟随指针：向右拖动浏览更早行情；纵向仍可自由平移。
-    const count=Math.max(1,state.viewCount);
+    const {start,end}=visibleIndices();
+    const count=Math.max(1,end-start);
     const plotW=Math.max(1,(state.width-16)*0.86);
     const step=plotW/count;
-    // Direct manipulation: the chart follows the pointer; dragging right reveals older candles.
+    // Two-axis free pan: horizontal motion moves the time window; vertical motion moves price levels.
+    // Keep time calculations anchored to pointer-down to avoid accumulated drift over repeated moves.
     const timeShift=-dx*(4*60*60*1000)/Math.max(.01,step);
     state.startTime=state.drag.baseStart+timeShift;
     state.endTime=state.drag.baseEnd+timeShift;
-    state.priceShift=state.drag.basePriceShift+dy;
+    state.priceShift=Math.max(-state.height*.32,Math.min(state.height*.32,state.drag.basePriceShift+dy));
     draw();
     const oldest=state.candles[0]?.t;
     if(Number.isFinite(oldest) && state.startTime<oldest+100*4*60*60*1000 && state.apiSymbol) {
