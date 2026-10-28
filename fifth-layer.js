@@ -19,28 +19,22 @@
     #v5-chart-overlay[hidden]{display:none!important}
     #v5-chart-overlay{position:fixed;inset:0;z-index:2147483000;display:block;background:transparent;touch-action:none}
     #v5-chart-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:transparent;touch-action:none;cursor:crosshair}
-    #v5-chart-status{position:absolute;top:clamp(12px,3vh,28px);left:clamp(12px,3vw,32px);max-width:80vw;color:rgba(220,240,255,.9);font:12px/1.5 Inter,-apple-system,BlinkMacSystemFont,sans-serif;text-shadow:0 0 8px #02040a;pointer-events:none;white-space:normal}
   `;
   document.head.appendChild(style);
-
-  // 已移除临时诊断条，避免在正式界面显示调试文字。
-  function diagnosticMessage(_message) {}
 
   const overlay = document.createElement('div');
   overlay.id = 'v5-chart-overlay';
   overlay.hidden = true;
-  overlay.innerHTML = '<canvas id="v5-chart-canvas" aria-label="4小时K线与Vegas均线图"></canvas><div id="v5-chart-status" role="status" aria-live="polite"></div>';
+  overlay.innerHTML = '<canvas id="v5-chart-canvas" aria-label="4小时K线与Vegas均线图"></canvas>';
   document.body.appendChild(overlay);
   const canvas = overlay.querySelector('canvas');
   const ctx = canvas.getContext('2d');
-  const status = overlay.querySelector('#v5-chart-status');
   const state = {
     symbol:'', name:'', stock:false, candles:[], series:[],
     startTime:null, endTime:null, viewCount:180,
-    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, priceShift:0, historyLoading:false
+    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, panX:0, priceShift:0, historyLoading:false
   };
 
-  function setStatus(message){ status.textContent = message; }
   function candlePath(symbol, stock, endTime) {
     const query = new URLSearchParams({
       category: stock ? 'SPOT' : 'USDT-FUTURES',
@@ -139,7 +133,7 @@
     state.series.forEach(s=>{for(let i=start;i<end;i++){const v=s.values[i];if(Number.isFinite(v)){min=Math.min(min,v);max=Math.max(max,v);}}});
     if(!Number.isFinite(min)||!Number.isFinite(max)) return;
     const margin=(max-min)*.055 || Math.max(max*.004,0.0001); min-=margin; max+=margin;
-    const xAt=i=>pad.left+(i-start+.5)*step;
+    const xAt=i=>pad.left+(i-start+.5)*step+state.panX;
     const yAt=v=>pad.top+(max-v)/(max-min)*plotH+state.priceShift;
 
     rows.forEach((c,j)=>{
@@ -166,7 +160,6 @@
   }
   async function loadData(isRefresh) {
     const generation=++state.generation;
-    setStatus(state.name+' · 4H · 正在加载交易所行情…');
     try {
       let apiSymbol=state.symbol;
       if(state.stock) apiSymbol=await resolveStock(state.symbol);
@@ -189,13 +182,10 @@
       }
       const range=visibleIndices();
       state.viewCount=Math.max(1,range.end-range.start);
-      setStatus(state.name+' · 4H · '+state.candles.length+' 根K线 · EMA 12/36/43/144/169/576/676 · 拖动平移，滚轮缩放，点击留白退出');
       draw();
       if(!isRefresh && rows.length >= 900) loadOlderHistory(generation,apiSymbol);
     } catch(error) {
       if(generation!==state.generation || overlay.hidden) return;
-      setStatus(state.name+' · 加载失败：'+String(error&&error.message||error));
-      diagnosticMessage('大卡片已打开，但行情请求失败：' + String(error&&error.message||error));
       console.error('[Vegas Fifth Layer]',error);
     }
   }
@@ -217,7 +207,6 @@
         rebuildSeries();
       }
       if(generation===state.generation && !overlay.hidden) {
-        setStatus(state.name+' · 4H · 已预载 '+state.candles.length+' 根K线 · EMA 12/36/43/144/169/576/676 · 拖动平移，滚轮缩放');
         draw();
       }
     } catch(error) {
@@ -233,9 +222,8 @@
     state.symbol=symbol;
     state.name=(card.querySelector('.mc-sym')?.childNodes[0]?.textContent||symbol).trim();
     state.stock=STOCKS.has(symbol);
-    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=180;state.drag=null;state.priceShift=0;state.historyLoading=false;
+    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=180;state.drag=null;state.panX=0;state.priceShift=0;state.historyLoading=false;
     overlay.hidden=false;
-    diagnosticMessage('已打开大卡片：' + symbol + '，正在请求行情');
     fitCanvas();
     loadData(false);
     if(state.timer) clearInterval(state.timer);
@@ -264,23 +252,16 @@
   function pointerDown(e) {
     if(overlay.hidden || !state.candles.length) return;
     const range=visibleIndices();
-    state.drag={x:e.clientX,y:e.clientY,startIndex:range.start,endIndex:range.end-1,count:range.end-range.start,basePanY:state.priceShift,moved:false};
+    state.drag={x:e.clientX,y:e.clientY,startIndex:range.start,endIndex:range.end-1,count:range.end-range.start,basePanX:state.panX,basePanY:state.priceShift,moved:false};
     try{canvas.setPointerCapture(e.pointerId);}catch(_){}
   }
   function pointerMove(e) {
     if(!state.drag || !state.candles.length) return;
     const dx=e.clientX-state.drag.x,dy=e.clientY-state.drag.y;
-    if(Math.hypot(dx,dy)>5) state.drag.moved=true;
+    if(Math.hypot(dx,dy)>3) state.drag.moved=true;
     if(!state.drag.moved) return;
-    const plotW=Math.max(1,state.width-16);
-    const step=plotW/Math.max(1,state.drag.count);
-    const shift=Math.round(-dx/Math.max(1,step));
-    const maxStart=Math.max(0,state.candles.length-state.drag.count);
-    const startIndex=Math.max(0,Math.min(maxStart,state.drag.startIndex+shift));
-    const endIndex=Math.min(state.candles.length-1,startIndex+state.drag.count-1);
-    state.startTime=state.candles[startIndex].t;
-    state.endTime=state.candles[endIndex].t;
-    state.viewCount=endIndex-startIndex+1;
+    // Translate the complete chart continuously in any direction, with no edge clamping.
+    state.panX=state.drag.basePanX+dx;
     state.priceShift=state.drag.basePanY+dy;
     draw();
   }
@@ -312,11 +293,9 @@
     if(!card) {
       const target=event.target;
       if(target && target.closest && target.closest('#market-cards-layer')) {
-        diagnosticMessage('收到卡片区域点击，但没有匹配到 .mc-card[data-symbol]');
       }
       return;
     }
-    diagnosticMessage('已捕获点击：' + (card.dataset.symbol || '无品种代码') + '，正在打开大卡片');
     event.preventDefault();
     event.stopPropagation();
     open(card);
@@ -342,6 +321,5 @@
   if(window.ResizeObserver) new ResizeObserver(fitCanvas).observe(canvas);
   window.VegasFifthLayer={open,close,refresh:()=>loadData(true),getState:()=>({symbol:state.symbol,visible:!overlay.hidden,candles:state.candles.length})};
   window.__VEGAS_FIFTH_LAYER_READY__=true;
-  diagnosticMessage('脚本初始化成功，找到 ' + document.querySelectorAll(CARD_SELECTOR).length + ' 张小卡片，等待点击');
   console.info('[Vegas Fifth Layer] initialized');
 })();
