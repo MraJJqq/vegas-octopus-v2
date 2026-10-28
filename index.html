@@ -525,6 +525,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     if (overlay.hidden) return;
     const W=state.width,H=state.height;
     ctx.clearRect(0,0,W,H);
+    state.hitSegments=[];
     const data=state.candles;
     if(!data.length) return;
     const {start,end}=visibleIndices(), rows=data.slice(start,end);
@@ -547,6 +548,8 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
       ctx.fillStyle=color;
       const y1=yAt(Math.max(c.o,c.c)),y2=yAt(Math.min(c.o,c.c));
       ctx.fillRect(x-bodyW/2,y1,bodyW,Math.max(1,y2-y1));
+      state.hitSegments.push({x1:x,y1:yAt(c.h),x2:x,y2:yAt(c.l)});
+      state.hitSegments.push({x1:x-bodyW/2,y1:y1,x2:x+bodyW/2,y2:y2});
     });
     state.series.forEach(s=>{
       ctx.strokeStyle=s.color;ctx.lineWidth=s.width;ctx.globalAlpha=.92;ctx.beginPath();
@@ -558,6 +561,14 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
         if(!begun){ctx.moveTo(x,y);begun=true;}else ctx.lineTo(x,y);
       }
       ctx.stroke();ctx.globalAlpha=1;
+      let previous=null;
+      for(let i=start;i<end;i++){
+        const value=s.values[i];
+        if(!Number.isFinite(value)){previous=null;continue;}
+        const point={x:pad.left+(i-start+.5)*step,y:yAt(value)};
+        if(previous) state.hitSegments.push({x1:previous.x,y1:previous.y,x2:point.x,y2:point.y});
+        previous=point;
+      }
     });
   }
   async function loadData(isRefresh) {
@@ -646,14 +657,19 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     state.endTime=state.candles[endIndex].t;
     draw();
   }
+  function pointDistance(p,s) {
+    const dx=s.x2-s.x1,dy=s.y2-s.y1,len=dx*dx+dy*dy;
+    const t=len?Math.max(0,Math.min(1,((p.x-s.x1)*dx+(p.y-s.y1)*dy)/len)):0;
+    return Math.hypot(p.x-(s.x1+t*dx),p.y-(s.y1+t*dy));
+  }
   function pointerUp(e) {
     if(!state.drag) return;
     const moved=state.drag.moved;state.drag=null;
     if(!moved) {
       const rect=canvas.getBoundingClientRect();
-      const x=e.clientX-rect.left,y=e.clientY-rect.top;
-      // Tap/click outside the plot area dismisses; plotted area stays interactive.
-      if(y<30 || x<5 || x>rect.width-5 || y>rect.height-5) close();
+      const p={x:e.clientX-rect.left,y:e.clientY-rect.top};
+      const nearest=state.hitSegments.reduce((best,s)=>Math.min(best,pointDistance(p,s)),Infinity);
+      if(nearest>12) close();
     }
   }
   // Capture clicks before page-level handlers; pointer events also cover touch devices.
