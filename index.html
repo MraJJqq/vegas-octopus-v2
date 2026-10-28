@@ -977,26 +977,9 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 #octopusMarketCardGrid.orb-stream-card-overlay{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;display:block;padding:0;max-height:none;perspective:1400px;z-index:5} #octopusMarketCardGrid.orb-stream-card-overlay #octopusMarketCardGrid .pos{pointer-events:auto}
 #octopusMarketCardGrid .pos{position:absolute;left:0;top:0;will-change:transform;cursor:pointer}
 #octopusMarketCardGrid .float{position:absolute;inset:0}
-#octopusMarketCardGrid .card{--c:var(--up);position:absolute;inset:0;border-radius:.9em;padding:.55em .75em;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:1fr auto;column-gap:.5em;row-gap:.2em;align-items:center}
-#octopusMarketCardGrid .card.up{--c:var(--up)}#octopusMarketCardGrid .card.dn{--c:var(--dn)}
-#octopusMarketCardGrid .bg{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(145deg,rgba(255,255,255,.14),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:var(--sh)}
-#octopusMarketCardGrid .bg::after{content:"";position:absolute;inset:0;border-radius:inherit;border:1px solid rgba(255,255,255,.5);box-shadow:0 44px 60px -18px rgba(0,0,0,.95),0 0 34px -6px var(--c);opacity:var(--hv,0);pointer-events:none}
-#octopusMarketCardGrid .gl{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:var(--hv,0);background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.26),transparent 55%)}
-#octopusMarketCardGrid .dim{position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:var(--bg);opacity:0}
-#octopusMarketCardGrid .coin{position:relative;width:1.8em;height:1.8em;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.9em;color:#07101f;background:var(--c);box-shadow:0 0 .9em -.15em var(--c)}
-#octopusMarketCardGrid .sym{position:relative;font-size:1em;font-weight:700;line-height:1.1}
-#octopusMarketCardGrid .sym small{display:block;font-size:.62em;color:var(--mute);font-weight:500}
-#octopusMarketCardGrid .price{position:relative;font-size:.95em;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;transition:color .3s}
-#octopusMarketCardGrid .price.flash{color:var(--c)}
-#octopusMarketCardGrid .spark{position:relative;grid-column:1/3;width:100%;height:1.5em}
-#octopusMarketCardGrid .spark .ln{fill:none;stroke:var(--c);stroke-width:1.5;vector-effect:non-scaling-stroke}
-#octopusMarketCardGrid .spark .ar{fill:var(--c);opacity:.14}
-#octopusMarketCardGrid .pct{position:relative;font-size:.8em;font-weight:700;color:var(--c);font-variant-numeric:tabular-nums;text-align:right}
-@media (prefers-reduced-motion:reduce){#octopusMarketCardGrid .float{animation:none}}
 
 #octopusMarketCardGrid.orb-stream-card-overlay{--bg:transparent;--ink:#e8f0ff;--mute:#7f8db0;--up:#2ee6a6;--dn:#ff5c7c;background:transparent;touch-action:pan-y}
 #octopusMarketCardGrid .pos{pointer-events:auto}
-#octopusMarketCardGrid .card{border-radius:.9em;padding:.55em .75em;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:1fr auto;column-gap:.5em;row-gap:.2em;align-items:center}
 @media(max-width:760px){#octopusMarketCardGrid .pos{font-size:clamp(6px,1.5vw,9px)!important}}
 
 #octopusFourHourHover{
@@ -1067,9 +1050,6 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 /* Place the untouched ORB module in the center stage; only the outer layout is styled. */
 .center-stage.orb-original-stage{position:relative;isolation:isolate;min-width:0;min-height:540px;overflow:hidden;border:1px solid rgba(36,139,255,.42);border-radius:18px;background:radial-gradient(ellipse at 50% 52%,rgba(0,102,255,.16),transparent 48%),#030a18}
 .orb-original-stage #orb-core-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:1;touch-action:pan-y;cursor:grab}.orb-original-stage #orb-core-canvas:active{cursor:grabbing}
-.orb-original-stage .orb-stage-label{position:absolute;left:15px;top:13px;z-index:2;display:flex;flex-direction:column;gap:3px;pointer-events:none;text-shadow:0 1px 5px #020712}
-.orb-original-stage .orb-stage-label strong{font-size:11px;letter-spacing:.14em;color:#dff8ff}
-.orb-original-stage .orb-stage-label span{font-size:7px;letter-spacing:.09em;color:#6f9bb9}
 @media(max-width:1180px){.center-stage.orb-original-stage{min-height:500px}}
 @media(max-width:760px){.center-stage.orb-original-stage{grid-column:1!important;grid-row:1!important;order:-1;min-height:0!important;height:clamp(300px,48vh,460px)!important}}
 </style>
@@ -1254,7 +1234,6 @@ body{position:fixed;inset:0}
     display:block!important;grid-column:1!important;grid-row:2!important;
     height:100%!important;min-height:0!important;max-height:none;order:initial!important;
   }
-  .orb-stage-label{left:8px!important;top:7px!important}
   .news-ticker{height:clamp(22px,3.8vh,30px)!important;gap:7px;padding-inline:6px}
   .ticker-label{font-size:8px}
   .ticker-track span{font-size:9px}
@@ -1378,23 +1357,6 @@ body{position:fixed;inset:0}
 #octopusMarketCardGrid.orb-stream-card-overlay{perspective:none!important;transform-style:flat!important;overflow:hidden!important}
 #octopusMarketCardGrid.orb-stream-card-overlay .pos{transform-style:flat!important;animation:none!important}
 #octopusMarketCardGrid.orb-stream-card-overlay .float{animation:none!important;transform:none!important;transform-style:flat!important}
-#octopusMarketCardGrid .card{--c:var(--up);position:absolute;inset:0;border-radius:.9em;padding:.55em .75em;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:1fr auto;column-gap:.5em;row-gap:.2em;align-items:center}
-#octopusMarketCardGrid .card.up{--c:var(--up)}#octopusMarketCardGrid .card.dn{--c:var(--dn)}
-#octopusMarketCardGrid .bg{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:var(--sh),inset 0 1px 0 rgba(255,255,255,.25)}
-#octopusMarketCardGrid .bg::after{content:"";position:absolute;inset:0;border-radius:inherit;background:rgba(14,20,38,.9);border:1px solid rgba(255,255,255,.5);box-shadow:0 44px 60px -18px rgba(0,0,0,.95),0 0 34px -6px var(--c);opacity:var(--hv,0);pointer-events:none}
-#octopusMarketCardGrid .gl{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:var(--hv,0);background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.26),transparent 55%)}
-#octopusMarketCardGrid .dim{position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:var(--bg);opacity:0}
-#octopusMarketCardGrid .coin{position:relative;width:1.8em;height:1.8em;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.9em;color:#07101f;background:var(--c);box-shadow:0 0 .9em -.15em var(--c)}
-#octopusMarketCardGrid .sym{position:relative;font-size:1em;font-weight:700;line-height:1.1}
-#octopusMarketCardGrid .sym small{display:block;font-size:.62em;color:var(--mute);font-weight:500}
-#octopusMarketCardGrid .price{position:relative;font-size:.95em;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;transition:color .3s}
-#octopusMarketCardGrid .price.flash{color:var(--c)}
-#octopusMarketCardGrid .spark{position:relative;grid-column:1/3;width:100%;height:1.5em}
-#octopusMarketCardGrid .spark .ln{fill:none;stroke:var(--c);stroke-width:1.5;vector-effect:non-scaling-stroke}
-#octopusMarketCardGrid .spark .ar{fill:var(--c);opacity:.14}
-#octopusMarketCardGrid .pct{position:relative;font-size:.8em;font-weight:700;color:var(--c);font-variant-numeric:tabular-nums;text-align:right}
-@media(max-width:760px){#octopusMarketCardGrid .pos{font-size:clamp(6px,1.5vw,9px)!important}}
-@media(prefers-reduced-motion:reduce){#octopusMarketCardGrid .float{animation:none}}
 </style>
 <style id="octopus-original-card-style-restore">
 /* Restore the user's original 27-card visual system; keep current card dimensions and placement logic unchanged. */
