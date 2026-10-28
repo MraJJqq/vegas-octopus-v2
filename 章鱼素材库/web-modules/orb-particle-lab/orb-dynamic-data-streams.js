@@ -69,7 +69,7 @@
           const slotOpacity = slot ? Number.parseFloat(getComputedStyle(slot).opacity) : 1;
           let state = states.get(card);
           if (!state) {
-            state = { opacity: 0, visibleSince: null, connected: false };
+            state = { opacity: 0, visibleSince: null, connected: false, endpoints: [] };
             states.set(card, state);
             groups.set(card, nextGroup++);
           }
@@ -126,7 +126,12 @@
             }
 
             const visibility = Math.max(0.22, Math.min(1, point[3] || 0));
-            const endX = point[0], endY = point[1];
+            const targetX = point[0], targetY = point[1];
+            const endpoint = state.endpoints[j] || (state.endpoints[j] = { x: targetX, y: targetY });
+            const follow = 1 - Math.exp(-dt / 0.09);
+            endpoint.x += (targetX - endpoint.x) * follow;
+            endpoint.y += (targetY - endpoint.y) * follow;
+            const endX = endpoint.x, endY = endpoint.y;
             const startX = endX >= centerX ? rightX : leftX;
             const startY = centerY + (j - (STREAMS_PER_CARD - 1) / 2) * 3.5;
             const controlX = (startX + endX) / 2;
