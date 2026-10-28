@@ -166,7 +166,7 @@ else if(!orbFrame){last=0;orbFrame=requestAnimationFrame(frame)}
       }
       renderSymbols("v9Stocks",STOCK_ORDER.filter(s=>seen.has(s)));
       renderSymbols("v9Core",CORE_ORDER.filter(s=>seen.has(s)));
-      if(status)status.textContent="V9 · 每2小时扫描";
+      if(status)status.textContent="V9·信号系统";
     }catch(error){
       const detail=String(error&&error.message||error).slice(0,70);
       if(status)status.textContent="V9 · 读取失败："+detail;
