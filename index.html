@@ -36,7 +36,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 
 /* 第三层：小卡片行情模块，独立叠加，不改动第一、二层。 */
-#market-cards-layer{position:absolute;z-index:2;inset:0;min-width:0;min-height:0;pointer-events:none;overflow:hidden}
+#market-cards-layer{--up:#2ee6a6;--dn:#ff5c7c;--mute:#7f8db0;--ink:#e8f0ff;position:absolute;z-index:2;inset:0;min-width:0;min-height:0;pointer-events:none;overflow:hidden}
 #market-cards-layer .mc-columns{position:absolute;inset:clamp(66px,10vh,110px) clamp(10px,1.5vw,24px) clamp(12px,2vh,28px);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(8px,1.4vw,22px);align-items:center}
 #market-cards-layer .mc-side{display:flex;flex-direction:column;justify-content:space-evenly;align-items:flex-start;gap:clamp(8px,1.2vh,16px);min-width:0;height:100%}
 #market-cards-layer .mc-side.right{align-items:flex-end}
