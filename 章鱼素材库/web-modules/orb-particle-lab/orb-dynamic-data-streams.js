@@ -8,7 +8,6 @@
   const particles = Array.from({ length: 300 }, (_, i) => ({
     color: i % COLORS.length,
     point: Math.floor(Math.random() * 900),
-    phase: Math.random(),
     speed: 0.18 + Math.random() * 0.25
   }));
 
@@ -70,16 +69,27 @@
           const slotOpacity = slot ? Number.parseFloat(getComputedStyle(slot).opacity) : 1;
           let state = states.get(card);
           if (!state) {
-            state = { opacity: 0 };
+            state = { opacity: 0, visibleSince: null };
             states.set(card, state);
             groups.set(card, nextGroup++);
           }
 
-          const target = visibleRatio * (Number.isFinite(slotOpacity) ? Math.max(0, Math.min(1, slotOpacity)) : 1);
-          // 指数缓动不依赖帧率，滚动进入/离开时更自然。
-          state.opacity += (target - state.opacity) * (1 - Math.exp(-dt / FADE_SECONDS));
-          if (state.opacity > 0.003 && rect.width > 0 && rect.height > 0) {
-            targets.push({ rect, opacity: state.opacity, group: groups.get(card) });
+          const slotVisibility = Number.isFinite(slotOpacity) ? Math.max(0, Math.min(1, slotOpacity)) : 1;
+          const target = visibleRatio * slotVisibility;
+          // 只有卡片进入滚动容器的可视区域后才启动一轮数据流；离开可视区域立即重置进度。
+          const eligible = visibleRatio >= 0.18 && slotVisibility >= 0.08;
+          if (!eligible) {
+            state.visibleSince = null;
+            state.opacity = 0;
+          } else if (state.visibleSince === null) {
+            state.visibleSince = time;
+          }
+          // 指数缓动不依赖帧率；不可见卡片不保留残余数据流。
+          if (eligible) {
+            state.opacity += (target - state.opacity) * (1 - Math.exp(-dt / FADE_SECONDS));
+          }
+          if (eligible && state.opacity > 0.003 && rect.width > 0 && rect.height > 0) {
+            targets.push({ rect, opacity: state.opacity, group: groups.get(card), state });
           }
         });
 
@@ -88,7 +98,7 @@
         ctx.lineJoin = 'round';
         ctx.lineWidth = 0.8;
 
-        targets.forEach(({ rect, opacity, group }) => {
+        targets.forEach(({ rect, opacity, group, state }) => {
           const centerX = rect.left + rect.width / 2 - appRect.left;
           const centerY = rect.top + rect.height / 2 - appRect.top;
           const leftX = rect.left - appRect.left;
@@ -122,7 +132,7 @@
             const color = 'hsl(' + COLORS[p.color] + ',100%,62%)';
 
             // 数据流从卡片端逐步向发光球延伸，避免滚动时球端提前出现整条连线。
-            const phase = (time * p.speed + p.phase) % 1;
+            const phase = Math.min(1, Math.max(0, (time - state.visibleSince) * p.speed));
             const inverse = 1 - phase;
             const particleX = inverse * inverse * startX + 2 * inverse * phase * controlX + phase * phase * endX;
             const particleY = inverse * inverse * startY + 2 * inverse * phase * startY + phase * phase * endY;
