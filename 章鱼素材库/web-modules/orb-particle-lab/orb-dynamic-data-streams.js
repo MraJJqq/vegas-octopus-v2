@@ -121,18 +121,22 @@
             const controlX = (startX + endX) / 2;
             const color = 'hsl(' + COLORS[p.color] + ',100%,62%)';
 
+            // 数据流从卡片端逐步向发光球延伸，避免滚动时球端提前出现整条连线。
+            const phase = (time * p.speed + p.phase) % 1;
+            const inverse = 1 - phase;
+            const particleX = inverse * inverse * startX + 2 * inverse * phase * controlX + phase * phase * endX;
+            const particleY = inverse * inverse * startY + 2 * inverse * phase * startY + phase * phase * endY;
+            // De Casteljau：求出截至当前粒子位置的二次贝塞尔曲线控制点。
+            const partialControlX = startX + phase * (controlX - startX);
+            const partialControlY = startY;
             ctx.beginPath();
             ctx.moveTo(startX, startY);
-            ctx.quadraticCurveTo(controlX, startY, endX, endY);
+            ctx.quadraticCurveTo(partialControlX, partialControlY, particleX, particleY);
             ctx.strokeStyle = color;
             ctx.globalAlpha = Math.min(1, 0.26 * visibility * opacity);
             ctx.shadowBlur = 0;
             ctx.stroke();
 
-            const phase = (time * p.speed + p.phase) % 1;
-            const inverse = 1 - phase;
-            const particleX = inverse * inverse * startX + 2 * inverse * phase * controlX + phase * phase * endX;
-            const particleY = inverse * inverse * startY + 2 * inverse * phase * startY + phase * phase * endY;
             ctx.globalAlpha = Math.min(1, 1.35 * visibility * opacity);
             ctx.fillStyle = color;
             ctx.shadowColor = color;
