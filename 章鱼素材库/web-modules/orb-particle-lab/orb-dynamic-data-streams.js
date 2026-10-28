@@ -77,24 +77,8 @@
       const formalCards = document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]');
 
       if (pr && formalCards.length) {
-        // 只显示正式信号品种对应的流。按卡片横向位置匹配素材原版的球面粒子编号。
-        const symbols = Array.from(formalCards).map(card => {
-          const r = card.getBoundingClientRect();
-          return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-        });
-        const appRect = app.getBoundingClientRect();
-        const targetIndices = symbols.map(pos => {
-          let best = 0, bestD = Infinity;
-          pr.forEach((q, idx) => {
-            const d = Math.pow(q[0] - (pos.x - appRect.left), 2) + Math.pow(q[1] - (pos.y - appRect.top), 2);
-            if (d < bestD) { bestD = d; best = idx; }
-          });
-          return best;
-        });
-        // 保留素材原版的 150 个流动粒子与七色分组；
-        // 仅将每条流的球面落点映射到当前正式信号对应的球面区域。
-        F.forEach(function (f, idx) { f.t = targetIndices[idx % targetIndices.length]; });
-
+        // 严格保留素材库原版随机球面落点 f.t；不把 150 条流强行压到少数信号卡片附近。
+        // 正式信号只负责启用/关闭数据流层，不改写原版粒子的目标点和运动轨迹。
         x.globalCompositeOperation = 'lighter';
         x.lineWidth = 0.8;
         F.forEach(function (f) {
