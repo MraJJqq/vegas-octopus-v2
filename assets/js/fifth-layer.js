@@ -58,7 +58,8 @@
   };
 
   // 4H candles are persisted per instrument in IndexedDB; 4,400 bars cover roughly two calendar years for 24/7 markets.
-  const EMA_WARMUP_BARS = 4400;
+  // The longest EMA is 676 bars; 1,000 bars provide a useful buffer without dozens of slow history requests per symbol.
+  const EMA_WARMUP_BARS = 1000;
   const MAX_CANDLE_BARS = 5000;
   const PREWARM_CACHE = new Map();
   const PREWARM_MAX_AGE = 4 * 60 * 60 * 1000;
@@ -481,7 +482,7 @@
         const oldRange=visibleIndices();
         const oldCount=Math.max(1,oldRange.end-oldRange.start);
         const followLatest=Number.isFinite(oldEnd) && oldEnd>=oldLast-4*60*60*1000;
-        state.candles=normalize(state.candles.concat(rows)).slice(-MAX_CANDLE_BARS);
+        state.candles=mergeCandles(state.candles,rows).slice(-MAX_CANDLE_BARS);
         rebuildSeries();
         if(followLatest) {
           const lastIndex=state.candles.length-1;
@@ -506,6 +507,21 @@
       const range=visibleIndices();
       if(range.end>range.start) state.viewCount=range.end-range.start;
       draw();
+      // Show cached/latest data first. If it is short, enrich this active chart in the background.
+      if(rows.length < EMA_WARMUP_BARS){
+        const activeSymbol=state.symbol,activeApiSymbol=state.contractSymbol,activeGeneration=generation;
+        window.setTimeout(async()=>{
+          try{
+            const enriched=await loadCandlesWithWarmup(activeApiSymbol,isReality);
+            if(overlay.hidden||state.generation!==activeGeneration||state.symbol!==activeSymbol||state.contractSymbol!==activeApiSymbol||enriched.length<=state.candles.length)return;
+            const oldStart=state.startTime,oldEnd=state.endTime;
+            state.candles=mergeCandles(state.candles,enriched).slice(-MAX_CANDLE_BARS);
+            rebuildSeries();
+            state.startTime=oldStart;state.endTime=oldEnd;
+            draw();
+          }catch(error){console.warn('[Vegas Fifth Layer] 后台补齐历史K线失败：'+activeSymbol,error);}
+        },0);
+      }
       if(state.contractSymbol && (!state.ws || state.ws.readyState===WebSocket.CLOSED)) connectKline(state.contractSymbol,REALITY_STOCKS.has(state.symbol));
     } catch(error) {
       if(generation!==state.generation || request!==state.dataRequest || overlay.hidden) return;
@@ -684,13 +700,25 @@
     window.visualViewport.addEventListener('scroll',fitCanvas,{passive:true});
   }
   if(window.ResizeObserver) new ResizeObserver(fitCanvas).observe(canvas);
+  async function loadLatestCandles(apiSymbol,isReality){
+    const [stored,rawLatest]=await Promise.all([
+      readPersistentCandles(apiSymbol,isReality),
+      getJson(candlePath(apiSymbol,undefined,isReality))
+    ]);
+    const latest=normalize(rawLatest);
+    const rows=mergeCandles(stored||[],latest).slice(-MAX_CANDLE_BARS);
+    if(rows.length>=2) await writePersistentCandles(apiSymbol,isReality,rows);
+    return rows;
+  }
   function prewarmSymbol(symbol){
     symbol=String(symbol||'').trim().toUpperCase();
     if(!symbol || PREWARM_CACHE.has(symbol)) return PREWARM_CACHE.get(symbol);
     const job=(async()=>{
       const isReality=REALITY_STOCKS.has(symbol);
       const apiSymbol=isReality?await resolveRealitySymbol(symbol):await resolveContract(symbol);
-      const rows=await loadCandlesWithWarmup(apiSymbol,isReality);
+      // Background prewarm only fetches the latest candles. Deep history is loaded
+      // only for the chart the user actually opens, avoiding hundreds of idle requests.
+      const rows=await loadLatestCandles(apiSymbol,isReality);
       if(rows.length<2) throw new Error('预热K线不足');
       const entry={apiSymbol,rows,createdAt:Date.now()};
       PREWARM_CACHE.set(symbol,entry);
