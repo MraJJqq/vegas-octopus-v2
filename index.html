@@ -318,6 +318,21 @@ html,body{width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavio
 <style id="octopus-square-scatter-layout">/* Restore card appearance and internal layout to the supplied 27-card reference; leave card placement and all other modules unchanged. */
 #octopusMarketCardGrid.orb-stream-card-overlay{perspective:none!important;transform-style:flat!important;overflow:hidden!important}#octopusMarketCardGrid.orb-stream-card-overlay .pos{transform-style:flat!important;animation:none!important}#octopusMarketCardGrid.orb-stream-card-overlay .float{animation:none!important;transform:none!important;transform-style:flat!important}
 </style>
+<style id="octopus-market-card-visibility-fix">
+/* Keep the 27 floating cards visible above the core canvas; scoped only to the card layer. */
+.main-grid>.center-stage.orb-original-stage #octopusMarketCardGrid{
+  display:block!important;visibility:visible!important;opacity:1!important;
+  pointer-events:none;z-index:5!important;
+}
+#octopusMarketCardGrid.orb-stream-card-overlay>.pos{
+  display:block!important;visibility:visible!important;opacity:1!important;
+  pointer-events:auto;z-index:6!important;
+}
+#octopusMarketCardGrid .pos>.float,
+#octopusMarketCardGrid .pos .card{
+  display:block!important;visibility:visible!important;
+}
+</style>
 <style id="octopus-original-card-style-restore">/* Restore the user's original 27-card visual system; keep current card dimensions and placement logic unchanged. */
 #octopusMarketCardGrid .card{--c:var(--up);position:absolute;inset:0;border-radius:.9em;padding:.55em .75em;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:1fr auto;column-gap:.5em;row-gap:.2em;align-items:center}#octopusMarketCardGrid .card.up{--c:var(--up)}#octopusMarketCardGrid .card.dn{--c:var(--dn)}#octopusMarketCardGrid .bg{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:var(--sh),inset 0 1px 0 rgba(255,255,255,.25)}#octopusMarketCardGrid .bg::after{content:"";position:absolute;inset:0;border-radius:inherit;background:rgba(14,20,38,.9);border:1px solid rgba(255,255,255,.5);box-shadow:0 44px 60px -18px rgba(0,0,0,.95),0 0 34px -6px var(--c);opacity:var(--hv,0);pointer-events:none}#octopusMarketCardGrid .gl{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:var(--hv,0);background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.26),transparent 55%)}#octopusMarketCardGrid .dim{position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:#070b18;opacity:0}#octopusMarketCardGrid .coin,#octopusMarketCardGrid .sym,#octopusMarketCardGrid .price,#octopusMarketCardGrid .spark,#octopusMarketCardGrid .pct{position:relative}#octopusMarketCardGrid .coin{width:1.8em;height:1.8em;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.9em;color:#07101f;background:var(--c);box-shadow:0 0 .9em -.15em var(--c)}#octopusMarketCardGrid .sym{font-size:1em;font-weight:700;line-height:1.1}#octopusMarketCardGrid .sym small{display:block;font-size:.62em;color:#7f8db0;font-weight:500}#octopusMarketCardGrid .price{font-size:.95em;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;transition:color .3s}#octopusMarketCardGrid .price.flash{color:var(--c)}#octopusMarketCardGrid .spark{grid-column:1/3;width:100%;height:1.5em}#octopusMarketCardGrid .spark .ln{fill:none;stroke:var(--c);stroke-width:1.5;vector-effect:non-scaling-stroke}#octopusMarketCardGrid .spark .ar{fill:var(--c);opacity:.14}#octopusMarketCardGrid .pct{font-size:.8em;font-weight:700;color:var(--c);font-variant-numeric:tabular-nums;text-align:right}
 </style>
