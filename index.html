@@ -45,7 +45,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 @keyframes mc-bob{0%{transform:translateY(0) rotateY(-5deg) rotateX(2deg)}100%{transform:translateY(-7px) rotateY(5deg) rotateX(-2deg)}}
 #market-cards-layer .mc-gshadow{position:absolute;left:14%;right:14%;bottom:0;height:14px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.65),transparent);filter:blur(5px);animation:mc-sh 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
 @keyframes mc-sh{0%{transform:scale(1);opacity:.9}100%{transform:scale(.82);opacity:.5}}
-#market-cards-layer .mc-card{--mc-c:var(--up);position:relative;transform-style:preserve-3d;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .14s ease-out;border-radius:17px;padding:clamp(10px,1.1vw,15px);min-height:clamp(122px,17vh,172px);touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:default}
+#market-cards-layer .mc-card{--mc-c:var(--up);position:relative;transform-style:preserve-3d;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .14s ease-out;border-radius:17px;padding:clamp(10px,1.1vw,15px);min-height:clamp(122px,17vh,172px);touch-action:pan-y;cursor:default}
 #market-cards-layer .mc-card.up{--mc-c:var(--up)}
 #market-cards-layer .mc-card.dn{--mc-c:var(--dn)}
 #market-cards-layer .mc-bg{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(145deg,rgba(255,255,255,.13),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 18px 35px -22px rgba(0,0,0,.8)}
