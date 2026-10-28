@@ -1,7 +1,6 @@
 /* Vegas 章鱼｜第四层：七色数据流连接正式信号卡片与发光球
- * 保留素材库原版七色、150 粒子、曲线控制方式、速度、透明度与辉光参数。
- * 每帧读取当天正式信号卡片；每张正式卡片匹配最近的实时球面粒子作为连接终点。
- * 不修改行情、信号识别、正式信号推送规则。
+ * 每张可见正式信号卡片绘制 14 根数据流，使用实时球面投影点作为连接终点。
+ * 不修改行情、信号识别或正式信号推送规则。
  */
 (function () {
   'use strict';
@@ -48,7 +47,6 @@
       const pr=getProjectedOrb();
       const appRect=app.getBoundingClientRect();
       const cards=Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]'));
-      const active=new Set(cards);
       const targets=[];
       cards.forEach(function(card){
         const rect=card.getBoundingClientRect();
@@ -71,11 +69,11 @@
         state.opacity+=(targetOpacity-state.opacity)*step;
         if(state.opacity>.005 && rect.width>0 && rect.height>0) {
           if(!cardGroups.has(card)){cardGroups.set(card,nextGroup++);}
-          targets.push({card:card,rect:rect,opacity:state.opacity,group:cardGroups.get(card)});
+          targets.push({rect:rect,opacity:state.opacity,group:cardGroups.get(card)});
         }
       });
       if (pr && targets.length) {
-        // 每张卡片固定一组七色数据流，始终绘制七根；不会因球面粒子透明度而随机少线。
+        // 每张卡片固定绘制 14 根数据流，七色循环两次。
         x.globalCompositeOperation='lighter';
         x.lineWidth=1.2;
         targets.forEach(function(target){
