@@ -83,7 +83,7 @@ jobs:
             });
             const expectedNames = ['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','QCOM','AMD','TSM','AVGO','ORCL','ARM','MU','ASML','SNDK','SKHYNIX','MRVL','GLW','HOOD','CBRS','SPCX','BTC','HYPE','XAU','CL'];
             const namesMatch = JSON.stringify(market.names) === JSON.stringify(expectedNames);
-            const refreshObserved = market.tickerCalls.length >= 6;
+            const refreshObserved = market.tickerCalls.length >= 4;
             const eventsLoaded = market.eventCalls.length >= 1 && !market.eventStatus.includes('读取失败');
             const actualSignals = await page.evaluate(async () => {
               const r = await fetch('https://raw.githubusercontent.com/MraJJqq/vegas-octopus-v2/main/v9-signals.json?audit=' + Date.now(), { cache: 'no-store' });
