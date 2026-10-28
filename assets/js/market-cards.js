@@ -120,17 +120,17 @@ left.addEventListener('scroll',()=>{
  if(!wheelFrame){wheelTarget=left.scrollTop;wheelVelocity=0}
  queueFocusScale();
 },{passive:true});
-let touchStartY=0,touchStartScrollTop=0;
-left.addEventListener('touchstart',e=>{wheelVelocity=0;wheelTarget=left.scrollTop;touchStartY=e.touches[0]?.clientY??0;touchStartScrollTop=left.scrollTop},{passive:true});
+let touchStartY=0;
+left.addEventListener('touchstart',e=>{wheelVelocity=0;wheelTarget=left.scrollTop;touchStartY=e.touches[0]?.clientY??0},{passive:true});
 left.addEventListener('touchmove',e=>{
  const touch=e.touches[0];if(!touch)return;
  const dy=touch.clientY-touchStartY;
- const atTop=left.scrollTop<=0||touchStartScrollTop<=0;
+ const atTop=left.scrollTop<=0;
  const atBottom=left.scrollTop+left.clientHeight>=left.scrollHeight-1;
  if((atTop&&dy>0)||(atBottom&&dy<0))e.preventDefault();
 },{passive:false});
-left.addEventListener('touchend',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;touchStartScrollTop=0},{passive:true});
-left.addEventListener('touchcancel',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;touchStartScrollTop=0},{passive:true});
+left.addEventListener('touchend',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0},{passive:true});
+left.addEventListener('touchcancel',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0},{passive:true});
 window.addEventListener('resize',queueFocusScale,{passive:true});
 left.style.scrollBehavior='auto';
 queueFocusScale();
