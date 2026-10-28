@@ -7,8 +7,8 @@
 (function () {
   'use strict';
 
-  const HUE = 190;
-  const PARTICLES_PER_STREAM = 220;
+  const STREAM_HUES = [0, 28, 52, 150, 190, 245, 320];
+  const IONS_PER_CONNECTION = 1500;
   const AUTO_TARGET_SELECTOR = '.mc-card[data-formal-signal="true"], .pos[data-formal-signal="true"]';
 
   function start() {
@@ -32,7 +32,8 @@
     const ctx = canvas.getContext('2d');
     let width = 1, height = 1, dpr = 1;
     let explicitTargets = null;
-    const particles = Array.from({ length: PARTICLES_PER_STREAM }, () => ({
+    const particles = Array.from({ length: IONS_PER_CONNECTION }, (_, i) => ({
+      strand: i % STREAM_HUES.length,
       offset: Math.random(),
       speed: 0.18 + Math.random() * 0.25,
       size: 1.1 + Math.random() * 0.5
@@ -64,36 +65,48 @@
 
     function drawStream(card, ox, oy, stageRect, time) {
       const rect = card.getBoundingClientRect();
-      const ax = rect.left - stageRect.left + rect.width / 2;
+      const ax = rect.right - stageRect.left;
       const ay = rect.top - stageRect.top + rect.height / 2;
       const dx = ox - ax, dy = oy - ay;
-      const cx = (ax + ox) / 2 - dy * 0.025;
-      const cy = (ay + oy) / 2 + dx * 0.025;
-      const color = 'hsl(' + HUE + ',100%,62%)';
+      const baseCx = (ax + ox) / 2 - dy * 0.025;
+      const baseCy = (ay + oy) / 2 + dx * 0.025;
 
-      ctx.save();
-      ctx.lineWidth = 0.8;
-      ctx.strokeStyle = color;
-      ctx.globalAlpha = 0.26;
-      ctx.beginPath();
-      ctx.moveTo(ax, ay);
-      ctx.quadraticCurveTo(cx, cy, ox, oy);
-      ctx.stroke();
+      // 每条连接由七根独立彩色纤维组成，沿用素材库的七色数据流风格。
+      STREAM_HUES.forEach((hue, strand) => {
+        const color = 'hsl(' + hue + ',100%,62%)';
+        const spread = strand - (STREAM_HUES.length - 1) / 2;
+        const sx = ax;
+        const sy = ay + spread * 2.2;
+        const ex = ox;
+        const ey = oy + spread * 1.2;
+        const cx = baseCx - spread * 2.0;
+        const cy = baseCy + spread * 2.4;
 
-      particles.forEach(particle => {
-        const u = (time * particle.speed + particle.offset) % 1;
-        const v = 1 - u;
-        const px = v * v * ax + 2 * v * u * cx + u * u * ox;
-        const py = v * v * ay + 2 * v * u * cy + u * u * oy;
-        ctx.globalAlpha = 0.95;
-        ctx.fillStyle = color;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 8;
+        ctx.save();
+        ctx.lineWidth = 0.8;
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = 0.26;
         ctx.beginPath();
-        ctx.arc(px, py, particle.size, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(sx, sy);
+        ctx.quadraticCurveTo(cx, cy, ex, ey);
+        ctx.stroke();
+
+        particles.forEach(particle => {
+          if (particle.strand !== strand) return;
+          const u = (time * particle.speed + particle.offset) % 1;
+          const v = 1 - u;
+          const px = v * v * sx + 2 * v * u * cx + u * u * ex;
+          const py = v * v * sy + 2 * v * u * cy + u * u * ey;
+          ctx.globalAlpha = 0.95;
+          ctx.fillStyle = color;
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.arc(px, py, particle.size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.restore();
       });
-      ctx.restore();
     }
 
     function frame(ms) {
