@@ -39,7 +39,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 #market-cards-layer .mc-columns{position:absolute;top:clamp(66px,10vh,110px);right:auto;bottom:clamp(8px,2vh,28px);left:0;width:clamp(150px,36vw,460px);height:auto;max-height:none;min-width:0;min-height:0;box-sizing:border-box;overflow:visible;pointer-events:auto;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 
 #market-cards-layer .mc-side{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:clamp(8px,1.2vh,16px);min-width:0;min-height:0;width:100%;height:100%;max-height:100%;box-sizing:border-box;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;padding-block:clamp(8px,2vh,28px);scrollbar-width:none;-ms-overflow-style:none;pointer-events:auto;cursor:default;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}#market-cards-layer .mc-side::-webkit-scrollbar{display:none;width:0;height:0}
-#market-cards-layer .mc-slot{position:relative;flex:0 0 auto;perspective:900px;width:min(100%,clamp(126px,18vw,238px));min-width:0;max-width:100%;box-sizing:border-box;padding:5px 4px 16px;pointer-events:auto;opacity:var(--mc-page-opacity,1);filter:blur(var(--mc-page-blur,0px));transition:transform .12s linear,opacity .28s ease,filter .28s ease;transform:scale(var(--mc-focus-scale,1));transform-origin:center center;will-change:transform}
+#market-cards-layer .mc-slot{position:relative;flex:0 0 auto;perspective:900px;width:min(100%,clamp(126px,18vw,238px));min-width:0;max-width:100%;box-sizing:border-box;padding:5px 4px 16px;pointer-events:auto;opacity:var(--mc-page-opacity,1);filter:none;transition:transform .12s linear,opacity .28s ease;transform:translateZ(0) scale(var(--mc-focus-scale,1));transform-origin:center center;backface-visibility:hidden;}
 #market-cards-layer .mc-float{transform-style:preserve-3d;animation:mc-bob 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
 @keyframes mc-bob{0%{transform:translateY(0) rotateY(-5deg) rotateX(2deg)}100%{transform:translateY(-7px) rotateY(5deg) rotateX(-2deg)}}
 #market-cards-layer .mc-gshadow{position:absolute;left:14%;right:14%;bottom:0;height:14px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.65),transparent);filter:blur(5px);animation:mc-sh 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
@@ -277,12 +277,11 @@ function updateFocusScale(){
  const metrics=focusSlots.map(slot=>{
   const r=slot.getBoundingClientRect(),distance=Math.abs((r.top+r.height/2)-center),t=Math.min(1,distance/range),ease=t*t*(3-2*t),fadeT=Math.min(1,distance/fadeRange),fadeEase=fadeT*fadeT*(3-2*fadeT);
   const visible=Math.max(0,Math.min(r.bottom,view.bottom)-Math.max(r.top,view.top)),ratio=Math.min(1,visible/Math.max(1,r.height)),focused=distance<view.height*.23&&ratio>=.98;
-  return {slot,scale:1+(Math.min(1.34,available/Math.max(1,slot.offsetWidth))-1)*(1-ease),opacity:focused?1:(1-.72*fadeEase)*Math.min(1,ratio*1.8),blur:focused?0:2.8*fadeEase+(1-ratio)*1.2};
+  return {slot,scale:1+(Math.min(1.34,available/Math.max(1,slot.offsetWidth))-1)*(1-ease),opacity:focused?1:(1-.72*fadeEase)*Math.min(1,ratio*1.8)};
  });
- metrics.forEach(({slot,scale,opacity,blur})=>{
+ metrics.forEach(({slot,scale,opacity})=>{
   slot.style.setProperty('--mc-focus-scale',scale.toFixed(3));
   slot.style.setProperty('--mc-page-opacity',Math.max(.025,opacity).toFixed(3));
-  slot.style.setProperty('--mc-page-blur',Math.max(0,blur).toFixed(2)+'px');
  });
 }
 function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(updateFocusScale)}
