@@ -28,13 +28,11 @@
     const ctx = canvas.getContext('2d');
     const states = new WeakMap();
     const groups = new WeakMap();
-    let width = 1, height = 1, dpr = 1, raf = 0, nextGroup = 0, lastTime = 0;
+    let dpr = 1, raf = 0, nextGroup = 0, lastTime = 0;
 
     function resize() {
       const rect = app.getBoundingClientRect();
       dpr = window.devicePixelRatio || 1;
-      width = rect.width;
-      height = rect.height;
       canvas.width = Math.max(1, Math.round(width * dpr));
       canvas.height = Math.max(1, Math.round(height * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
