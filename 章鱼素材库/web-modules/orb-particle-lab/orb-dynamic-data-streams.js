@@ -45,14 +45,7 @@
       if (pr && cards.length) {
         const appRect=app.getBoundingClientRect();
         const targets=cards.map(function(card){
-          const r=card.getBoundingClientRect();
-          const center={x:r.left+r.width/2-appRect.left,y:r.top+r.height/2-appRect.top};
-          let best=0,bestD=Infinity;
-          pr.forEach(function(q,i){
-            const d=(q[0]-center.x)*(q[0]-center.x)+(q[1]-center.y)*(q[1]-center.y);
-            if(d<bestD){bestD=d;best=i;}
-          });
-          return {card:card,center:center,target:best,rect:r};
+          return {rect:card.getBoundingClientRect()};
         });
         // 每张正式信号卡片对应一整组原版数据流；每组沿用原版 F 的全部 150 根。
         // 只为现存正式信号卡片绘制数据流组，不存在卡片时不绘制孤立数据流。
