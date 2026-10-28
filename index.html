@@ -743,7 +743,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     } catch(error) {
       if(generation!==state.generation || request!==state.dataRequest || overlay.hidden) return;
       if(!state.candles.length) {
-        state.error='4H行情加载失败，请稍后重试';
+        state.error='Bitget合约4H行情加载失败：'+String(error&&error.message||error).slice(0,90);
         draw();
       }
       console.error('[Vegas Fifth Layer]',error);
@@ -772,9 +772,9 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     overlay.hidden=false;
     fitCanvas();
     state.error='正在连接 Bitget 原生4H合约行情…';draw();
-    loadData(false).then(()=>{if(!overlay.hidden&&state.contractSymbol)connectContractKline(state.contractSymbol);});
+    loadData(false).then(()=>{if(!overlay.hidden&&state.contractSymbol&&state.candles.length)connectContractKline(state.contractSymbol);});
     if(state.timer) clearInterval(state.timer);
-    state.timer=window.setInterval(()=>{if(!overlay.hidden&&!state.drag)loadData(true);},15000);
+    state.timer=window.setInterval(()=>{if(!overlay.hidden&&!state.drag&&(!state.ws||state.ws.readyState!==WebSocket.OPEN))loadData(true);},15000);
   }
   function close() {
     stopContractKline();overlay.hidden=true;state.drag=null;state.generation++;
