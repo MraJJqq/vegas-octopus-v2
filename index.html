@@ -740,6 +740,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
       const range=visibleIndices();
       if(range.end>range.start) state.viewCount=range.end-range.start;
       draw();
+      if(state.contractSymbol && (!state.ws || state.ws.readyState===WebSocket.CLOSED)) connectContractKline(state.contractSymbol);
     } catch(error) {
       if(generation!==state.generation || request!==state.dataRequest || overlay.hidden) return;
       if(!state.candles.length) {
@@ -772,7 +773,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     overlay.hidden=false;
     fitCanvas();
     state.error='正在连接 Bitget 原生4H合约行情…';draw();
-    loadData(false).then(()=>{if(!overlay.hidden&&state.contractSymbol&&state.candles.length)connectContractKline(state.contractSymbol);});
+    loadData(false);
     if(state.timer) clearInterval(state.timer);
     state.timer=window.setInterval(()=>{if(!overlay.hidden&&!state.drag&&(!state.ws||state.ws.readyState!==WebSocket.OPEN))loadData(true);},15000);
   }
