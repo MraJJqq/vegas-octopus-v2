@@ -245,7 +245,7 @@
     if(!state.drag.moved) return;
     const plotW=Math.max(1,state.width-16);
     const step=plotW/Math.max(1,state.drag.count);
-    const shift=Math.round(dx/Math.max(1,step));
+    const shift=Math.round(-dx/Math.max(1,step));
     const maxStart=Math.max(0,state.candles.length-state.drag.count);
     const startIndex=Math.max(0,Math.min(maxStart,state.drag.startIndex+shift));
     const endIndex=Math.min(state.candles.length-1,startIndex+state.drag.count-1);
