@@ -1,5 +1,4 @@
-/* 第五层：原生 4H USDT 合约 K 线悬浮图表。 */
-/* 第五层：点击小卡片打开透明4H图表。独立实现，不依赖外部脚本文件。 */
+/* 第五层：原生 4H USDT 本位合约 K 线悬浮图表。 */
 (function () {
   'use strict';
   if (window.__VEGAS_FIFTH_LAYER_READY__) return;
@@ -281,7 +280,7 @@
         state.startTime=state.endTime-120*24*60*60*1000;
         rebuildSeries();
       }
-      writeCandleCache(state.symbol,state.candles);
+
       const range=visibleIndices();
       if(range.end>range.start) state.viewCount=range.end-range.start;
       draw();
@@ -296,7 +295,18 @@
     }
   }
   function stopContractKline(){if(state.wsReconnect)clearTimeout(state.wsReconnect);if(state.wsHeartbeat)clearInterval(state.wsHeartbeat);state.wsReconnect=0;state.wsHeartbeat=0;const w=state.ws;state.ws=null;if(w){try{w.onclose=null;w.close();}catch(_){}}}
-  function applyLiveCandle(row){const n=normalize([row])[0];if(!n||!state.candles.length)return;const list=state.candles,i=list.findIndex(c=>c.t===n.t);if(i>=0)list[i]=n;else{list.push(n);list.sort((x,y)=>x.t-y.t);if(list.length>EMA_CACHE_BARS)list.splice(0,list.length-EMA_CACHE_BARS);}rebuildSeries();if(list.length>MAX_CANDLE_BARS)list.splice(0,list.length-MAX_CANDLE_BARS);if(state.drag){state.pendingDraw=true;return;}draw();}
+  function applyLiveCandle(row){
+    const candle=normalize([row])[0];
+    if(!candle||!state.candles.length)return;
+    const candles=state.candles;
+    const index=candles.findIndex(item=>item.t===candle.t);
+    if(index>=0)candles[index]=candle;
+    else{candles.push(candle);candles.sort((a,b)=>a.t-b.t);}
+    if(candles.length>MAX_CANDLE_BARS)candles.splice(0,candles.length-MAX_CANDLE_BARS);
+    rebuildSeries();
+    if(state.drag){state.pendingDraw=true;return;}
+    draw();
+  }
   function connectContractKline(symbol){stopContractKline();if(overlay.hidden||!symbol||!('WebSocket'in window))return;const gen=state.generation;let w;try{w=new WebSocket('wss://ws.bitget.com/v2/ws/public');}catch(e){console.warn('[Vegas Fifth Layer] WebSocket连接失败',e);return;}state.ws=w;
     w.onopen=()=>{if(gen!==state.generation||overlay.hidden||state.ws!==w){w.close();return;}w.send(JSON.stringify({op:'subscribe',args:[{instType:'USDT-FUTURES',channel:'candle4H',instId:symbol}]}));state.wsHeartbeat=setInterval(()=>{if(w.readyState===WebSocket.OPEN)w.send('ping');},25000);};
     w.onmessage=e=>{if(gen!==state.generation||state.ws!==w||overlay.hidden||e.data==='pong')return;let m;try{m=JSON.parse(e.data);}catch(_){return;}if(m.event==='error'){console.warn('[Vegas Fifth Layer] Bitget K线订阅失败',m.code,m.msg);return;}if(m.arg&&m.arg.instId===symbol&&m.arg.channel==='candle4H'&&Array.isArray(m.data))m.data.forEach(applyLiveCandle);};
@@ -451,6 +461,6 @@
   if(window.ResizeObserver) new ResizeObserver(fitCanvas).observe(canvas);
   window.VegasFifthLayer={open,close,refresh:()=>loadData(true),getState:()=>({symbol:state.symbol,contractSymbol:state.contractSymbol,productType:'USDT-FUTURES',granularity:'4H',websocket:!!(state.ws&&state.ws.readyState===WebSocket.OPEN),visible:!overlay.hidden,candles:state.candles.length})};
   window.__VEGAS_FIFTH_LAYER_READY__=true;
-  window.setTimeout(()=>{if(!document.hidden)warmCandleCache();},350);
+
   console.info('[Vegas Fifth Layer] initialized');
 })();
