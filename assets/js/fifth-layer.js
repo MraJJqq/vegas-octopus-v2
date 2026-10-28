@@ -234,10 +234,11 @@
     }
     const {start,end}=visibleIndices(), rows=data.slice(start,end);
     if(!rows.length) return;
-    const pad={left:8,right:8,top:30,bottom:12};
-    // The transparent full-screen overlay stays fixed at the top z-index;
-    // the chart viewport itself can be moved anywhere within the page bounds.
+    // Keep the chart viewport inside all four screen edges while the transparent
+    // overlay itself remains fixed above the other visual layers.
     const frameW=Math.max(1,Math.min(W,W*.86)), frameH=Math.max(1,Math.min(H,H*.78));
+    const pad={left:Math.min(8,frameW*.03),right:Math.min(8,frameW*.03),
+      top:Math.min(30,frameH*.06),bottom:Math.min(12,frameH*.025)};
     state.offsetX=Math.max(0,Math.min(Math.max(0,W-frameW),state.offsetX||0));
     state.offsetY=Math.max(0,Math.min(Math.max(0,H-frameH),state.offsetY||0));
     const plotLeft=state.offsetX+pad.left;
@@ -250,10 +251,9 @@
     state.series.forEach(s=>{for(let i=start;i<end;i++){const v=s.values[i];if(Number.isFinite(v)){min=Math.min(min,v);max=Math.max(max,v);}}});
     if(!Number.isFinite(min)||!Number.isFinite(max)) return;
     const margin=(max-min)*.055 || Math.max(max*.004,0.0001); min-=margin; max+=margin;
-    // Horizontal history navigation is handled by the time window itself; do not
-    // add a second pixel offset, which could clip candles after repeated zoom/pan.
+    // Zoom changes the time window; dragging moves the viewport itself.
+    // Keep candle and EMA coordinates relative to the bounded plot area.
     const xAt=i=>plotLeft+(i-start+.5)*step;
-    // Keep all drawing inside the reserved plot area while allowing bounded vertical movement.
     const yAt=v=>plotTop+(max-v)/(max-min)*plotH;
 
     rows.forEach((c,j)=>{
@@ -407,12 +407,10 @@
   }
   function pointerDown(e) {
     if(overlay.hidden || !state.candles.length) return;
-    const range=visibleIndices();
     state.drag={
       x:e.clientX,y:e.clientY,
       baseOffsetX:state.offsetX,baseOffsetY:state.offsetY,
-      baseStart:range.start,baseEnd:range.end,
-      baseCount:Math.max(1,range.end-range.start),moved:false
+      moved:false
     };
     try{canvas.setPointerCapture(e.pointerId);}catch(_){}
   }
