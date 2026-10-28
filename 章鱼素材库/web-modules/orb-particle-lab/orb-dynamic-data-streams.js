@@ -8,7 +8,9 @@
   const particles = Array.from({ length: 300 }, (_, i) => ({
     color: i % COLORS.length,
     point: Math.floor(Math.random() * 900),
-    speed: 0.18 + Math.random() * 0.25
+    speed: 0.18 + Math.random() * 0.25,
+    // 为粒子分配均匀错开的起始相位，避免整组粒子同时从出口起步造成空档。
+    phaseOffset: Math.random()
   }));
 
   function start() {
@@ -139,24 +141,28 @@
             const startX = orbCenterX >= centerX ? rightX : leftX;
             // 卡片出口先收束成窄束，再沿曲线向不同球面端点逐渐散开。
             const startY = centerY + (j - (STREAMS_PER_CARD - 1) / 2) * 0.08;
-            const controlX = (startX + endX) / 2;
+            // 控制点缓慢摆动，让整条数据流呈现连续、柔和的丝带姿态。
+            const sway = time * 0.62 + group * 0.37 + j * 0.71;
+            const controlX = (startX + endX) / 2 + Math.sin(sway) * 22;
+            const controlY = (startY + endY) / 2 + Math.sin(sway * 0.83 + 0.9) * 30;
             const color = 'hsl(' + COLORS[p.color] + ',100%,62%)';
 
             const elapsed = Math.max(0, time - state.visibleSince);
-            const travel = elapsed * p.speed;
+            const travel = elapsed * p.speed + p.phaseOffset;
             if (travel >= 1) state.connected = true;
             const phase = travel % 1;
             const inverse = 1 - phase;
             const particleX = inverse * inverse * startX + 2 * inverse * phase * controlX + phase * phase * endX;
-            const particleY = inverse * inverse * startY + 2 * inverse * phase * startY + phase * phase * endY;
+            const particleY = inverse * inverse * startY + 2 * inverse * phase * controlY + phase * phase * endY;
             ctx.beginPath();
             ctx.moveTo(startX, startY);
             if (state.connected) {
               // 首次抵达发光球后保留完整连接线，粒子继续沿线循环运动。
-              ctx.quadraticCurveTo(controlX, startY, endX, endY);
+              ctx.quadraticCurveTo(controlX, controlY, endX, endY);
             } else {
               const partialControlX = startX + phase * (controlX - startX);
-              ctx.quadraticCurveTo(partialControlX, startY, particleX, particleY);
+              const partialControlY = startY + phase * (controlY - startY);
+              ctx.quadraticCurveTo(partialControlX, partialControlY, particleX, particleY);
             }
             ctx.strokeStyle = color;
             ctx.globalAlpha = Math.min(1, 0.26 * visibility * opacity);
