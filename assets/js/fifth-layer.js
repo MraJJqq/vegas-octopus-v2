@@ -209,6 +209,7 @@
     // Keep the chart proportions responsive while preserving the user's pan position.
     if(oldWidth>1) state.panX*=state.width/oldWidth;
     if(oldHeight>1) state.priceShift*=state.height/oldHeight;
+    state.priceShift=Math.max(-Math.min(120,state.height*.15),Math.min(Math.min(120,state.height*.15),state.priceShift));
     // Resize must not reset the user's historical viewport or zoom level.
     const pixelW=Math.round(state.width*state.dpr),pixelH=Math.round(state.height*state.dpr);
     if(canvas.width!==pixelW) canvas.width=pixelW;
@@ -231,16 +232,25 @@
     const {start,end}=visibleIndices(), rows=data.slice(start,end);
     if(!rows.length) return;
     const pad={left:8,right:8,top:38,bottom:12};
-    const plotW=Math.max(1,(W-pad.left-pad.right)*0.86), plotH=Math.max(1,H-pad.top-pad.bottom); // 默认右侧保留约14%空白，避免最新K线贴边
+    // Reserve a vertical safety band so panning never pushes the plotted candles
+    // beyond the screen edges. The band scales with viewport height.
+    const verticalLimit=Math.max(0,Math.min(120,H*.15));
+    const plotTop=pad.top+verticalLimit;
+    const plotW=Math.max(1,(W-pad.left-pad.right)*0.86);
+    const plotH=Math.max(1,H-plotTop-pad.bottom-verticalLimit); // 右侧保留约14%空白
+    state.priceShift=Math.max(-verticalLimit,Math.min(verticalLimit,state.priceShift));
     const step=plotW/rows.length, bodyW=Math.max(1,Math.min(8,step*.62));
     let min=Infinity,max=-Infinity;
     rows.forEach(c=>{min=Math.min(min,c.l);max=Math.max(max,c.h);});
     state.series.forEach(s=>{for(let i=start;i<end;i++){const v=s.values[i];if(Number.isFinite(v)){min=Math.min(min,v);max=Math.max(max,v);}}});
     if(!Number.isFinite(min)||!Number.isFinite(max)) return;
     const margin=(max-min)*.055 || Math.max(max*.004,0.0001); min-=margin; max+=margin;
-    const xAt=i=>pad.left+(i-start+.5)*step+state.panX;
-    // Preserve the full vertical drag distance so diagonal and vertical pans follow the pointer.
-    const yAt=v=>pad.top+(max-v)/(max-min)*plotH+state.priceShift;
+    // Horizontal history navigation is handled by the time window itself; do not
+    // add a second pixel offset, which could clip candles after repeated zoom/pan.
+    state.panX=0;
+    const xAt=i=>pad.left+(i-start+.5)*step;
+    // Keep all drawing inside the reserved plot area while allowing bounded vertical movement.
+    const yAt=v=>plotTop+(max-v)/(max-min)*plotH+state.priceShift;
 
     rows.forEach((c,j)=>{
       const i=start+j,x=xAt(i),up=c.c>=c.o,color=up?'#2ee6a6':'#ff5c7c';
@@ -387,6 +397,7 @@
     const nextStart=Math.max(0,anchorIndex-next+1);
     const actualCount=anchorIndex-nextStart+1;
     state.viewCount=actualCount;
+    state.panX=0;
     state.startTime=state.candles[nextStart].t;
     state.endTime=state.candles[anchorIndex].t;
     draw();
@@ -421,9 +432,12 @@
     state.startTime=data[nextStart].t;
     state.endTime=data[nextEnd-1].t;
     const appliedShift=nextStart-d.baseStart;
-    state.panX=d.basePanX+dx+appliedShift*step;
-    // No artificial vertical clamp: the entire chart follows the pointer freely.
-    state.priceShift=d.basePriceShift+dy;
+    // The visible time range already accounts for horizontal movement. A separate
+    // pixel translation would push candles off-screen after repeated drag/zoom cycles.
+    state.panX=0;
+    // Bound vertical movement to the reserved safety band so the chart stays on-screen.
+    const verticalLimit=Math.max(0,Math.min(120,state.height*.15));
+    state.priceShift=Math.max(-verticalLimit,Math.min(verticalLimit,d.basePriceShift+dy));
     draw();
   }
   function hitRenderedChart(x,y) {
