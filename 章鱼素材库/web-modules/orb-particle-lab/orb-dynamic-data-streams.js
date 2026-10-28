@@ -1,126 +1,142 @@
-/* Vegas 章鱼｜第四层：七色曲线数据流
- * 仅绘制正式信号卡片与中央发光球之间的连线。
- * 不计算行情、不判断信号、不修改卡片或前三层逻辑。
+/* Vegas 章鱼｜第四层：严格移植 orb-particle-lab v3 的数据流段
+ * 数据流绘制公式、150 个流、七色分组、曲线起点/控制点、透明度、
+ * 速度、粒子半径和辉光参数均按素材库原代码保留。
+ * 球体投影直接复用主页面第二层的 P / pj / V / rot / pitB 参数，
+ * 只绘制正式信号卡片对应的流；不改变信号判断和行情逻辑。
  */
 (function () {
   'use strict';
 
-  const HUES = [0, 28, 52, 150, 190, 245, 320];
-  const IONS_PER_CONNECTION = 1500;
-  const TARGET_SELECTOR = '#market-cards-layer .mc-card[data-formal-signal="true"]';
+  const SH = [0, 28, 52, 150, 190, 245, 320];
+  const F = [];
+  for (let i = 0; i < 150; i++) {
+    F.push({ s: i % 7, t: Math.floor(Math.random() * 900), o: Math.random(), v: 0.18 + Math.random() * 0.25 });
+  }
 
   function start() {
     const app = document.querySelector('.app');
-    const stage = document.querySelector('.center-stage');
-    const orb = stage && stage.querySelector('#orb-core-canvas, .core-orb');
-    if (!app || !stage || !orb || document.getElementById('octopusDynamicDataStreams')) return;
+    const orbCanvas = document.getElementById('orb-core-canvas');
+    if (!app || !orbCanvas || document.getElementById('octopusDynamicDataStreams')) return;
 
-    const canvas = document.createElement('canvas');
-    canvas.id = 'octopusDynamicDataStreams';
-    Object.assign(canvas.style, {
+    const cv = document.createElement('canvas');
+    cv.id = 'octopusDynamicDataStreams';
+    Object.assign(cv.style, {
       position: 'absolute', inset: '0', width: '100%', height: '100%',
       pointerEvents: 'none', zIndex: '2'
     });
     const cardLayer = document.getElementById('market-cards-layer');
-    if (cardLayer && cardLayer.parentElement === app) app.insertBefore(canvas, cardLayer);
-    else app.appendChild(canvas);
-    const ctx = canvas.getContext('2d');
-    let width = 1, height = 1, dpr = 1;
+    if (cardLayer && cardLayer.parentElement === app) app.insertBefore(cv, cardLayer);
+    else app.appendChild(cv);
 
-    // 每条正式信号连接共 1500 个流动离子，分布在七种颜色的独立曲线上。
-    const particles = Array.from({ length: IONS_PER_CONNECTION }, (_, i) => ({
-      strand: i % HUES.length,
-      offset: Math.random(),
-      speed: 0.18 + Math.random() * 0.25,
-      size: 1.1 + Math.random() * 0.5
-    }));
+    const x = cv.getContext('2d');
+    let W = 1, H = 1, dpr = 1, raf = 0;
 
-    function resize() {
+    function rs() {
       const r = app.getBoundingClientRect();
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
-      width = Math.max(1, r.width);
-      height = Math.max(1, r.height);
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      dpr = window.devicePixelRatio || 1;
+      W = r.width;
+      H = r.height;
+      cv.width = Math.max(1, Math.round(W * dpr));
+      cv.height = Math.max(1, Math.round(H * dpr));
+      x.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
-    function curvePoint(a, b, c, t) {
-      const q = 1 - t;
+    // 与素材库原版 bz(a,b,c,s) 完全一致。
+    function bz(a, b, c, s) {
+      const q = 1 - s;
       return [
-        q * q * a[0] + 2 * q * t * b[0] + t * t * c[0],
-        q * q * a[1] + 2 * q * t * b[1] + t * t * c[1]
+        q * q * a[0] + 2 * q * s * b[0] + s * s * c[0],
+        q * q * a[1] + 2 * q * s * b[1] + s * s * c[1]
       ];
     }
 
-    function drawConnection(card, orbRect, canvasRect, time) {
-      const r = card.getBoundingClientRect();
-      if (!r.width || !r.height) return;
-      // 从卡片朝向发光球的一侧出发，所有坐标统一相对全屏画布。
-      const cardCenterX = r.left + r.width / 2;
-      const orbCenterX = orbRect.left + orbRect.width / 2;
-      const startX = (orbCenterX < cardCenterX ? r.left : r.right) - canvasRect.left;
-      const startY = r.top + r.height / 2 - canvasRect.top;
-      const endX = orbCenterX - canvasRect.left;
-      const endY = orbRect.top + orbRect.height / 2 - canvasRect.top;
-      const dx = endX - startX, dy = endY - startY;
-      const baseControlX = (startX + endX) / 2 - dy * 0.12;
-      const baseControlY = (startY + endY) / 2 + dx * 0.12;
-
-      HUES.forEach((hue, strand) => {
-        const spread = strand - (HUES.length - 1) / 2;
-        const a = [startX, startY + spread * 2.1];
-        const c = [endX, endY + spread * 1.4];
-        const b = [baseControlX - spread * 2.0, baseControlY + spread * 2.4];
-        const color = 'hsl(' + hue + ',100%,62%)';
-
-        ctx.save();
-        ctx.lineWidth = 0.8;
-        ctx.strokeStyle = color;
-        ctx.globalAlpha = 0.26;
-        ctx.beginPath();
-        ctx.moveTo(a[0], a[1]);
-        ctx.quadraticCurveTo(b[0], b[1], c[0], c[1]);
-        ctx.stroke();
-
-        // 与素材参考一致：沿二次曲线移动的高亮离子。
-        ctx.globalAlpha = 0.95;
-        ctx.fillStyle = color;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 8;
-        for (const p of particles) {
-          if (p.strand !== strand) continue;
-          const u = (time * p.speed + p.offset) % 1;
-          const [px, py] = curvePoint(a, b, c, u);
-          ctx.beginPath();
-          ctx.arc(px, py, p.size, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.restore();
+    function getProjectedOrb(t) {
+      // 复用主页面第二层相同的球体投影公式和实时旋转参数。
+      if (!Array.isArray(window.P) || typeof window.pj !== 'function' ||
+          !window.V || typeof window.rot !== 'number' || typeof window.pitB !== 'number') return null;
+      const P = window.P, V = window.V;
+      const cx = W * 0.66, cy = H * 0.5;
+      const roomX = Math.min(cx - 8, W - cx - 8);
+      const roomY = Math.max(1, H * 0.46);
+      const Rr = Math.max(1, Math.min(roomX, roomY) * V.zm);
+      const pit = window.pitB + 0.1 * Math.sin(t * 0.17);
+      const cp = Math.cos(pit), spp = Math.sin(pit);
+      return P.map(function (p) {
+        const yw = window.rot * (0.8 + 0.4 * p.k);
+        const q = window.pj([p.x, p.y, p.z], Math.cos(yw), Math.sin(yw), cp, spp, cx, cy, Rr);
+        const u = (q[0] - (cx - Rr)) / (2 * Rr);
+        q.push(Math.max(0, Math.min(1, (0.6 - u) / 0.22)), (q[2] + 1) / 2);
+        return q;
       });
     }
 
     function frame(ms) {
-      ctx.clearRect(0, 0, width, height);
-      const canvasRect = canvas.getBoundingClientRect();
-      const orbRect = orb.getBoundingClientRect();
-      document.querySelectorAll(TARGET_SELECTOR).forEach(card => {
-        const r = card.getBoundingClientRect();
-        if (r.right <= canvasRect.left || r.left >= canvasRect.right ||
-            r.bottom <= canvasRect.top || r.top >= canvasRect.bottom) return;
-        drawConnection(card, orbRect, canvasRect, ms / 1000);
-      });
-      requestAnimationFrame(frame);
+      const t = ms / 1000;
+      x.clearRect(0, 0, W, H);
+      const pr = getProjectedOrb(t);
+      const formalCards = document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]');
+
+      if (pr && formalCards.length) {
+        // 只显示正式信号品种对应的流。按卡片横向位置匹配素材原版的球面粒子编号。
+        const symbols = Array.from(formalCards).map(card => {
+          const r = card.getBoundingClientRect();
+          return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+        });
+        const appRect = app.getBoundingClientRect();
+        const selected = new Set();
+        symbols.forEach(pos => {
+          let best = -1, bestD = Infinity;
+          pr.forEach((q, idx) => {
+            const d = Math.pow(q[0] - (pos.x - appRect.left), 2) + Math.pow(q[1] - (pos.y - appRect.top), 2);
+            if (d < bestD) { bestD = d; best = idx; }
+          });
+          if (best >= 0) selected.add(best);
+        });
+
+        x.globalCompositeOperation = 'lighter';
+        x.lineWidth = 0.8;
+        F.forEach(function (f) {
+          if (!selected.has(f.t)) return;
+          const q = pr[f.t], fa = q[3];
+          if (fa < 0.05) return;
+          const y0 = H * (0.12 + f.s * 0.12);
+          const col = 'hsl(' + SH[f.s] + ',100%,62%)';
+          const c1x = (W * 0.66) * 0.5;
+
+          x.strokeStyle = col;
+          x.globalAlpha = 0.26 * fa;
+          x.beginPath();
+          x.moveTo(0, y0);
+          x.quadraticCurveTo(c1x, y0, q[0], q[1]);
+          x.stroke();
+
+          const u = (t * f.v + f.o) % 1, v = 1 - u;
+          const px = 2 * v * u * c1x + u * u * q[0];
+          const py = v * v * y0 + 2 * v * u * y0 + u * u * q[1];
+          x.globalAlpha = 0.95 * fa;
+          x.fillStyle = col;
+          x.shadowColor = col;
+          x.shadowBlur = 8;
+          x.beginPath();
+          x.arc(px, py, 1.6, 0, Math.PI * 2);
+          x.fill();
+          x.shadowBlur = 0;
+        });
+      }
+      x.globalAlpha = 1;
+      x.globalCompositeOperation = 'source-over';
+      raf = requestAnimationFrame(frame);
     }
 
-    window.VegasSignalDataStreams = Object.freeze({ refresh: resize });
-    resize();
-    if (window.ResizeObserver) {
-      const observer = new ResizeObserver(resize);
-      observer.observe(app);
-    }
-    window.addEventListener('resize', resize, { passive: true });
-    requestAnimationFrame(frame);
+    window.VegasSignalDataStreams = Object.freeze({ refresh: rs });
+    rs();
+    if (window.ResizeObserver) new ResizeObserver(rs).observe(app);
+    window.addEventListener('resize', rs, { passive: true });
+    raf = requestAnimationFrame(frame);
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden && raf) { cancelAnimationFrame(raf); raf = 0; }
+      else if (!document.hidden && !raf) raf = requestAnimationFrame(frame);
+    });
   }
 
   if (document.readyState === 'loading') {
