@@ -54,12 +54,12 @@
   const state = {
     symbol:'', contractSymbol:'', candles:[], series:[], ws:null, wsReconnect:0, wsHeartbeat:0, pendingDraw:false,
     startTime:null, endTime:null, viewCount:720,
-    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, pendingRefresh:false, offsetX:null, offsetY:null, error:''
+    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, pendingRefresh:false, offsetX:null, offsetY:null, error:'', lastLiveAt:0, drawFrame:0
   };
 
   // 4H candles are persisted per instrument in IndexedDB; 4,400 bars cover roughly two calendar years for 24/7 markets.
   // The longest EMA is 676 bars; 1,000 bars provide a useful buffer without dozens of slow history requests per symbol.
-  const EMA_WARMUP_BARS = 1000;
+  const EMA_WARMUP_BARS = 3000;
   const MAX_CANDLE_BARS = 5000;
   const PREWARM_CACHE = new Map();
   const PREWARM_MAX_AGE = 4 * 60 * 60 * 1000;
@@ -386,6 +386,7 @@
     draw();
   }
   function draw() {
+    state.drawFrame=0;
     if (overlay.hidden) return;
     const W=state.width,H=state.height;
     ctx.clearRect(0,0,W,H);
@@ -532,23 +533,30 @@
       console.error('[Vegas Fifth Layer]',error);
     }
   }
-  function stopContractKline(){if(state.wsReconnect)clearTimeout(state.wsReconnect);if(state.wsHeartbeat)clearInterval(state.wsHeartbeat);state.wsReconnect=0;state.wsHeartbeat=0;const w=state.ws;state.ws=null;if(w){try{w.onclose=null;w.close();}catch(_){}}}
+  function stopContractKline(){if(state.wsReconnect)clearTimeout(state.wsReconnect);if(state.wsHeartbeat)clearInterval(state.wsHeartbeat);state.wsReconnect=0;state.wsHeartbeat=0;state.lastLiveAt=0;const w=state.ws;state.ws=null;if(w){try{w.onclose=null;w.close();}catch(_){}}}
+  function scheduleDraw(){if(state.drawFrame||overlay.hidden)return;state.drawFrame=requestAnimationFrame(draw);}
   function applyLiveCandle(row){
     const candle=normalize([row])[0];
     if(!candle||!state.candles.length)return;
     const candles=state.candles;
     const index=candles.findIndex(item=>item.t===candle.t);
+    const wasLast=index===candles.length-1;
     if(index>=0)candles[index]=candle;
     else{candles.push(candle);candles.sort((a,b)=>a.t-b.t);}
-    if(candles.length>MAX_CANDLE_BARS)candles.splice(0,candles.length-MAX_CANDLE_BARS);
-    rebuildSeries();
+    const trimmed=candles.length>MAX_CANDLE_BARS;
+    if(trimmed)candles.splice(0,candles.length-MAX_CANDLE_BARS);
+    state.lastLiveAt=Date.now();
+    if(!trimmed && state.series.length && ((index>=0&&wasLast&&index===candles.length-1)||(index<0&&candle.t===candles[candles.length-1].t))){
+      const closeValues=candles.map(item=>item.c),targetIndex=candles.length-1;
+      state.series.forEach(series=>{const period=series.period,k=2/(period+1);if(targetIndex<period-1){series.values[targetIndex]=null;}else if(targetIndex===period-1){let sum=0;for(let j=0;j<period;j++)sum+=closeValues[j];series.values[targetIndex]=sum/period;}else{const previous=series.values[targetIndex-1];series.values[targetIndex]=Number.isFinite(previous)?candle.c*k+previous*(1-k):null;}});
+    }else rebuildSeries();
     if(state.drag){state.pendingDraw=true;return;}
-    draw();
+    scheduleDraw();
   }
   function connectKline(symbol,isReality=false){stopContractKline();if(overlay.hidden||!symbol||!('WebSocket'in window))return;const gen=state.generation;let w;try{w=new WebSocket('wss://ws.bitget.com/v2/ws/public');}catch(e){console.warn('[Vegas Fifth Layer] WebSocket连接失败',e);return;}state.ws=w;
     const instType=isReality?'SPOT':'USDT-FUTURES';
     w.onopen=()=>{if(gen!==state.generation||overlay.hidden||state.ws!==w){w.close();return;}w.send(JSON.stringify({op:'subscribe',args:[{instType,channel:'candle4H',instId:symbol}]}));state.wsHeartbeat=setInterval(()=>{if(w.readyState===WebSocket.OPEN)w.send('ping');},25000);};
-    w.onmessage=e=>{if(gen!==state.generation||state.ws!==w||overlay.hidden||e.data==='pong')return;let m;try{m=JSON.parse(e.data);}catch(_){return;}if(m.event==='error'){console.warn('[Vegas Fifth Layer] Bitget K线订阅失败',m.code,m.msg);return;}if(m.arg&&m.arg.instId===symbol&&m.arg.channel==='candle4H'&&Array.isArray(m.data))m.data.forEach(applyLiveCandle);};
+    w.onmessage=e=>{if(gen!==state.generation||state.ws!==w||overlay.hidden||e.data==='pong')return;let m;try{m=JSON.parse(e.data);}catch(_){return;}if(m.event==='error'){console.warn('[Vegas Fifth Layer] Bitget K线订阅失败',m.code,m.msg);return;}if(m.event==='subscribe'){state.lastLiveAt=Date.now();return;}if(m.arg&&m.arg.instId===symbol&&m.arg.channel==='candle4H'&&Array.isArray(m.data))m.data.forEach(applyLiveCandle);};
     w.onerror=()=>{try{w.close();}catch(_){}};
     w.onclose=()=>{if(state.ws===w){state.ws=null;if(state.wsHeartbeat)clearInterval(state.wsHeartbeat);state.wsHeartbeat=0;}if(!overlay.hidden&&gen===state.generation&&state.contractSymbol===symbol)state.wsReconnect=setTimeout(()=>connectKline(symbol,isReality),3000);};
   }
@@ -571,7 +579,7 @@
     prewarmSymbol(symbol);
     loadData(false);
     if(state.timer) clearInterval(state.timer);
-    state.timer=window.setInterval(()=>{if(!overlay.hidden&&!state.drag&&(!state.ws||state.ws.readyState!==WebSocket.OPEN))loadData(true);},15000);
+    state.timer=window.setInterval(()=>{if(overlay.hidden||state.drag)return;const socketOpen=state.ws&&state.ws.readyState===WebSocket.OPEN;const liveStale=!state.lastLiveAt||Date.now()-state.lastLiveAt>45000;if(!socketOpen||liveStale)loadData(true);},15000);
   }
   function close() {
     stopContractKline();overlay.hidden=true;state.drag=null;state.generation++;
@@ -738,7 +746,7 @@
       const av=ar.bottom>0&&ar.top<window.innerHeight?0:1;
       const bv=br.bottom>0&&br.top<window.innerHeight?0:1;
       return av-bv;
-    });
+    }).filter(card=>{const r=card.getBoundingClientRect();return r.bottom>0&&r.top<window.innerHeight;}).slice(0,6);
     let cursor=0;
     async function worker(){
       while(cursor<ordered.length){
@@ -753,6 +761,7 @@
   window.__VEGAS_FIFTH_LAYER_READY__=true;
 
   console.info('[Vegas Fifth Layer] initialized');
-  // Warm all instruments with a paced queue; IndexedDB retains up to 4,400 native 4H candles per instrument across page reloads.
-  startBackgroundPrewarm();
+  // Warm only the first visible cards. Other symbols are loaded on demand to reduce idle network traffic.
+  if(!document.hidden) startBackgroundPrewarm();
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!overlay.hidden){const stale=!state.lastLiveAt||Date.now()-state.lastLiveAt>45000;if(stale)loadData(true);}});
 })();
