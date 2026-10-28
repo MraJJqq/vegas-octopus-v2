@@ -38,7 +38,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 /* 第三层：小卡片行情模块，独立叠加，不改动第一、二层。 */
 #market-cards-layer{--up:#2ee6a6;--dn:#ff5c7c;--mute:#7f8db0;--ink:#e8f0ff;position:absolute;z-index:2;inset:0;min-width:0;min-height:0;pointer-events:none;overflow:hidden}
 #market-cards-layer .mc-columns{position:absolute;inset:clamp(66px,10vh,110px) clamp(10px,1.5vw,24px) clamp(12px,2vh,28px);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(8px,1.4vw,22px);align-items:center}
-#market-cards-layer .mc-side{display:flex;flex-direction:column;justify-content:space-evenly;align-items:flex-start;gap:clamp(8px,1.2vh,16px);min-width:0;height:100%}
+#market-cards-layer .mc-side{display:flex;flex-direction:column;justify-content:flex-start;align-items:flex-start;gap:clamp(8px,1.2vh,16px);min-width:0;height:calc(2 * (max(172px,clamp(122px,17vh,172px)) + 21px) + clamp(8px,1.2vh,16px));overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
 #market-cards-layer .mc-side.right{align-items:flex-end}
 #market-cards-layer .mc-slot{position:relative;perspective:900px;width:clamp(145px,18vw,238px);max-width:100%;padding:5px 4px 16px;pointer-events:auto}
 #market-cards-layer .mc-float{transform-style:preserve-3d;animation:mc-bob 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
@@ -68,7 +68,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 #market-cards-layer .mc-spark .mc-ar{fill:var(--mc-c);opacity:.14}
 #market-cards-layer .mc-hl{margin-top:5px;font-size:10px;color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
 #market-cards-layer .mc-hl span{color:var(--ink);margin:0 5px 0 2px}
-@media(max-width:700px){#market-cards-layer .mc-columns{inset:clamp(76px,12vh,112px) 5px 8px;gap:4px}#market-cards-layer .mc-slot{width:clamp(126px,43vw,190px);padding:3px 2px 12px}#market-cards-layer .mc-card{padding:9px;border-radius:14px;min-height:clamp(112px,15vh,145px)}#market-cards-layer .mc-sym small{font-size:9px}#market-cards-layer .mc-price{font-size:clamp(17px,4.4vw,23px)}#market-cards-layer .mc-hl{font-size:9px}}
+@media(max-width:700px){#market-cards-layer .mc-columns{inset:clamp(76px,12vh,112px) 5px 8px;gap:4px}#market-cards-layer .mc-side{height:calc(2 * (max(153px,clamp(112px,15vh,145px)) + 15px) + 10px);gap:10px}#market-cards-layer .mc-slot{width:clamp(126px,43vw,190px);padding:3px 2px 12px}#market-cards-layer .mc-card{padding:9px;border-radius:14px;min-height:clamp(112px,15vh,145px)}#market-cards-layer .mc-sym small{font-size:9px}#market-cards-layer .mc-price{font-size:clamp(17px,4.4vw,23px)}#market-cards-layer .mc-hl{font-size:9px}}
 @media(prefers-reduced-motion:reduce){#market-cards-layer .mc-float,#market-cards-layer .mc-gshadow{animation:none}}
 
 </style>
@@ -210,30 +210,65 @@ else if(!orbFrame){last=0;orbFrame=requestAnimationFrame(frame)}
     }
   }
   refreshV9State();
-  window.setInterval(refreshV9State,15*60*1000);
-})();
-</script>
-
-<!-- 第三层：小卡片行情模块 -->
-<section id="market-cards-layer" aria-label="小卡片行情展示">
-  <div class="mc-columns"><div class="mc-side left" id="mc-left"></div><div class="mc-side right" id="mc-right"></div></div>
-</section>
-
-
-<script>
-/* 第三层：小卡片展示。当前为模拟行情，未接入真实行情接口。 */
+  window.setInterval(refreshV9State,15<script>
+/* 第三层：27张行情卡片。卡片视觉参数保留，左右两列独立滚动，每侧显示两张。 */
 (()=>{
-const P=[["BTC",67850,.0009],["ETH",2610,.0013],["SOL",172,.002],["BNB",585,.001],["XRP",.52,.0018],["DOGE",.158,.0025]];
-const fmt=p=>p>=100?p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):p>=1?p.toFixed(3):p.toFixed(4);
-const S=P.map(([s,p,v],i)=>{const h=[];let x=p*(1+(Math.random()-.5)*.01);for(let k=0;k<40;k++){x*=1+(Math.random()-.5)*2*v;h.push(x)}return{s,v,p:h[39],o:h[0],h,i}});
+const P=[
+ ["AAPL","AAPLUSDT"],["MSFT","MSFTUSDT"],["GOOGL","GOOGLUSDT"],["AMZN","AMZNUSDT"],["NVDA","NVDAUSDT"],["TSLA","TSLAUSDT"],["META","METAUSDT"],["INTC","INTCUSDT"],["QCOM","QCOMUSDT"],["AMD","AMDUSDT"],["TSM","TSMUSDT"],["AVGO","AVGOUSDT"],["ORCL","ORCLUSDT"],["ARM","ARMUSDT"],["MU","MUUSDT"],["ASML","ASMLUSDT"],["SNDK","SNDKUSDT"],["SKHYNIX","SKHYNIXUSDT"],["MRVL","MRVLUSDT"],["GLW","GLWUSDT"],["HOOD","HOODUSDT"],["CBRS","CBRSUSDT"],["SPCX","SPCXUSDT"],["BTC","BTCUSDT"],["HYPE","HYPEUSDT"],["XAUUSD","XAUUSDT"],["USOIL","CLUSDT"]
+];
+const REALITY_STOCKS=new Set(P.slice(0,23).map(x=>x[0]));
+const fmt=p=>p>=1000?p.toLocaleString('en-US',{maximumFractionDigits:1}):p>=100?p.toFixed(2):p>=1?p.toFixed(3):p>=.01?p.toFixed(4):p.toFixed(6);
+const S=P.map(([s,api],i)=>({s,api,i,p:0,o:0,h:[],ready:false}));
 const left=document.getElementById('mc-left'),right=document.getElementById('mc-right');
 S.forEach(d=>{
-const host=d.i<3?left:right;
-host.insertAdjacentHTML('beforeend',`<div class="mc-slot"><div class="mc-float" style="--d:${-d.i*.9}s"><div class="mc-card" id="mc-c${d.i}"><div class="mc-bg"></div><i class="mc-gl"></i><div class="mc-row mc-l2"><span class="mc-coin">${d.s[0]}</span><b class="mc-sym">${d.s}<small>/USDT</small></b></div><div class="mc-price mc-l4"></div><div class="mc-l3"><span class="mc-pct"></span></div><svg class="mc-spark mc-l1" viewBox="0 0 200 35" preserveAspectRatio="none"><path class="mc-ar"/><path class="mc-ln"/></svg><div class="mc-hl mc-l2">高<span class="mc-hi"></span>低<span class="mc-lo"></span></div></div></div><div class="mc-gshadow" style="--d:${-d.i*.9}s"></div></div>`);
+ const host=d.i<14?left:right;
+ host.insertAdjacentHTML('beforeend',`<div class="mc-slot"><div class="mc-float" style="--d:${-d.i*.9}s"><div class="mc-card" id="mc-c${d.i}"><div class="mc-bg"></div><i class="mc-gl"></i><div class="mc-row mc-l2"><span class="mc-coin">${d.s[0]}</span><b class="mc-sym">${d.s}<small>${d.s==="USOIL"?"原油":d.s==="XAUUSD"?"黄金":"/USDT 永续"}</small></b></div><div class="mc-price mc-l4">加载中</div><div class="mc-l3"><span class="mc-pct">--</span></div><svg class="mc-spark mc-l1" viewBox="0 0 200 35" preserveAspectRatio="none"><path class="mc-ar"/><path class="mc-ln"/></svg><div class="mc-hl mc-l2">高<span class="mc-hi">--</span>低<span class="mc-lo">--</span></div></div></div><div class="mc-gshadow" style="--d:${-d.i*.9}s"></div></div>`);
 });
-function paint(d){const c=document.getElementById('mc-c'+d.i),q=s=>c.querySelector(s),up=d.p>=d.o;c.classList.toggle('up',up);c.classList.toggle('dn',!up);q('.mc-price').textContent=fmt(d.p);q('.mc-pct').textContent=(up?'+':'')+((d.p/d.o-1)*100).toFixed(2)+'%';const mn=Math.min(...d.h),mx=Math.max(...d.h),r=mx-mn||1;const pts=d.h.map((v,k)=>[k*200/39,32-(v-mn)/r*28]);const ln='M'+pts.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join('L');q('.mc-ln').setAttribute('d',ln);q('.mc-ar').setAttribute('d',ln+'L200 35L0 35Z');q('.mc-hi').textContent=fmt(mx);q('.mc-lo').textContent=fmt(mn)}
-S.forEach(paint);
-setInterval(()=>{S.forEach(d=>{d.p*=1+(Math.random()-.5)*2*d.v;d.h.push(d.p);d.h.shift();paint(d);const pr=document.querySelector('#mc-c'+d.i+' .mc-price');pr.classList.add('flash');setTimeout(()=>pr.classList.remove('flash'),250)})},1000);
+function paint(d){
+ const c=document.getElementById('mc-c'+d.i),q=s=>c.querySelector(s);
+ if(!d.ready||!Number.isFinite(d.p)||d.p<=0){q('.mc-price').textContent='加载中';q('.mc-pct').textContent='--';q('.mc-hi').textContent='--';q('.mc-lo').textContent='--';q('.mc-ln').setAttribute('d','');q('.mc-ar').setAttribute('d','');return}
+ const up=d.p>=d.o;c.classList.toggle('up',up);c.classList.toggle('dn',!up);
+ q('.mc-price').textContent=fmt(d.p);q('.mc-pct').textContent=(up?'+':'')+((d.p/d.o-1)*100).toFixed(2)+'%';
+ const values=d.h.filter(v=>Number.isFinite(v)&&v>0);
+ if(values.length>1){const mn=Math.min(...values),mx=Math.max(...values),r=mx-mn||1;const pts=values.map((v,k)=>[k*200/(values.length-1),32-(v-mn)/r*28]);const ln='M'+pts.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join('L');q('.mc-ln').setAttribute('d',ln);q('.mc-ar').setAttribute('d',ln+'L200 35L0 35Z');q('.mc-hi').textContent=fmt(mx);q('.mc-lo').textContent=fmt(mn)}
+}
+const API='https://api.bitget.com';
+async function bitgetJson(path){const r=await fetch(API+path,{cache:'no-store'});if(!r.ok)throw new Error('Bitget HTTP '+r.status);const p=await r.json();if(p.code!=='00000'||!Array.isArray(p.data))throw new Error(p.msg||'Bitget response invalid');return p.data}
+async function loadSparkline(d,symbol,isStock){
+ try{const params=isStock?new URLSearchParams({category:'SPOT',symbol,interval:'1H',limit:'40'}):new URLSearchParams({symbol,productType:'USDT-FUTURES',granularity:'1H',limit:'40'});const path=isStock?'/api/v3/market/candles':'/api/v2/mix/market/candles';const rows=await bitgetJson(path+'?'+params);d.h=rows.filter(r=>Array.isArray(r)&&Number(r[4])>0).sort((a,b)=>Number(a[0])-Number(b[0])).map(r=>Number(r[4])).slice(-40)}catch(error){d.h=[];console.warn('[Vegas Octopus] 1H candles failed for '+d.s+':',error)}paint(d)
+}
+let marketLoadInFlight=false;
+async function loadMarketData(){
+ if(marketLoadInFlight)return;marketLoadInFlight=true;
+ try{
+  const results=await Promise.allSettled([bitgetJson('/api/v2/mix/market/tickers?productType=USDT-FUTURES'),bitgetJson('/api/v3/market/tickers?category=SPOT'),bitgetJson('/api/v3/reality/market/stock-info')]);
+  const [futureResult,spotResult,stockResult]=results;
+  const futures=futureResult.status==='fulfilled'?new Map(futureResult.value.map(t=>[String(t.symbol).toUpperCase(),t])):null;
+  const spots=spotResult.status==='fulfilled'?new Map(spotResult.value.map(t=>[String(t.symbol).toUpperCase(),t])):null;
+  const realitySymbols=stockResult.status==='fulfilled'?new Map(stockResult.value.filter(s=>s&&s.code&&s.symbol).map(s=>[String(s.code).toUpperCase(),String(s.symbol)])):null;
+  if(realitySymbols&&stockResult.status==='fulfilled'){const sk=stockResult.value.find(s=>s&&s.symbol&&(String(s.code||'').toUpperCase().replace(/[^A-Z0-9]/g,'')==='SKHY'||/SK\s*HYNIX/i.test(String(s.name||''))||/RSKHYUSDT/i.test(String(s.symbol||''))));if(sk)realitySymbols.set('SKHYNIX',String(sk.symbol))}
+  const sparkJobs=[];
+  S.forEach(d=>{
+   if(REALITY_STOCKS.has(d.s)){
+    if(!spots||!realitySymbols){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='行情暂不可用';return}
+    const symbol=realitySymbols.get(d.s),ticker=symbol&&spots.get(symbol.toUpperCase());
+    if(!ticker){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='暂无行情';return}
+    const last=Number(ticker.lastPrice),open=Number(ticker.openPrice24h);
+    if(!(last>0&&open>0)){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='数据无效';return}
+    d.api=symbol;d.p=last;d.o=open;d.ready=true;paint(d);sparkJobs.push(()=>loadSparkline(d,symbol,true));
+   }else{
+    if(!futures){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='行情暂不可用';return}
+    const ticker=futures.get(d.api.toUpperCase());
+    if(!ticker){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='暂无行情';return}
+    const last=Number(ticker.lastPr),open=Number(ticker.open24h);
+    if(!(last>0&&open>0)){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='数据无效';return}
+    d.p=last;d.o=open;d.ready=true;paint(d);sparkJobs.push(()=>loadSparkline(d,d.api,false));
+   }
+  });
+  for(let i=0;i<sparkJobs.length;i+=8)await Promise.allSettled(sparkJobs.slice(i,i+8).map(job=>job()));
+ }catch(error){console.warn('[Vegas Octopus] market feed failed:',error)}finally{marketLoadInFlight=false}
+}
+loadMarketData();setInterval(loadMarketData,15000);
 document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=el.querySelector('.mc-card');const off=()=>{c.style.setProperty('--rx','0deg');c.style.setProperty('--ry','0deg');c.classList.remove('hot')};el.addEventListener('pointermove',e=>{const r=el.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;c.style.setProperty('--ry',((x-.5)*24)+'deg');c.style.setProperty('--rx',((.5-y)*20)+'deg');c.style.setProperty('--mx',x*100+'%');c.style.setProperty('--my',y*100+'%');c.classList.add('hot')});['pointerleave','pointerup','pointercancel'].forEach(t=>el.addEventListener(t,off))});
 })();
 </script>
