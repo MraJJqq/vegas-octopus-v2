@@ -2176,10 +2176,10 @@ async function loadSparkline(d,symbol,isStock){
 loadMarketData();
 setInterval(loadMarketData,15000);
 
-// 悬停：状态只切换目标值，放大/阴影/倾斜全部在帧循环里平滑插值；松开留 80ms 缓冲防抖，触屏松手后保持 1.5 秒
+// 悬停只负责卡片放大、发光和倾斜；单击一次才打开大卡片。离开后的收起规则保持不变。
 C.forEach(o=>{const el=o.pos,c=o.card;let t;
   el.addEventListener('pointerenter',()=>{clearTimeout(t);o.on=true});
-  el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();showFourHour(o)});
+  el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(e.detail>1)return;showFourHour(o)});
   const off=e=>{clearTimeout(t);t=setTimeout(()=>{o.on=false;o.tiltX=0;o.tiltY=0},e.pointerType==='touch'?1500:80)};
   el.addEventListener('pointerleave',off);el.addEventListener('pointercancel',off);
   el.addEventListener('pointermove',e=>{const r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
