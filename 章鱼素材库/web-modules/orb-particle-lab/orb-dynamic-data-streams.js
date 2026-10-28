@@ -9,11 +9,11 @@
 
   const HUE = 190;
   const PARTICLES_PER_STREAM = 220;
-  const AUTO_TARGET_SELECTOR = '.pos[data-formal-signal="true"]';
+  const AUTO_TARGET_SELECTOR = '.mc-card[data-formal-signal="true"], .pos[data-formal-signal="true"]';
 
   function start() {
     const stage = document.querySelector('.center-stage');
-    const grid = document.getElementById('octopusMarketCardGrid');
+    const grid = document.getElementById('octopusMarketCardGrid') || document.getElementById('mc-left') || document.getElementById('market-cards-layer');
     const orb = stage && (stage.querySelector('.core-orb') || stage.querySelector('#orb-core-canvas'));
     if (!stage || !grid || !orb || document.getElementById('octopusDynamicDataStreams')) return;
 
@@ -25,9 +25,9 @@
       width: '100%',
       height: '100%',
       pointerEvents: 'none',
-      zIndex: '3'
+      zIndex: '2'
     });
-    stage.appendChild(canvas);
+    (document.querySelector('.app') || stage).appendChild(canvas);
 
     const ctx = canvas.getContext('2d');
     let width = 1, height = 1, dpr = 1;
@@ -101,8 +101,9 @@
       ctx.clearRect(0, 0, width, height);
       const stageRect = stage.getBoundingClientRect();
       const orbRect = orb.getBoundingClientRect();
-      const ox = orbRect.left - stageRect.left + orbRect.width / 2;
-      const oy = orbRect.top - stageRect.top + orbRect.height / 2;
+      const isFullStageCanvas = orb && orb.id === 'orb-core-canvas';
+      const ox = isFullStageCanvas ? stageRect.width * 0.66 : orbRect.left - stageRect.left + orbRect.width / 2;
+      const oy = isFullStageCanvas ? stageRect.height * 0.5 : orbRect.top - stageRect.top + orbRect.height / 2;
 
       getTargets().forEach(card => drawStream(card, ox, oy, stageRect, time));
       requestAnimationFrame(frame);
