@@ -266,34 +266,36 @@ function normalizeLoopPosition(){
  if(step<1)return;
  loopBusy=true;
  let top=left.scrollTop,guard=0;
- while(top>=step&&guard++<focusSlots.length){
+ const count=focusSlots.length;
+ while(top>=step&&guard++<count){
   const first=focusSlots.shift();
   left.appendChild(first);
+  focusSlots.push(first);
   top-=step;
   wheelTarget-=step;
  }
  guard=0;
- while(top<=0&&wheelVelocity<0&&guard++<focusSlots.length){
+ while(top<=0&&wheelVelocity<0&&guard++<count){
   const last=focusSlots.pop();
   left.insertBefore(last,left.firstElementChild);
+  focusSlots.unshift(last);
   top+=step;
   wheelTarget+=step;
  }
  if(Math.abs(top-left.scrollTop)>.1)left.scrollTop=top;
  loopBusy=false;
+ queueFocusScale();
 }
 function smoothWheelStep(now){
  if(!wheelLastTime)wheelLastTime=now;
  const dt=Math.min(32,Math.max(1,now-wheelLastTime));
  wheelLastTime=now;
- const current=left.scrollTop;
- const diff=wheelTarget-current;
+ const current=left.scrollTop,diff=wheelTarget-current;
  left.scrollTop=current+diff*(1-Math.exp(-dt/55));
  normalizeLoopPosition();
  wheelVelocity*=Math.exp(-dt/260);
- if(Math.abs(wheelVelocity)>.01){
-  wheelTarget+=wheelVelocity*dt;
- }else wheelVelocity=0;
+ if(Math.abs(wheelVelocity)>.01)wheelTarget+=wheelVelocity*dt;
+ else wheelVelocity=0;
  queueFocusScale();
  if(Math.abs(wheelTarget-left.scrollTop)<.6&&Math.abs(wheelVelocity)<.01){
   wheelTarget=left.scrollTop;wheelFrame=0;wheelLastTime=0;return;
