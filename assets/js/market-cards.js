@@ -93,9 +93,9 @@ function smoothWheelStep(now){
  const dt=Math.min(32,Math.max(1,now-wheelLastTime));
  wheelLastTime=now;
  const current=left.scrollTop,diff=wheelTarget-current;
- left.scrollTop=current+diff*(1-Math.exp(-dt/55));
+ left.scrollTop=current+diff*(1-Math.exp(-dt/68));
  normalizeLoopPosition();
- wheelVelocity*=Math.exp(-dt/260);
+ wheelVelocity*=Math.exp(-dt/320);
  if(Math.abs(wheelVelocity)>.01)wheelTarget+=wheelVelocity*dt;
  else wheelVelocity=0;
  queueFocusScale();
