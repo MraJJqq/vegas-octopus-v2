@@ -673,10 +673,21 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
       writeCandleCache(state.symbol,rows);
       if(isRefresh && state.candles.length) {
         const oldStart=state.startTime,oldEnd=state.endTime;
+        const oldLast=state.candles[state.candles.length-1].t;
+        const oldRange=visibleIndices();
+        const oldCount=Math.max(1,oldRange.end-oldRange.start);
+        const followLatest=Number.isFinite(oldEnd) && oldEnd>=oldLast-4*60*60*1000;
         state.candles=normalize(state.candles.concat(rows));
         rebuildSeries();
-        state.startTime=oldStart;
-        state.endTime=oldEnd;
+        if(followLatest) {
+          const lastIndex=state.candles.length-1;
+          const firstIndex=Math.max(0,lastIndex-oldCount+1);
+          state.startTime=state.candles[firstIndex].t;
+          state.endTime=state.candles[lastIndex].t;
+        } else {
+          state.startTime=oldStart;
+          state.endTime=oldEnd;
+        }
       } else {
         state.candles=rows;
         state.endTime=rows[rows.length-1].t;
