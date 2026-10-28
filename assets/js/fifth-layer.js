@@ -54,7 +54,7 @@
   const state = {
     symbol:'', contractSymbol:'', candles:[], series:[], ws:null, wsReconnect:0, wsHeartbeat:0, pendingDraw:false,
     startTime:null, endTime:null, viewCount:720,
-    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, pendingRefresh:false, priceShift:0, panX:0, error:''
+    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, pendingRefresh:false, priceShift:0, error:''
   };
 
   const EMA_WARMUP_BARS = 1400;
@@ -206,8 +206,6 @@
     const oldWidth=state.width,oldHeight=state.height;
     state.dpr=Math.max(1,window.devicePixelRatio||1);
     state.width=Math.max(1,rect.width); state.height=Math.max(1,rect.height);
-    // Keep the chart proportions responsive while preserving the user's pan position.
-    if(oldWidth>1) state.panX*=state.width/oldWidth;
     if(oldHeight>1) state.priceShift*=state.height/oldHeight;
     state.priceShift=Math.max(-Math.min(120,state.height*.15),Math.min(Math.min(120,state.height*.15),state.priceShift));
     // Resize must not reset the user's historical viewport or zoom level.
@@ -247,7 +245,6 @@
     const margin=(max-min)*.055 || Math.max(max*.004,0.0001); min-=margin; max+=margin;
     // Horizontal history navigation is handled by the time window itself; do not
     // add a second pixel offset, which could clip candles after repeated zoom/pan.
-    state.panX=0;
     const xAt=i=>pad.left+(i-start+.5)*step;
     // Keep all drawing inside the reserved plot area while allowing bounded vertical movement.
     const yAt=v=>plotTop+(max-v)/(max-min)*plotH+state.priceShift;
@@ -371,7 +368,7 @@
     state.dataRequest++;
     state.symbol=symbol;
     state.contractSymbol='';
-    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=540;state.drag=null;state.priceShift=0;state.panX=0;state.error='';
+    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=540;state.drag=null;state.priceShift=0;state.error='';
     overlay.hidden=false;
     fitCanvas();
     state.error=REALITY_STOCKS.has(symbol)?'正在连接 Bitget Reality 原生4H股票行情…':'正在连接 Bitget 原生4H合约行情…';draw();
@@ -407,7 +404,7 @@
     const range=visibleIndices();
     state.drag={
       x:e.clientX,y:e.clientY,
-      basePanX:state.panX,basePriceShift:state.priceShift,
+      basePriceShift:state.priceShift,
       baseStart:range.start,baseEnd:range.end,
       baseCount:Math.max(1,range.end-range.start),moved:false
     };
@@ -431,7 +428,6 @@
     state.viewCount=Math.max(1,nextEnd-nextStart);
     state.startTime=data[nextStart].t;
     state.endTime=data[nextEnd-1].t;
-    const appliedShift=nextStart-d.baseStart;
     // The visible time range already accounts for horizontal movement. A separate
     // pixel translation would push candles off-screen after repeated drag/zoom cycles.
     state.panX=0;
