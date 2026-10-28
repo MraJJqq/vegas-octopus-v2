@@ -447,7 +447,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   const canvas = overlay.querySelector('canvas');
   const ctx = canvas.getContext('2d');
   const state = {
-    symbol:'', name:'', stock:false, candles:[], series:[],
+    symbol:'', stock:false, candles:[], series:[],
     startTime:null, endTime:null, viewCount:180,
     width:1,height:1,dpr:1, drag:null, timer:0, generation:0, panX:0, priceShift:0, historyLoading:false
   };
@@ -683,7 +683,6 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     const symbol=String(card.dataset.symbol||'').trim().toUpperCase();
     if(!symbol) return;
     state.symbol=symbol;
-    state.name=(card.querySelector('.mc-sym')?.childNodes[0]?.textContent||symbol).trim();
     state.stock=STOCKS.has(symbol);
     state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=540;state.drag=null;state.panX=0;state.priceShift=0;state.historyLoading=false;
     overlay.hidden=false;
@@ -715,8 +714,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   }
   function pointerDown(e) {
     if(overlay.hidden || !state.candles.length) return;
-    const range=visibleIndices();
-    state.drag={x:e.clientX,y:e.clientY,startIndex:range.start,endIndex:range.end-1,count:range.end-range.start,basePanX:state.panX,basePanY:state.priceShift,moved:false};
+    state.drag={x:e.clientX,y:e.clientY,basePanX:state.panX,basePanY:state.priceShift,moved:false};
     try{canvas.setPointerCapture(e.pointerId);}catch(_){}
   }
   function pointerMove(e) {
@@ -754,12 +752,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   document.addEventListener('click',event=>{
     if(!overlay.hidden) return;
     const card=findCard(event);
-    if(!card) {
-      const target=event.target;
-      if(target && target.closest && target.closest('#market-cards-layer')) {
-      }
-      return;
-    }
+    if(!card) return;
     event.preventDefault();
     event.stopPropagation();
     open(card);
