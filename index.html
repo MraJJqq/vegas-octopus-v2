@@ -382,7 +382,7 @@ html,body{width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavio
 var R=Math.random,PI=Math.PI,cv=document.getElementById("orb-core-canvas"),x=cv.getContext("2d"),W,H,i;
 function rs(){var d=window.devicePixelRatio||1,r=cv.getBoundingClientRect();W=Math.max(1,r.width);H=Math.max(1,r.height);cv.width=Math.round(W*d);cv.height=Math.round(H*d);x.setTransform(d,0,0,d,0,0)}
 rs();window.addEventListener("resize",rs);if(window.ResizeObserver)new ResizeObserver(rs).observe(cv.parentElement);
-var V={spd:.2,zm:1,ln:1,ps:1,fl:1};
+var V={spd:.13,zm:.83,ln:2.5,ps:1.6,fl:3};
 /* glow sprites */
 var SG=[];
 for(i=0;i<36;i++){(function(h){var c=document.createElement("canvas");c.width=c.height=64;var g=c.getContext("2d"),q=g.createRadialGradient(32,32,0,32,32,32);q.addColorStop(0,"hsla("+h+",100%,85%,1)");q.addColorStop(.25,"hsla("+h+",100%,62%,.5)");q.addColorStop(1,"hsla("+h+",100%,50%,0)");g.fillStyle=q;g.fillRect(0,0,64,64);SG.push(c)})(i*10)}
