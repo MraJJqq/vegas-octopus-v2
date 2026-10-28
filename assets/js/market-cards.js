@@ -105,6 +105,7 @@ function smoothWheelStep(now){
  wheelFrame=requestAnimationFrame(smoothWheelStep);
 }
 left.addEventListener('wheel',e=>{
+ autoResumeAt=performance.now()+1800;
  if(Math.abs(e.deltaY)<.1)return;
  e.preventDefault();
  e.stopPropagation();
@@ -120,17 +121,41 @@ left.addEventListener('scroll',()=>{
  if(!wheelFrame){wheelTarget=left.scrollTop;wheelVelocity=0}
  queueFocusScale();
 },{passive:true});
-let touchStartY=0;
-left.addEventListener('touchstart',e=>{wheelVelocity=0;wheelTarget=left.scrollTop;touchStartY=e.touches[0]?.clientY??0},{passive:true});
+let touchStartY=0,autoResumeAt=0,autoLastTime=0,autoFrame=0;
+left.addEventListener('touchstart',e=>{wheelVelocity=0;wheelTarget=left.scrollTop;touchStartY=e.touches[0]?.clientY??0;autoResumeAt=performance.now()+1800},{passive:true});
 left.addEventListener('touchmove',e=>{
  const touch=e.touches[0];if(!touch)return;
  const dy=touch.clientY-touchStartY;
+ autoResumeAt=performance.now()+1800;
  const atTop=left.scrollTop<=0;
  const atBottom=left.scrollTop+left.clientHeight>=left.scrollHeight-1;
  if((atTop&&dy>0)||(atBottom&&dy<0))e.preventDefault();
 },{passive:false});
-left.addEventListener('touchend',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0},{passive:true});
-left.addEventListener('touchcancel',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0},{passive:true});
+left.addEventListener('touchend',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;autoResumeAt=performance.now()+1400},{passive:true});
+left.addEventListener('touchcancel',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;autoResumeAt=performance.now()+1400},{passive:true});
+function autoWaveScroll(now){
+ if(!autoLastTime)autoLastTime=now;
+ const dt=Math.min(40,Math.max(0,now-autoLastTime))/1000;
+ autoLastTime=now;
+ if(!wheelFrame&&now>=autoResumeAt){
+  if(!autoWaveScroll.nextChange||now>=autoWaveScroll.nextChange){
+   autoWaveScroll.targetSpeed=6+Math.random()*16;
+   autoWaveScroll.nextChange=now+2800+Math.random()*5200;
+  }
+  const speed=autoWaveScroll.speed??9;
+  autoWaveScroll.speed=speed+(autoWaveScroll.targetSpeed-speed)*(1-Math.exp(-dt/2.2));
+  left.scrollTop+=autoWaveScroll.speed*dt;
+  loopDirection=1;
+  normalizeLoopPosition();
+  wheelTarget=left.scrollTop;
+  queueFocusScale();
+ }
+ autoFrame=requestAnimationFrame(autoWaveScroll);
+}
+autoWaveScroll.speed=9;
+autoWaveScroll.targetSpeed=9;
+autoFrame=requestAnimationFrame(autoWaveScroll);
+left.addEventListener('wheel',()=>{autoResumeAt=performance.now()+1800},{passive:true});
 window.addEventListener('resize',queueFocusScale,{passive:true});
 left.style.scrollBehavior='auto';
 queueFocusScale();
