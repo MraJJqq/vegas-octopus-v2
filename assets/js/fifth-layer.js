@@ -4,8 +4,9 @@
   if (window.__VEGAS_FIFTH_LAYER_READY__) return;
 
   const CARD_SELECTOR = '#market-cards-layer .mc-card[data-symbol]';
-  const CONTRACT_ALIASES={SKHYNIX:'SKHYUSDT'};
-  const CONTRACT_CANDIDATES=symbol=>{const name=String(symbol||'').trim().toUpperCase();return [CONTRACT_ALIASES[name],name.endsWith('USDT')?name:name+'USDT'].filter(Boolean);};
+  // 先使用与卡片名称完全对应的合约；别名仅作为交易所实际代码不一致时的后备。
+  const CONTRACT_ALIASES={SKHYNIX:['SKHYNIXUSDT','SKHYUSDT']};
+  const CONTRACT_CANDIDATES=symbol=>{const name=String(symbol||'').trim().toUpperCase();return [...(CONTRACT_ALIASES[name]||[]),name.endsWith('USDT')?name:name+'USDT'].filter((value,index,list)=>value&&list.indexOf(value)===index);};
   const EMA = [
     {period:12,color:'#ffd84a',width:1.7},
     {period:36,color:'#f4f8ff',width:1.2},
@@ -68,26 +69,35 @@
     const latest = normalize(await getJson(candlePath(apiSymbol)));
     if (latest.length < 2) throw new Error('交易所返回的4H K线不足');
 
+    // EMA_WARMUP_BARS 是总目标根数，不是额外追加的历史根数。
+    // 最新接口已返回的 K 线计入目标，减少不必要的历史请求和限频风险。
     let combined = latest;
     let pages = 0;
-    const maxPages = Math.ceil(EMA_WARMUP_BARS / 200) + 3;
-    while (combined.length - latest.length < EMA_WARMUP_BARS && pages < maxPages) {
+    const maxPages = Math.ceil(EMA_WARMUP_BARS / 200) + 1;
+    while (combined.length < EMA_WARMUP_BARS && pages < maxPages) {
       const oldest = combined[0];
       if (!oldest || !Number.isFinite(oldest.t)) break;
-      const page = normalize(await getJson(historyCandlePath(apiSymbol, oldest.t - 1)));
+      let rawPage;
+      try {
+        rawPage = await getJson(historyCandlePath(apiSymbol, oldest.t - 1));
+      } catch (error) {
+        // 历史预热属于可选增强；历史端点失败时仍使用已经成功取得的原生4H K线。
+        console.warn('[Vegas Fifth Layer] 历史预热请求失败，继续使用已有4H K线：' + apiSymbol, error);
+        break;
+      }
       pages++;
+      const page = normalize(rawPage);
       if (!page.length) break;
       const next = normalize(page.concat(combined));
       if (next.length <= combined.length || next[0].t >= oldest.t) break;
       combined = next;
       if (page.length < 200) break;
     }
-    const warmupCount = combined.length - latest.length;
-    if (warmupCount < EMA_WARMUP_BARS) {
+    if (combined.length < EMA_WARMUP_BARS) {
       console.warn('[Vegas Fifth Layer] EMA历史预热不足：' + apiSymbol +
-        '，已取得 ' + warmupCount + '/' + EMA_WARMUP_BARS + ' 根历史K线');
+        '，已取得 ' + combined.length + '/' + EMA_WARMUP_BARS + ' 根总K线');
     }
-    return combined;
+    return combined.slice(-MAX_CANDLE_BARS);
   }
   async function getJson(url) {
     const response = await fetch('https://api.bitget.com' + url, {cache:'no-store'});
