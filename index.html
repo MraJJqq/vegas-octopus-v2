@@ -15,13 +15,13 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 /* 页面容器透明，所有内容叠加在第一层背景之上。 */
 .app{position:relative;z-index:1;width:100%;height:100dvh;min-height:0;padding:0;background:transparent;overflow:hidden}
 /* 第二层：最新事件悬浮模块。 */
-.topbar{position:absolute;z-index:3;top:clamp(14px,2.2vh,28px);right:clamp(14px,2.2vw,32px);width:min(38vw,520px);min-width:280px;height:auto;display:block;pointer-events:none}
+.topbar{position:absolute;z-index:3;top:clamp(14px,2.2vh,28px);right:clamp(14px,2.2vw,32px);width:min(22vw,320px);min-width:190px;height:auto;display:block;pointer-events:none}
 .event-top-card{width:100%;min-width:0;min-height:0;padding:0;display:flex;flex-direction:column;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;pointer-events:auto}
 .panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 0 7px}
 .panel-title{display:flex;align-items:center;gap:7px;font-size:clamp(11px,.8vw,15px);font-weight:750;letter-spacing:.03em}
 .panel-title .icon{display:inline-grid;place-items:center;width:clamp(20px,1.45vw,27px);height:clamp(20px,1.45vw,27px);border-radius:7px;background:rgba(35,200,255,.12);border:1px solid rgba(51,206,255,.3);color:var(--cyan)}
 .v9-sync-status{font-size:clamp(8px,.6vw,10px);color:var(--muted);white-space:nowrap}
-.v9-notification{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:clamp(8px,1vw,16px);flex:1;min-height:0;overflow:auto}
+.v9-notification{display:flex;flex-direction:column;gap:clamp(12px,1.4vh,20px);flex:1;min-height:0;overflow:auto}
 .v9-group{min-width:0;border-left:1px solid rgba(85,155,214,.18);padding-left:9px}
 .v9-group-title{font-size:clamp(9px,.65vw,11px);font-weight:750;color:#a9d9ff;white-space:nowrap;margin-bottom:5px}
 .v9-symbols{display:flex;flex-wrap:wrap;align-content:flex-start;gap:4px 7px;min-width:0}
@@ -32,7 +32,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 .center-stage{position:relative;isolation:isolate;min-width:0;min-height:0;width:100%;height:100%;overflow:hidden;border-radius:0;background:transparent;pointer-events:none}
 #orb-core-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:1;pointer-events:auto;touch-action:pan-y;cursor:grab}
 #orb-core-canvas:active{cursor:grabbing}
-@media(max-width:600px){.topbar{top:12px;right:12px;width:min(54vw,340px);min-width:0}.v9-notification{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:7px}.v9-group{padding-left:6px}.panel-head{padding-bottom:5px}}
+@media(max-width:600px){.topbar{top:12px;right:12px;width:min(42vw,250px);min-width:150px}.v9-notification{flex-direction:column;gap:10px}.v9-group{padding-left:6px}.panel-head{padding-bottom:5px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 </style>
 </head>
