@@ -1342,13 +1342,45 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(pct)pct.textContent='--';
   }
   function format(n){return n>=1000?n.toLocaleString('en-US',{maximumFractionDigits:2}):n>=100?n.toFixed(2):n>=1?n.toFixed(3):n>=.01?n.toFixed(4):n.toFixed(6)}
-  function apply(card,last,open){
+  const CACHE_KEY='vegasOctopusMarketCacheV1';
+  function cardSymbol(card){
+    const el=$(card,'.sym');
+    return String(el&&el.childNodes[0]&&el.childNodes[0].textContent||'').trim().toUpperCase();
+  }
+  function readCache(){
+    try{
+      const data=JSON.parse(localStorage.getItem(CACHE_KEY)||'{}');
+      return data&&typeof data==='object'?data:{};
+    }catch(_){return {}}
+  }
+  function writeCache(data){
+    try{localStorage.setItem(CACHE_KEY,JSON.stringify(data))}catch(_){}
+  }
+  function paintCached(){
+    const data=readCache(),now=Date.now();
+    const grid=document.getElementById('octopusMarketCardGrid');
+    if(!grid)return;
+    for(const card of grid.querySelectorAll('.pos')){
+      const row=data[cardSymbol(card)];
+      if(!row||now-Number(row.t)>24*60*60*1000||now<Number(row.t))continue;
+      const last=Number(row.p),open=Number(row.o);
+      if(Number.isFinite(last)&&last>0&&Number.isFinite(open)&&open>0){
+        apply(card,last,open,false);
+        card.dataset.marketCache='1';
+      }
+    }
+  }
+  function apply(card,last,open,persist=true){
     if(!(Number.isFinite(last)&&last>0&&Number.isFinite(open)&&open>0)){setUnavailable(card,'行情数据无效');return}
-    const price=$(card,'.price'),pct=$(card,'.pct'),sym=$(card,'.sym');
+    const price=$(card,'.price'),pct=$(card,'.pct');
     if(!price||!pct)return;
     const up=last>=open;
     card.classList.toggle('up',up);card.classList.toggle('dn',!up);
     price.textContent=format(last);pct.textContent=(up?'+':'')+((last/open-1)*100).toFixed(2)+'%';
+    if(persist){
+      const data=readCache(),symbol=cardSymbol(card);
+      if(symbol){data[symbol]={p:last,o:open,t:Date.now()};writeCache(data)}
+    }
   }
   async function refresh(){
     const grid=document.getElementById('octopusMarketCardGrid');
@@ -1388,7 +1420,19 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     }
     if(!updated)console.warn('[Vegas Octopus] rescue feed received no usable ticker data; endpoint statuses:',results.map(x=>x.status));
   }
-  function start(){refresh().catch(e=>console.warn('[Vegas Octopus] independent market feed failed:',e));setInterval(()=>refresh().catch(e=>console.warn('[Vegas Octopus] independent market feed failed:',e)),15000)}
+  function start(){
+    paintCached();
+    const grid=document.getElementById('octopusMarketCardGrid');
+    if(grid&&window.MutationObserver){
+      let scheduled=false;
+      new MutationObserver(()=>{
+        if(scheduled)return;scheduled=true;
+        requestAnimationFrame(()=>{scheduled=false;paintCached()});
+      }).observe(grid,{childList:true});
+    }
+    refresh().catch(e=>console.warn('[Vegas Octopus] independent market feed failed:',e));
+    setInterval(()=>refresh().catch(e=>console.warn('[Vegas Octopus] independent market feed failed:',e)),15000)
+  }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
