@@ -255,16 +255,15 @@ function updateFocusScale(){
  });
 }
 function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(updateFocusScale)}
-let wheelTarget=left.scrollTop,wheelFrame=0,wheelVelocity=0,wheelLastTime=0,loopBusy=false,loopDirection=1;
+let wheelTarget=left.scrollTop,wheelFrame=0,wheelVelocity=0,wheelLastTime=0,loopDirection=1;
 function cardStep(){
  const first=left.firstElementChild;
  return first?first.getBoundingClientRect().height+(parseFloat(getComputedStyle(left).rowGap)||0):0;
 }
 function normalizeLoopPosition(){
- if(loopBusy||focusSlots.length<2)return;
+ if(focusSlots.length<2)return;
  const step=cardStep();
  if(step<1)return;
- loopBusy=true;
  let top=left.scrollTop,guard=0;
  const count=focusSlots.length;
  if(loopDirection<0){
@@ -285,7 +284,6 @@ function normalizeLoopPosition(){
   }
  }
  if(Math.abs(top-left.scrollTop)>.1)left.scrollTop=top;
- loopBusy=false;
 }
 function smoothWheelStep(now){
  if(!wheelLastTime)wheelLastTime=now;
@@ -337,7 +335,7 @@ async function loadMarketData(){
   const futures=futureResult.status==='fulfilled'?new Map(futureResult.value.map(t=>[String(t.symbol).toUpperCase(),t])):null;
   const spots=spotResult.status==='fulfilled'?new Map(spotResult.value.map(t=>[String(t.symbol).toUpperCase(),t])):null;
   const realitySymbols=stockResult.status==='fulfilled'?new Map(stockResult.value.filter(s=>s&&s.code&&s.symbol).map(s=>[String(s.code).toUpperCase(),String(s.symbol)])):null;
-  if(realitySymbols&&stockResult.status==='fulfilled'){const sk=stockResult.value.find(s=>s&&s.symbol&&(String(s.code||'').toUpperCase().replace(/[^A-Z0-9]/g,'')==='SKHY'||/SK\s*HYNIX/i.test(String(s.name||''))||/RSKHYUSDT/i.test(String(s.symbol||''))));if(sk)realitySymbols.set('SKHYNIX',String(sk.symbol))}
+  if(realitySymbols){const sk=stockResult.value.find(s=>s&&s.symbol&&(String(s.code||'').toUpperCase().replace(/[^A-Z0-9]/g,'')==='SKHY'||/SK\s*HYNIX/i.test(String(s.name||''))||/RSKHYUSDT/i.test(String(s.symbol||''))));if(sk)realitySymbols.set('SKHYNIX',String(sk.symbol))}
   const sparkJobs=[];
   S.forEach(d=>{
    if(REALITY_STOCKS.has(d.s)){
