@@ -213,16 +213,44 @@
     return json.data;
   }
   let contractInfoPromise=null;
+  let legacyContractInfoPromise=null;
   let realityInfoPromise=null;
   async function resolveRealitySymbol(symbol){
     if(!realityInfoPromise)realityInfoPromise=getJson('/api/v3/reality/market/stock-info').catch(error=>{realityInfoPromise=null;throw error;});
     const rows=await realityInfoPromise;
     let found=rows.find(row=>row&&String(row.code||'').trim().toUpperCase()===symbol);
     if(symbol==='SKHYNIX'&&!found)found=rows.find(row=>row&&(/SK\\s*HYNIX/i.test(String(row.name||''))||/RSKHYUSDT/i.test(String(row.symbol||''))));
-    if(!found||!found.symbol)throw new Error('Bitget Reality 未返回该股票的交易所代码：'+symbol);
-    return String(found.symbol).trim();
+    if(!found||!found.symbol)throw new Error('Bitget Reality 未返回该股票的交易所代码：'+symbol+'；请检查股票代码是否仍在 Reality 上市');
+    return String(found.symbol).trim().toUpperCase();
   }
-  async function resolveContract(symbol){if(!contractInfoPromise)contractInfoPromise=getJson('/api/v2/mix/market/contracts?productType=USDT-FUTURES').catch(e=>{contractInfoPromise=null;throw e;});const rows=await contractInfoPromise,candidates=CONTRACT_CANDIDATES(symbol);const found=rows.find(row=>{if(!row||!candidates.includes(String(row.symbol||'').toUpperCase()))return false;const status=String(row.symbolStatus||row.status||'').toLowerCase();return !status||['normal','online','listed'].includes(status);});if(!found)throw new Error('Bitget 无对应的在线 USDT 本位合约：'+symbol);return String(found.symbol).toUpperCase();}
+  async function resolveContract(symbol){
+    const candidates=CONTRACT_CANDIDATES(symbol);
+    // Prefer Bitget's current V3 instruments endpoint. Keep V2 contracts as a
+    // compatibility fallback so a metadata endpoint change does not break chart opening.
+    let rows=[];
+    try{
+      if(!contractInfoPromise)contractInfoPromise=getJson('/api/v3/market/instruments?category=USDT-FUTURES').catch(error=>{contractInfoPromise=null;throw error;});
+      rows=await contractInfoPromise;
+    }catch(error){
+      console.warn('[Vegas Fifth Layer] V3 合约目录读取失败，尝试兼容接口：',error);
+    }
+    let found=rows.find(row=>row&&candidates.includes(String(row.symbol||'').trim().toUpperCase()));
+    if(!found){
+      try{
+        if(!legacyContractInfoPromise)legacyContractInfoPromise=getJson('/api/v2/mix/market/contracts?productType=USDT-FUTURES').catch(error=>{legacyContractInfoPromise=null;throw error;});
+        const legacyRows=await legacyContractInfoPromise;
+        found=legacyRows.find(row=>{
+          if(!row||!candidates.includes(String(row.symbol||'').trim().toUpperCase()))return false;
+          const status=String(row.symbolStatus||row.status||'').toLowerCase();
+          return !status||['normal','online','listed'].includes(status);
+        });
+      }catch(error){
+        console.warn('[Vegas Fifth Layer] V2 合约目录读取失败：',error);
+      }
+    }
+    if(!found)throw new Error('Bitget 未找到在线 USDT 本位合约：'+symbol+'（候选：'+candidates.join(', ')+')');
+    return String(found.symbol).trim().toUpperCase();
+  }
   function normalize(rows) {
     const byTime = new Map();
     for (const row of Array.isArray(rows) ? rows : []) {
