@@ -13,6 +13,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 .event-top-card{width:100%;min-width:0;min-height:0;max-height:100%;padding:0;display:flex;flex-direction:column;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;pointer-events:auto}
 .panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 0 7px}
 .panel-title{display:flex;align-items:center;gap:7px;font-size:clamp(11px,.8vw,15px);font-weight:750;letter-spacing:.03em}
+.panel-note{font-size:inherit;font-weight:inherit;letter-spacing:inherit;color:inherit;white-space:nowrap;flex-shrink:0}
 .panel-title .icon{display:inline-grid;place-items:center;width:clamp(20px,1.45vw,27px);height:clamp(20px,1.45vw,27px);border-radius:7px;background:rgba(35,200,255,.12);border:1px solid rgba(51,206,255,.3);color:var(--cyan)}
 
 .v9-notification{display:flex;flex-direction:column;gap:clamp(8px,1.4vh,20px);flex:1;min-width:0;min-height:0;max-height:calc(100dvh - 76px);overflow:auto;overscroll-behavior:contain}
