@@ -83,20 +83,21 @@
           return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
         });
         const appRect = app.getBoundingClientRect();
-        const selected = new Set();
-        symbols.forEach(pos => {
-          let best = -1, bestD = Infinity;
+        const targetIndices = symbols.map(pos => {
+          let best = 0, bestD = Infinity;
           pr.forEach((q, idx) => {
             const d = Math.pow(q[0] - (pos.x - appRect.left), 2) + Math.pow(q[1] - (pos.y - appRect.top), 2);
             if (d < bestD) { bestD = d; best = idx; }
           });
-          if (best >= 0) selected.add(best);
+          return best;
         });
+        // 保留素材原版的 150 个流动粒子与七色分组；
+        // 仅将每条流的球面落点映射到当前正式信号对应的球面区域。
+        F.forEach(function (f, idx) { f.t = targetIndices[idx % targetIndices.length]; });
 
         x.globalCompositeOperation = 'lighter';
         x.lineWidth = 0.8;
         F.forEach(function (f) {
-          if (!selected.has(f.t)) return;
           const q = pr[f.t], fa = q[3];
           if (fa < 0.05) return;
           const y0 = H * (0.12 + f.s * 0.12);
