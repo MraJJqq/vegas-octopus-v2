@@ -132,7 +132,7 @@
             const color = 'hsl(' + COLORS[p.color] + ',100%,62%)';
 
             // 数据流从卡片端逐步向发光球延伸，避免滚动时球端提前出现整条连线。
-            const phase = Math.min(1, Math.max(0, (time - state.visibleSince) * p.speed));
+            const phase = ((time - state.visibleSince) * p.speed) % 1;
             const inverse = 1 - phase;
             const particleX = inverse * inverse * startX + 2 * inverse * phase * controlX + phase * phase * endX;
             const particleY = inverse * inverse * startY + 2 * inverse * phase * startY + phase * phase * endY;
