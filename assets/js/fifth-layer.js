@@ -61,6 +61,9 @@
 
   const EMA_WARMUP_BARS = 1400;
   const MAX_CANDLE_BARS = 1600;
+  const PREWARM_CACHE = new Map();
+  const PREWARM_MAX_AGE = 4 * 60 * 60 * 1000;
+  const INITIAL_HISTORY_MS = 90 * 24 * 60 * 60 * 1000;
 
   function candlePath(symbol,endTime,isReality=false){
     if(isReality){const q=new URLSearchParams({category:'SPOT',symbol,interval:'4H',limit:'1000',...(Number.isFinite(endTime)?{endTime:String(endTime)}:{})});return '/api/v3/market/candles?'+q;}
@@ -213,7 +216,7 @@
     // Keep the chart proportions responsive while preserving the user's pan position.
     if(oldWidth>1) state.panX*=state.width/oldWidth;
     if(oldHeight>1) state.priceShift*=state.height/oldHeight;
-    if(state.autoFitView) state.viewCount=Math.min(state.candles.length || 540,540);
+    // Resize must not reset the user's historical viewport or zoom level.
     const pixelW=Math.round(state.width*state.dpr),pixelH=Math.round(state.height*state.dpr);
     if(canvas.width!==pixelW) canvas.width=pixelW;
     if(canvas.height!==pixelH) canvas.height=pixelH;
@@ -271,9 +274,19 @@
     const request=++state.dataRequest;
     try {
       const isReality=REALITY_STOCKS.has(state.symbol);
-      const apiSymbol=state.contractSymbol||(isReality?await resolveRealitySymbol(state.symbol):await resolveContract(state.symbol));
+      let apiSymbol=state.contractSymbol;
+      let rows;
+      if(!isRefresh){
+        let cached=PREWARM_CACHE.get(state.symbol);
+        if(cached && typeof cached.then==='function') cached=await cached;
+        if(cached && Date.now()-cached.createdAt<PREWARM_MAX_AGE){
+          apiSymbol=cached.apiSymbol;
+          rows=cached.rows;
+        }
+      }
+      if(!apiSymbol) apiSymbol=isReality?await resolveRealitySymbol(state.symbol):await resolveContract(state.symbol);
       state.contractSymbol=apiSymbol;
-      const rows=isRefresh?normalize(await getJson(candlePath(apiSymbol,undefined,isReality))):await loadCandlesWithWarmup(apiSymbol,isReality);
+      if(!rows) rows=isRefresh?normalize(await getJson(candlePath(apiSymbol,undefined,isReality))):await loadCandlesWithWarmup(apiSymbol,isReality);
       if(generation!==state.generation || request!==state.dataRequest || overlay.hidden) return;
       // A request may have started just before the user began dragging.
       // Never let its response replace/redraw candles during an active gesture.
@@ -303,8 +316,10 @@
       } else {
         state.candles=rows;
         state.endTime=rows[rows.length-1].t;
-        state.startTime=state.endTime-90*24*60*60*1000;
-        state.viewCount=Math.min(rows.length,540);
+        state.startTime=state.endTime-INITIAL_HISTORY_MS;
+        const firstVisible=rows.findIndex(c=>c.t>=state.startTime);
+        state.viewCount=Math.max(1,rows.length-(firstVisible<0?Math.max(0,rows.length-540):firstVisible));
+        state.autoFitView=false;
         rebuildSeries();
       }
 
@@ -412,8 +427,8 @@
     state.endTime=data[nextEnd-1].t;
     const appliedShift=nextStart-d.baseStart;
     state.panX=d.basePanX+dx+appliedShift*step;
-    const verticalLimit=Math.max(0,(state.height-50)*0.12);
-    state.priceShift=Math.max(-verticalLimit,Math.min(verticalLimit,d.basePriceShift+dy));
+    // No artificial vertical clamp: the entire chart follows the pointer freely.
+    state.priceShift=d.basePriceShift+dy;
     draw();
   }
   function hitRenderedChart(x,y) {
@@ -488,8 +503,47 @@
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!overlay.hidden)close();});
   window.addEventListener('resize',fitCanvas,{passive:true});
   if(window.ResizeObserver) new ResizeObserver(fitCanvas).observe(canvas);
-  window.VegasFifthLayer={open,close,refresh:()=>loadData(true),getState:()=>({symbol:state.symbol,contractSymbol:state.contractSymbol,productType:REALITY_STOCKS.has(state.symbol)?'SPOT':'USDT-FUTURES',granularity:'4H',websocket:!!(state.ws&&state.ws.readyState===WebSocket.OPEN),visible:!overlay.hidden,candles:state.candles.length})};
+  function prewarmSymbol(symbol){
+    symbol=String(symbol||'').trim().toUpperCase();
+    if(!symbol || PREWARM_CACHE.has(symbol)) return PREWARM_CACHE.get(symbol);
+    const job=(async()=>{
+      const isReality=REALITY_STOCKS.has(symbol);
+      const apiSymbol=isReality?await resolveRealitySymbol(symbol):await resolveContract(symbol);
+      const rows=normalize(await getJson(candlePath(apiSymbol,undefined,isReality)));
+      if(rows.length<2) throw new Error('预热K线不足');
+      const entry={apiSymbol,rows,createdAt:Date.now()};
+      PREWARM_CACHE.set(symbol,entry);
+      return entry;
+    })().catch(error=>{
+      PREWARM_CACHE.delete(symbol);
+      console.warn('[Vegas Fifth Layer] K线预热失败：'+symbol,error);
+      return null;
+    });
+    PREWARM_CACHE.set(symbol,job);
+    return job;
+  }
+  async function startBackgroundPrewarm(){
+    const cards=Array.from(document.querySelectorAll(CARD_SELECTOR));
+    const ordered=cards.slice().sort((a,b)=>{
+      const ar=a.getBoundingClientRect(),br=b.getBoundingClientRect();
+      const av=ar.bottom>0&&ar.top<window.innerHeight?0:1;
+      const bv=br.bottom>0&&br.top<window.innerHeight?0:1;
+      return av-bv;
+    });
+    let cursor=0;
+    async function worker(){
+      while(cursor<ordered.length){
+        const card=ordered[cursor++];
+        await prewarmSymbol(card.dataset.symbol);
+        await new Promise(resolve=>setTimeout(resolve,180));
+      }
+    }
+    await Promise.all([worker(),worker(),worker()]);
+  }
+  window.VegasFifthLayer={open,close,refresh:()=>loadData(true),prewarm:()=>startBackgroundPrewarm(),getState:()=>({symbol:state.symbol,contractSymbol:state.contractSymbol,productType:REALITY_STOCKS.has(state.symbol)?'SPOT':'USDT-FUTURES',granularity:'4H',websocket:!!(state.ws&&state.ws.readyState===WebSocket.OPEN),visible:!overlay.hidden,candles:state.candles.length,prewarmed:PREWARM_CACHE.size})};
   window.__VEGAS_FIFTH_LAYER_READY__=true;
 
   console.info('[Vegas Fifth Layer] initialized');
+  // Warm all 27 instruments in the background; each cache contains enough native 4H bars for the initial 90-day view.
+  startBackgroundPrewarm();
 })();
