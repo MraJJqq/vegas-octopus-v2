@@ -117,10 +117,13 @@
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&overlay.style.display!=='none')close();});
   window.addEventListener('resize',resize,{passive:true});
   if(window.ResizeObserver)resizeObserver=new ResizeObserver(resize).observe(canvas);
+  // Capture phase avoids other page handlers swallowing taps; composedPath also handles nested card content.
   document.addEventListener('click',e=>{
     if(window.getComputedStyle(overlay).display!=='none')return;
-    const card=e.target.closest('#market-cards-layer .mc-card[data-symbol]');
-    if(card)open(card);
-  });
+    const path=typeof e.composedPath==='function'?e.composedPath():[e.target];
+    const card=path.find(node=>node&&node.matches&&node.matches('#market-cards-layer .mc-card[data-symbol]'))
+      ||(e.target&&e.target.closest?e.target.closest('#market-cards-layer .mc-card[data-symbol]'):null);
+    if(card){e.preventDefault();open(card);}
+  },true);
   window.VegasFifthLayer={open,close};
 })();
