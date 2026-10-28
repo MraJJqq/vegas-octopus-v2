@@ -81,7 +81,7 @@
         ctx.globalCompositeOperation = 'lighter';
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        ctx.lineWidth = 1.9;
+        ctx.lineWidth = 2.4;
 
         targets.forEach(({ rect, opacity, group }) => {
           const centerX = rect.left + rect.width / 2 - appRect.left;
@@ -120,9 +120,12 @@
             ctx.moveTo(startX, startY);
             ctx.quadraticCurveTo(controlX, startY, endX, endY);
             ctx.strokeStyle = color;
-            ctx.globalAlpha = 0.78 * visibility * opacity;
+            ctx.globalAlpha = Math.min(1, 0.92 * visibility * opacity);
             ctx.shadowColor = color;
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 22;
+            ctx.stroke();
+            ctx.globalAlpha = Math.min(1, 0.95 * visibility * opacity);
+            ctx.shadowBlur = 5;
             ctx.stroke();
             ctx.shadowBlur = 0;
 
