@@ -32,7 +32,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 .center-stage{position:relative;isolation:isolate;min-width:0;min-height:0;width:100%;height:100%;overflow:hidden;border-radius:0;background:transparent;pointer-events:none}
 #orb-core-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:1;pointer-events:auto;touch-action:pan-y;cursor:grab}
 #orb-core-canvas:active{cursor:grabbing}
-@media(max-width:600px){.topbar{top:12px;right:12px;width:min(42vw,250px);min-width:150px}.v9-notification{flex-direction:column;gap:10px}.v9-group{padding-left:6px}.panel-head{padding-bottom:5px}}
+@media(max-width:600px){.topbar{top:12px;right:12px;width:min(42vw,250px);min-width:150px}.v9-notification{gap:10px}.v9-group{padding-left:6px}.panel-head{padding-bottom:5px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 </style>
 </head>
@@ -148,14 +148,12 @@ else if(!orbFrame){last=0;orbFrame=requestAnimationFrame(frame)}
     return await response.json();
   }
   async function refreshV9State(){
-    const status=$("v9SyncStatus");
     try{
       const state=await fetchStateJson();
       const daily=state&&state.__daily_formal_signals__;
       if(!daily||!Array.isArray(daily.signals))throw new Error("状态格式无效");
       if(daily.date!==todayBeijing()){
         renderMessage("等待今日扫描");
-        if(status)status.textContent="V9 · 等待今日扫描（状态日期 "+String(daily.date||"未知")+"）";
         return;
       }
       const seen=new Set();
@@ -166,10 +164,8 @@ else if(!orbFrame){last=0;orbFrame=requestAnimationFrame(frame)}
       }
       renderSymbols("v9Stocks",STOCK_ORDER.filter(s=>seen.has(s)));
       renderSymbols("v9Core",CORE_ORDER.filter(s=>seen.has(s)));
-      if(status)status.textContent="V9·信号系统";
     }catch(error){
       const detail=String(error&&error.message||error).slice(0,70);
-      if(status)status.textContent="V9 · 读取失败："+detail;
       renderMessage("读取失败："+detail);
       console.warn("V9 latest-events state unavailable:",error);
     }
