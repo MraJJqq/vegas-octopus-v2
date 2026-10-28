@@ -253,7 +253,8 @@ function updatePageFade(){
  focusSlots.forEach(slot=>{
   const r=slot.getBoundingClientRect(),slotCenter=r.top+r.height/2,distance=Math.abs(slotCenter-center),t=Math.min(1,distance/range),ease=t*t*(3-2*t);
   const visible=Math.max(0,Math.min(r.bottom,view.bottom)-Math.max(r.top,view.top)),ratio=Math.min(1,visible/Math.max(1,r.height));
-  const opacity=(1-.72*ease)*Math.min(1,ratio*1.8),blur=2.8*ease+(1-ratio)*1.2;
+  const isFocused=distance<view.height*.23&&ratio>=.98;
+  const opacity=isFocused?1:(1-.72*ease)*Math.min(1,ratio*1.8),blur=isFocused?0:2.8*ease+(1-ratio)*1.2;
   slot.style.setProperty('--mc-page-opacity',Math.max(.025,opacity).toFixed(3));
   slot.style.setProperty('--mc-page-blur',Math.max(0,blur).toFixed(2)+'px');
  });
