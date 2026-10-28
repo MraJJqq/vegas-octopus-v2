@@ -84,7 +84,6 @@
           } else if (state.visibleSince === null) {
             state.visibleSince = time;
           }
-          // 指数缓动不依赖帧率；不可见卡片不保留残余数据流。
           if (eligible) {
             state.opacity += (target - state.opacity) * (1 - Math.exp(-dt / FADE_SECONDS));
           }
@@ -131,12 +130,10 @@
             const controlX = (startX + endX) / 2;
             const color = 'hsl(' + COLORS[p.color] + ',100%,62%)';
 
-            // 数据流从卡片端逐步向发光球延伸，避免滚动时球端提前出现整条连线。
             const phase = ((time - state.visibleSince) * p.speed) % 1;
             const inverse = 1 - phase;
             const particleX = inverse * inverse * startX + 2 * inverse * phase * controlX + phase * phase * endX;
             const particleY = inverse * inverse * startY + 2 * inverse * phase * startY + phase * phase * endY;
-            // De Casteljau：求出截至当前粒子位置的二次贝塞尔曲线控制点。
             const partialControlX = startX + phase * (controlX - startX);
             const partialControlY = startY;
             ctx.beginPath();
