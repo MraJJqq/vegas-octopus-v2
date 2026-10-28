@@ -257,30 +257,27 @@ function updateFocusScale(){
 function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(updateFocusScale)}
 let wheelTarget=left.scrollTop,wheelFrame=0,wheelVelocity=0,wheelLastTime=0,loopBusy=false;
 function cardStep(){
- const slot=left.firstElementChild;
- if(!slot)return 0;
- return slot.getBoundingClientRect().height+(parseFloat(getComputedStyle(left).rowGap)||0);
+ const first=left.firstElementChild;
+ return first?first.getBoundingClientRect().height+(parseFloat(getComputedStyle(left).rowGap)||0):0;
 }
-function rotateCards(){
+function normalizeLoopPosition(){
  if(loopBusy||focusSlots.length<2)return;
  const step=cardStep();
  if(step<1)return;
  loopBusy=true;
  let top=left.scrollTop,guard=0;
- if(top>=step){
-  while(top>=step&&guard++<focusSlots.length){
-   const first=focusSlots.shift();
-   left.appendChild(first);
-   top-=step;
-   wheelTarget-=step;
-  }
- }else if(top<=0){
-  while(top<=0&&guard++<focusSlots.length){
-   const last=focusSlots.pop();
-   left.insertBefore(last,left.firstElementChild);
-   top+=step;
-   wheelTarget+=step;
-  }
+ while(top>=step&&guard++<focusSlots.length){
+  const first=focusSlots.shift();
+  left.appendChild(first);
+  top-=step;
+  wheelTarget-=step;
+ }
+ guard=0;
+ while(top<=0&&wheelVelocity<0&&guard++<focusSlots.length){
+  const last=focusSlots.pop();
+  left.insertBefore(last,left.firstElementChild);
+  top+=step;
+  wheelTarget+=step;
  }
  if(Math.abs(top-left.scrollTop)>.1)left.scrollTop=top;
  loopBusy=false;
@@ -289,20 +286,16 @@ function smoothWheelStep(now){
  if(!wheelLastTime)wheelLastTime=now;
  const dt=Math.min(32,Math.max(1,now-wheelLastTime));
  wheelLastTime=now;
- const current=left.scrollTop,diff=wheelTarget-current;
- left.scrollTop=current+diff*(1-Math.exp(-dt/48));
- rotateCards();
- wheelTarget=left.scrollTop+(wheelTarget-left.scrollTop);
- wheelVelocity*=Math.exp(-dt/210);
- if(Math.abs(wheelVelocity)>.012){
+ const current=left.scrollTop;
+ const diff=wheelTarget-current;
+ left.scrollTop=current+diff*(1-Math.exp(-dt/55));
+ normalizeLoopPosition();
+ wheelVelocity*=Math.exp(-dt/260);
+ if(Math.abs(wheelVelocity)>.01){
   wheelTarget+=wheelVelocity*dt;
-  const step=cardStep();
-  const max=Math.max(0,left.scrollHeight-left.clientHeight);
-  if(left.scrollTop<=0&&wheelVelocity<0)left.scrollTop=Math.max(1,step);
-  if(left.scrollTop>=max&&wheelVelocity>0)left.scrollTop=Math.max(0,max-step);
  }else wheelVelocity=0;
  queueFocusScale();
- if(Math.abs(wheelTarget-left.scrollTop)<.5&&Math.abs(wheelVelocity)<.012){
+ if(Math.abs(wheelTarget-left.scrollTop)<.6&&Math.abs(wheelVelocity)<.01){
   wheelTarget=left.scrollTop;wheelFrame=0;wheelLastTime=0;return;
  }
  wheelFrame=requestAnimationFrame(smoothWheelStep);
@@ -312,16 +305,16 @@ left.addEventListener('wheel',e=>{
  e.preventDefault();
  const unit=e.deltaMode===1?16:e.deltaMode===2?left.clientHeight:1;
  const delta=e.deltaY*unit;
- wheelTarget+=delta*1.1;
- wheelVelocity=Math.max(-1.4,Math.min(1.4,wheelVelocity+delta*.018));
+ if(!wheelFrame)wheelTarget=left.scrollTop;
+ wheelTarget+=delta*1.05;
+ wheelVelocity=Math.max(-1.2,Math.min(1.2,wheelVelocity+delta*.016));
  if(!wheelFrame)wheelFrame=requestAnimationFrame(smoothWheelStep);
 },{passive:false});
 left.addEventListener('scroll',()=>{
  if(!wheelFrame){wheelTarget=left.scrollTop;wheelVelocity=0}
- rotateCards();
  queueFocusScale();
 },{passive:true});
-left.addEventListener('touchstart',()=>{wheelVelocity=0},{passive:true});
+left.addEventListener('touchstart',()=>{wheelVelocity=0;wheelTarget=left.scrollTop},{passive:true});
 left.addEventListener('touchend',()=>{wheelTarget=left.scrollTop;wheelVelocity=0},{passive:true});
 window.addEventListener('resize',queueFocusScale,{passive:true});
 left.style.scrollSnapType='none';
