@@ -8,12 +8,12 @@
 <style>
 :root{color-scheme:dark;--text:#e8f5ff;--cyan:#31d9ff}
 *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
-html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#02040a;color:var(--text);font:13px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;overscroll-behavior-y:none;background:#02040a;color:var(--text);font:13px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
 body{position:fixed;inset:0;background:#02040a}
 /* 第一层：全页面统一深邃黑暗背景；后续模块不得另建底色层。 */
 body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:#02040a}
 /* 页面容器透明，所有内容叠加在第一层背景之上。 */
-.app{position:relative;z-index:1;width:100%;height:100dvh;min-height:0;padding:0;background:transparent;overflow:hidden}
+.app{position:relative;z-index:1;width:100%;height:100dvh;min-height:0;padding:0;background:transparent;overflow:hidden;overscroll-behavior:none;overscroll-behavior-y:none}
 /* 第二层：最新事件悬浮模块。 */
 .topbar{position:absolute;z-index:3;top:clamp(12px,2.2vh,28px);right:clamp(12px,2.2vw,32px);width:clamp(150px,22vw,320px);min-width:0;max-height:calc(100dvh - 24px);overflow:hidden;pointer-events:none}
 .event-top-card{width:100%;min-width:0;min-height:0;max-height:100%;padding:0;display:flex;flex-direction:column;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;pointer-events:auto}
@@ -334,6 +334,7 @@ function smoothWheelStep(now){
 left.addEventListener('wheel',e=>{
  if(Math.abs(e.deltaY)<.1)return;
  e.preventDefault();
+ e.stopPropagation();
  const unit=e.deltaMode===1?16:e.deltaMode===2?left.clientHeight:1;
  const delta=e.deltaY*unit;
  loopDirection=delta<0?-1:1;
@@ -346,8 +347,17 @@ left.addEventListener('scroll',()=>{
  if(!wheelFrame){wheelTarget=left.scrollTop;wheelVelocity=0}
  queueFocusScale();
 },{passive:true});
-left.addEventListener('touchstart',()=>{wheelVelocity=0;wheelTarget=left.scrollTop},{passive:true});
-left.addEventListener('touchend',()=>{wheelTarget=left.scrollTop;wheelVelocity=0},{passive:true});
+let touchStartY=0,touchStartScrollTop=0;
+left.addEventListener('touchstart',e=>{wheelVelocity=0;wheelTarget=left.scrollTop;touchStartY=e.touches[0]?.clientY??0;touchStartScrollTop=left.scrollTop},{passive:true});
+left.addEventListener('touchmove',e=>{
+ const touch=e.touches[0];if(!touch)return;
+ const dy=touch.clientY-touchStartY;
+ const atTop=left.scrollTop<=0||touchStartScrollTop<=0;
+ const atBottom=left.scrollTop+left.clientHeight>=left.scrollHeight-1;
+ if((atTop&&dy>0)||(atBottom&&dy<0))e.preventDefault();
+},{passive:false});
+left.addEventListener('touchend',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;touchStartScrollTop=0},{passive:true});
+left.addEventListener('touchcancel',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;touchStartScrollTop=0},{passive:true});
 window.addEventListener('resize',queueFocusScale,{passive:true});
 left.style.scrollBehavior='auto';
 queueFocusScale();
