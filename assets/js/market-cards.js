@@ -5,7 +5,7 @@ const P=[
 ];
 const REALITY_STOCKS=new Set(P.slice(0,23).map(x=>x[0]));
 const fmt=p=>p>=100?p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):p>=1?p.toFixed(3):p.toFixed(4);
-const S=P.map(([s,api],i)=>({s,api,i,p:0,o:0,candles:[],candleUpdatedAt:0,ready:false}));
+const S=P.map(([s,api],i)=>({s,api,i,p:0,o:0,candles:[],candleUpdatedAt:0,candleLoading:false,ready:false}));
 const left=document.getElementById('mc-left');
 S.forEach(d=>{
  left.insertAdjacentHTML('beforeend',`<div class="mc-slot"><div class="mc-float" style="--d:${-d.i*.9}s"><div class="mc-card" id="mc-c${d.i}" data-symbol="${d.s}"><div class="mc-bg"></div><i class="mc-g1"></i><i class="mc-g2"></i><i class="mc-gl"></i><div class="mc-row mc-l2"><span class="mc-coin">${d.s[0]}</span><b class="mc-sym">${d.s}<small>${REALITY_STOCKS.has(d.s)?'/USDT 现货':'/USDT 永续'}</small></b></div><div class="mc-price mc-l4">加载中</div><div class="mc-l3"><span class="mc-pct">--</span></div><canvas class="mc-kline mc-l1" aria-label="${d.s} K线图"></canvas><div class="mc-hl mc-l2">高<span class="mc-hi">--</span>低<span class="mc-lo">--</span></div></div></div><div class="mc-gshadow" style="--d:${-d.i*.9}s"></div></div>`);
@@ -168,6 +168,8 @@ const API='https://api.bitget.com';
 const CANDLE_REFRESH_MS=5*60*1000;
 async function bitgetJson(path){const r=await fetch(API+path,{cache:'no-store'});if(!r.ok)throw new Error('Bitget HTTP '+r.status);const p=await r.json();if(p.code!=='00000'||!Array.isArray(p.data))throw new Error(p.msg||'Bitget response invalid');return p.data}
 async function loadSparkline(d,symbol,isStock){
+ if(d.candleLoading||document.hidden)return;
+ d.candleLoading=true;
  try{
   const params=isStock?new URLSearchParams({category:'SPOT',symbol,interval:'1H',limit:'30'}):new URLSearchParams({symbol,productType:'USDT-FUTURES',granularity:'1H',limit:'30'});
   const path=isStock?'/api/v3/market/candles':'/api/v2/mix/market/candles';
@@ -175,18 +177,35 @@ async function loadSparkline(d,symbol,isStock){
   d.candles=rows.filter(r=>Array.isArray(r)&&Number(r[1])>0&&Number(r[2])>0&&Number(r[3])>0&&Number(r[4])>0).sort((a,b)=>Number(a[0])-Number(b[0])).slice(-30).map(r=>({open:Number(r[1]),high:Number(r[2]),low:Number(r[3]),close:Number(r[4])}));
   d.candleUpdatedAt=Date.now();
  }catch(error){d.candleUpdatedAt=Date.now()-CANDLE_REFRESH_MS+60000;console.warn('[Vegas Octopus] 1H candles failed for '+d.s+':',error)}
+ finally{d.candleLoading=false}
  paint(d)
 }
 let marketLoadInFlight=false;
+let realitySymbolCache=null,realitySymbolCacheAt=0;
+async function runSparkJobs(jobs){
+ for(let i=0;i<jobs.length;i+=4){
+  if(document.hidden)return;
+  await Promise.allSettled(jobs.slice(i,i+4).map(job=>job()));
+ }
+}
 async function loadMarketData(){
  if(marketLoadInFlight)return;marketLoadInFlight=true;
  try{
-  const results=await Promise.allSettled([bitgetJson('/api/v2/mix/market/tickers?productType=USDT-FUTURES'),bitgetJson('/api/v3/market/tickers?category=SPOT'),bitgetJson('/api/v3/reality/market/stock-info')]);
-  const [futureResult,spotResult,stockResult]=results;
+  const needRealityDirectory=!realitySymbolCache||Date.now()-realitySymbolCacheAt>5*60*1000;
+  const requests=[bitgetJson('/api/v2/mix/market/tickers?productType=USDT-FUTURES'),bitgetJson('/api/v3/market/tickers?category=SPOT')];
+  if(needRealityDirectory)requests.push(bitgetJson('/api/v3/reality/market/stock-info'));
+  const results=await Promise.allSettled(requests);
+  const [futureResult,spotResult]=results;
+  const stockResult=needRealityDirectory?results[2]:null;
   const futures=futureResult.status==='fulfilled'?new Map(futureResult.value.map(t=>[String(t.symbol).toUpperCase(),t])):null;
   const spots=spotResult.status==='fulfilled'?new Map(spotResult.value.map(t=>[String(t.symbol).toUpperCase(),t])):null;
-  const realitySymbols=stockResult.status==='fulfilled'?new Map(stockResult.value.filter(s=>s&&s.code&&s.symbol).map(s=>[String(s.code).toUpperCase(),String(s.symbol)])):null;
-  if(realitySymbols){const sk=stockResult.value.find(s=>s&&s.symbol&&(String(s.code||'').toUpperCase().replace(/[^A-Z0-9]/g,'')==='SKHY'||/SK\s*HYNIX/i.test(String(s.name||''))||/RSKHYUSDT/i.test(String(s.symbol||''))));if(sk)realitySymbols.set('SKHYNIX',String(sk.symbol))}
+  let realitySymbols=realitySymbolCache;
+  if(needRealityDirectory&&stockResult&&stockResult.status==='fulfilled'){
+   realitySymbols=new Map(stockResult.value.filter(s=>s&&s.code&&s.symbol).map(s=>[String(s.code).toUpperCase(),String(s.symbol)]));
+   const sk=stockResult.value.find(s=>s&&s.symbol&&(String(s.code||'').toUpperCase().replace(/[^A-Z0-9]/g,'')==='SKHY'||/SK\s*HYNIX/i.test(String(s.name||''))||/RSKHYUSDT/i.test(String(s.symbol||''))));
+   if(sk)realitySymbols.set('SKHYNIX',String(sk.symbol));
+   realitySymbolCache=realitySymbols;realitySymbolCacheAt=Date.now();
+  }
   const sparkJobs=[];
   S.forEach(d=>{
    if(REALITY_STOCKS.has(d.s)){
@@ -205,7 +224,7 @@ async function loadMarketData(){
     d.p=last;d.o=open;d.ready=true;paint(d);if(Date.now()-d.candleUpdatedAt>=CANDLE_REFRESH_MS)sparkJobs.push(()=>loadSparkline(d,d.api,false));
    }
   });
-  for(let i=0;i<sparkJobs.length;i+=8)await Promise.allSettled(sparkJobs.slice(i,i+8).map(job=>job()));
+  if(sparkJobs.length)runSparkJobs(sparkJobs);
  }catch(error){console.warn('[Vegas Octopus] market feed failed:',error)}finally{marketLoadInFlight=false}
 }
 window.VegasApplyFormalSignals=function(){
