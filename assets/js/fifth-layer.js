@@ -376,9 +376,18 @@
       const i=start+j,x=xAt(i),up=c.c>=c.o,color=up?'#2ee6a6':'#ff5c7c';
       ctx.strokeStyle=color;ctx.lineWidth=Math.max(1,Math.min(1.5,step*.18));
       ctx.beginPath();ctx.moveTo(x,yAt(c.h));ctx.lineTo(x,yAt(c.l));ctx.stroke();
-      ctx.fillStyle=color;
       const y1=yAt(Math.max(c.o,c.c)),y2=yAt(Math.min(c.o,c.c));
-      ctx.fillRect(x-bodyW/2,y1,bodyW,Math.max(1,y2-y1));
+      const bodyY=y1,bodyH=Math.max(1,y2-y1),bodyX=x-bodyW/2;
+      if(up){
+        // Exchange-style hollow bullish candle: green outline, transparent body.
+        ctx.strokeStyle=color;
+        ctx.lineWidth=Math.max(1,Math.min(1.5,step*.18));
+        ctx.strokeRect(bodyX,bodyY,bodyW,bodyH);
+      }else{
+        // Bearish candles remain filled, matching the exchange's hollow-up mode.
+        ctx.fillStyle=color;
+        ctx.fillRect(bodyX,bodyY,bodyW,bodyH);
+      }
     });
     state.series.forEach(s=>{
       ctx.strokeStyle=s.color;ctx.lineWidth=s.width;ctx.globalAlpha=.92;ctx.beginPath();
