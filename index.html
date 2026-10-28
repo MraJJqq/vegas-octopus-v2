@@ -267,19 +267,22 @@ function rotateCards(){
  if(step<1)return;
  loopBusy=true;
  let top=left.scrollTop,guard=0;
- while(top>=step&&guard++<focusSlots.length){
-  const first=focusSlots.shift();
-  left.appendChild(first);
-  top-=step;
-  wheelTarget-=step;
+ if(top>=step){
+  while(top>=step&&guard++<focusSlots.length){
+   const first=focusSlots.shift();
+   left.appendChild(first);
+   top-=step;
+   wheelTarget-=step;
+  }
+ }else if(top<=0){
+  while(top<=0&&guard++<focusSlots.length){
+   const last=focusSlots.pop();
+   left.insertBefore(last,left.firstElementChild);
+   top+=step;
+   wheelTarget+=step;
+  }
  }
- while(top<=0&&guard++<focusSlots.length){
-  const last=focusSlots.pop();
-  left.insertBefore(last,left.firstElementChild);
-  top+=step;
-  wheelTarget+=step;
- }
- if(top!==left.scrollTop)left.scrollTop=top;
+ if(Math.abs(top-left.scrollTop)>.1)left.scrollTop=top;
  loopBusy=false;
 }
 function smoothWheelStep(now){
