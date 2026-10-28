@@ -137,7 +137,8 @@
             smoothEndpoint.y += (targetY - smoothEndpoint.y) * follow;
             const endX = smoothEndpoint.x, endY = smoothEndpoint.y;
             const startX = orbCenterX >= centerX ? rightX : leftX;
-            const startY = centerY + (j - (STREAMS_PER_CARD - 1) / 2) * 3.5;
+            // 卡片出口先收束成窄束，再沿曲线向不同球面端点逐渐散开。
+            const startY = centerY + (j - (STREAMS_PER_CARD - 1) / 2) * 0.55;
             const controlX = (startX + endX) / 2;
             const color = 'hsl(' + COLORS[p.color] + ',100%,62%)';
 
