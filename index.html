@@ -706,7 +706,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
       if(range.end>range.start) state.viewCount=range.end-range.start;
       draw();
       state.apiSymbol=apiSymbol;
-      if(!isRefresh && rows.length >= 900) loadOlderHistory(generation,apiSymbol);
+      // Keep chart interaction local; do not fetch older pages as a side effect of opening or dragging.
     } catch(error) {
       if(generation!==state.generation || request!==state.dataRequest || overlay.hidden) return;
       if(!state.candles.length) {
@@ -803,14 +803,17 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     // Two-axis free pan: horizontal motion moves the time window; vertical motion moves price levels.
     // Keep time calculations anchored to pointer-down to avoid accumulated drift over repeated moves.
     const timeShift=-dx*(4*60*60*1000)/Math.max(.01,step);
-    state.startTime=state.drag.baseStart+timeShift;
-    state.endTime=state.drag.baseEnd+timeShift;
+    const oldest=state.candles[0]?.t;
+    const newest=state.candles[state.candles.length-1]?.t;
+    const span=Math.max(4*60*60*1000,state.drag.baseEnd-state.drag.baseStart);
+    // Pan only inside the data already loaded; dragging must not trigger a
+    // background history request or make the viewport jump to another range.
+    const minStart=oldest;
+    const maxStart=Math.max(oldest,newest-span);
+    state.startTime=Math.max(minStart,Math.min(maxStart,state.drag.baseStart+timeShift));
+    state.endTime=state.startTime+span;
     state.priceShift=Math.max(-state.height*.32,Math.min(state.height*.32,state.drag.basePriceShift+dy));
     draw();
-    const oldest=state.candles[0]?.t;
-    if(Number.isFinite(oldest) && state.startTime<oldest+100*4*60*60*1000 && state.apiSymbol) {
-      loadOlderHistory(state.generation,state.apiSymbol);
-    }
   }
   function pointDistance(p,s) {
     const dx=s.x2-s.x1,dy=s.y2-s.y1,len=dx*dx+dy*dy;
