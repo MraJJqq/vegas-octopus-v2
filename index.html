@@ -1152,7 +1152,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 </script>
 
 <script id="octopus-square-scatter-layout-script">
-/* Vegas 章鱼｜27张行情卡片：动态检测卡片生成与舞台尺寸，所有定位均限制在可视舞台内。 */
+/* Vegas 章鱼｜27张行情卡片：按舞台与视口交集布局，确保卡片主体和悬停放大范围都留在屏幕内。 */
 (function(){
   function start(){
     const grid=document.getElementById('octopusMarketCardGrid');
@@ -1163,26 +1163,31 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       scheduled=false;
       const cards=[...grid.querySelectorAll('.pos')];
       if(!cards.length)return;
-      const W=Math.max(1,stage.clientWidth),H=Math.max(1,stage.clientHeight);
+      const rect=grid.getBoundingClientRect();
+      // Work only inside the part of the stage actually visible in the current viewport.
+      const left=Math.max(0,-rect.left),right=Math.min(rect.width,window.innerWidth-rect.left);
+      const top=Math.max(0,-rect.top),bottom=Math.min(rect.height,window.innerHeight-rect.top);
+      const W=Math.max(1,right-left),H=Math.max(1,bottom-top);
       const mobile=W<=760,cols=4,rows=Math.ceil(cards.length/cols);
-      const centers=mobile?[.12,.35,.65,.88]:[.08,.245,.755,.92];
-      const sideMargin=Math.max(2,W*.006);
+      const centers=[.12,.35,.65,.88];
+      const marginX=Math.max(2,Math.min(10,W*.012));
+      const marginY=Math.max(2,Math.min(8,H*.012));
       const rowStep=H/rows;
       const nearestGap=Math.min(...centers.slice(1).map((v,i)=>(v-centers[i])*W));
-      // Limit dimensions first, then reserve the full 1.5x hover footprint at every edge.
-      const cardW=Math.min(mobile?108:188,W*(mobile?.215:.145),nearestGap*.72,Math.max(1,(W-sideMargin*2)/2));
-      const cardH=Math.min(mobile?54:78,rowStep*.62,H/rows*.62);
+      // Reserve 1.5x card dimensions for the hover scale and keep a small edge margin.
+      const cardW=Math.max(1,Math.min(mobile?108:188,nearestGap/1.56,(W-2*marginX)/2));
+      const cardH=Math.max(1,Math.min(mobile?54:78,(rowStep-2*marginY)/1.56));
       const halfW=cardW*.78,halfH=cardH*.78;
       const ordered=cards.slice().sort((a,b)=>(a.querySelector('.sym')?.textContent||'').trim().localeCompare((b.querySelector('.sym')?.textContent||'').trim()));
       ordered.forEach((el,i)=>{
         const col=i%cols,row=Math.floor(i/cols);
         const seed=(i*37+11)%17;
-        const jitterX=(seed/16-.5)*(mobile?W*.008:W*.01);
-        const jitterY=(((i*13+5)%11)/10-.5)*Math.min(2,rowStep*.025);
-        const minX=Math.min(W/2,sideMargin+halfW),maxX=Math.max(minX,W-sideMargin-halfW);
-        const minY=Math.min(H/2,halfH+2),maxY=Math.max(minY,H-halfH-2);
-        const x=Math.max(minX,Math.min(maxX,W*centers[col]+jitterX));
-        const y=Math.max(minY,Math.min(maxY,(row+.5)*rowStep+jitterY));
+        const jitterX=(seed/16-.5)*Math.min(W*.008,2);
+        const jitterY=(((i*13+5)%11)/10-.5)*Math.min(2,rowStep*.02);
+        const minX=left+marginX+halfW,maxX=left+W-marginX-halfW;
+        const minY=top+marginY+halfH,maxY=top+H-marginY-halfH;
+        const x=Math.max(minX,Math.min(maxX,left+W*centers[col]+jitterX));
+        const y=Math.max(minY,Math.min(maxY,top+(row+.5)*rowStep+jitterY));
         const st=el.style;
         st.setProperty('position','absolute','important');
         st.setProperty('left',x+'px','important');
@@ -1202,15 +1207,17 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       grid.style.setProperty('inset','0','important');
       grid.style.setProperty('width','100%','important');
       grid.style.setProperty('height','100%','important');
-      grid.style.setProperty('overflow','hidden','important');
+      grid.style.setProperty('overflow','visible','important');
       grid.style.setProperty('perspective','none','important');
       stage.style.setProperty('position','relative','important');
-      stage.style.setProperty('overflow','hidden','important');
+      // Do not clip cards at the stage edge; their coordinates are clamped to the viewport intersection.
+      stage.style.setProperty('overflow','visible','important');
     }
     function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(sizeAndPlace)}
     sizeAndPlace();
     if(window.ResizeObserver)new ResizeObserver(schedule).observe(stage);
     window.addEventListener('resize',schedule,{passive:true});
+    window.addEventListener('orientationchange',schedule,{passive:true});
     new MutationObserver(schedule).observe(grid,{childList:true,subtree:true});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
