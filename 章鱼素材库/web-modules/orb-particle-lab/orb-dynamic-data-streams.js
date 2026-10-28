@@ -8,7 +8,7 @@
   const particles = Array.from({ length: 300 }, (_, i) => ({
     color: i % COLORS.length,
     point: Math.floor(Math.random() * 900),
-    speed: 0.18 + Math.random() * 0.25
+    speed: 0.30 + Math.random() * 0.12
   }));
 
   function start() {
@@ -69,7 +69,7 @@
           const slotOpacity = slot ? Number.parseFloat(getComputedStyle(slot).opacity) : 1;
           let state = states.get(card);
           if (!state) {
-            state = { opacity: 0, visibleSince: null };
+            state = { opacity: 0, visibleSince: null, connected: false };
             states.set(card, state);
             groups.set(card, nextGroup++);
           }
@@ -80,9 +80,11 @@
           const eligible = visibleRatio >= 0.18 && slotVisibility >= 0.08;
           if (!eligible) {
             state.visibleSince = null;
+            state.connected = false;
             state.opacity = 0;
           } else if (state.visibleSince === null) {
             state.visibleSince = time;
+            state.connected = false;
           }
           if (eligible) {
             state.opacity += (target - state.opacity) * (1 - Math.exp(-dt / FADE_SECONDS));
@@ -130,15 +132,22 @@
             const controlX = (startX + endX) / 2;
             const color = 'hsl(' + COLORS[p.color] + ',100%,62%)';
 
-            const phase = ((time - state.visibleSince) * p.speed) % 1;
+            const elapsed = Math.max(0, time - state.visibleSince);
+            const travel = elapsed * p.speed;
+            if (travel >= 1) state.connected = true;
+            const phase = travel % 1;
             const inverse = 1 - phase;
             const particleX = inverse * inverse * startX + 2 * inverse * phase * controlX + phase * phase * endX;
             const particleY = inverse * inverse * startY + 2 * inverse * phase * startY + phase * phase * endY;
-            const partialControlX = startX + phase * (controlX - startX);
-            const partialControlY = startY;
             ctx.beginPath();
             ctx.moveTo(startX, startY);
-            ctx.quadraticCurveTo(partialControlX, partialControlY, particleX, particleY);
+            if (state.connected) {
+              // 首次抵达发光球后保留完整连接线，粒子继续沿线循环运动。
+              ctx.quadraticCurveTo(controlX, startY, endX, endY);
+            } else {
+              const partialControlX = startX + phase * (controlX - startX);
+              ctx.quadraticCurveTo(partialControlX, startY, particleX, particleY);
+            }
             ctx.strokeStyle = color;
             ctx.globalAlpha = Math.min(1, 0.26 * visibility * opacity);
             ctx.shadowBlur = 0;
