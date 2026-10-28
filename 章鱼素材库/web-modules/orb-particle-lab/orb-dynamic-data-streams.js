@@ -1,133 +1,171 @@
-/* Vegas 章鱼｜第四层：七色数据流连接正式信号卡片与发光球
- * 每张可见正式信号卡片绘制 14 根数据流，使用实时球面投影点作为连接终点。
- * 不修改行情、信号识别或正式信号推送规则。
- */
+/* Vegas 章鱼｜第四层：正式信号卡片至发光球的数据流 */
 (function () {
   'use strict';
-  const SH = [0, 28, 52, 150, 190, 245, 320];
-  const F = [];
-  for (let i = 0; i < 300; i++) {
-    F.push({ s: i % 7, t: Math.floor(Math.random() * 900), o: Math.random(), v: 0.18 + Math.random() * 0.25 });
-  }
+
+  const COLORS = [0, 28, 52, 150, 190, 245, 320];
+  const STREAMS_PER_CARD = 14;
+  const FADE_SECONDS = 0.14;
+  const particles = Array.from({ length: 300 }, (_, i) => ({
+    color: i % COLORS.length,
+    point: Math.floor(Math.random() * 900),
+    phase: Math.random(),
+    speed: 0.18 + Math.random() * 0.25
+  }));
 
   function start() {
     const app = document.querySelector('.app');
     const orbCanvas = document.getElementById('orb-core-canvas');
     if (!app || !orbCanvas || document.getElementById('octopusDynamicDataStreams')) return;
-    const cv = document.createElement('canvas');
-    cv.id = 'octopusDynamicDataStreams';
-    Object.assign(cv.style, { position:'absolute', inset:'0', width:'100%', height:'100%', pointerEvents:'none', zIndex:'2' });
+
+    const canvas = document.createElement('canvas');
+    canvas.id = 'octopusDynamicDataStreams';
+    Object.assign(canvas.style, {
+      position: 'absolute', inset: '0', width: '100%', height: '100%',
+      pointerEvents: 'none', zIndex: '2'
+    });
     const cardLayer = document.getElementById('market-cards-layer');
-    if (cardLayer && cardLayer.parentElement === app) app.insertBefore(cv, cardLayer);
-    else app.appendChild(cv);
-    const x = cv.getContext('2d');
-    let W=1,H=1,dpr=1,raf=0;
-    const cardStates=new WeakMap();
-    const cardGroups=new WeakMap();
-    let nextGroup=0,lastFrameMs=0;
+    app.insertBefore(canvas, cardLayer?.parentElement === app ? cardLayer : null);
 
-    function rs() {
-      const r=app.getBoundingClientRect();
-      dpr=window.devicePixelRatio||1; W=r.width; H=r.height;
-      cv.width=Math.max(1,Math.round(W*dpr)); cv.height=Math.max(1,Math.round(H*dpr));
-      x.setTransform(dpr,0,0,dpr,0,0);
-    }
+    const ctx = canvas.getContext('2d');
+    const states = new WeakMap();
+    const groups = new WeakMap();
+    let width = 1, height = 1, dpr = 1, raf = 0, nextGroup = 0, lastTime = 0;
 
-    function getProjectedOrb() {
-      // 直接读取发光球自身每帧生成的投影点，确保数据流终点与球面粒子完全重合。
-      const points=window.VegasOrbProjectedPoints;
-      return Array.isArray(points) && points.length ? points : null;
+    function resize() {
+      const rect = app.getBoundingClientRect();
+      dpr = window.devicePixelRatio || 1;
+      width = rect.width;
+      height = rect.height;
+      canvas.width = Math.max(1, Math.round(width * dpr));
+      canvas.height = Math.max(1, Math.round(height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
     function frame(ms) {
-      const t=ms/1000;
-      const dt=lastFrameMs ? Math.min(.1,Math.max(0,(ms-lastFrameMs)/1000)) : 1/60;
-      lastFrameMs=ms;
-      x.clearRect(0,0,W,H);
-      const pr=getProjectedOrb();
-      const appRect=app.getBoundingClientRect();
-      const cards=Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]'));
-      const targets=[];
-      cards.forEach(function(card){
-        const rect=card.getBoundingClientRect();
-        const scroller=card.closest('.mc-side');
-        const clip=scroller ? scroller.getBoundingClientRect() : appRect;
-        const left=Math.max(rect.left,clip.left,appRect.left);
-        const right=Math.min(rect.right,clip.right,appRect.right);
-        const top=Math.max(rect.top,clip.top,appRect.top);
-        const bottom=Math.min(rect.bottom,clip.bottom,appRect.bottom);
-        const visibleArea=Math.max(0,right-left)*Math.max(0,bottom-top);
-        const totalArea=Math.max(1,rect.width*rect.height);
-        const ratio=rect.width>0&&rect.height>0 ? Math.min(1,visibleArea/totalArea) : 0;
-        const slot=card.closest('.mc-slot');
-        const slotOpacity=slot ? Number.parseFloat(getComputedStyle(slot).opacity) : 1;
-        let state=cardStates.get(card);
-        if(!state){state={opacity:0};cardStates.set(card,state);}
-        // 与滚动卡片的可见/淡化状态同步；离开滚动视口后平滑消失，滚回后平滑出现。
-        const targetOpacity=ratio>0 ? Math.max(0,Math.min(1,ratio*(Number.isFinite(slotOpacity)?slotOpacity:1))) : 0;
-        const step=Math.min(1,dt/.18);
-        state.opacity+=(targetOpacity-state.opacity)*step;
-        if(state.opacity>.005 && rect.width>0 && rect.height>0) {
-          if(!cardGroups.has(card)){cardGroups.set(card,nextGroup++);}
-          targets.push({rect:rect,opacity:state.opacity,group:cardGroups.get(card)});
-        }
-      });
-      if (pr && targets.length) {
-        // 每张卡片固定绘制 14 根数据流，七色循环两次。
-        x.globalCompositeOperation='lighter';
-        x.lineWidth=1.2;
-        targets.forEach(function(target){
-          const cardR=target.rect;
-          const cardCenterX=cardR.left+cardR.width/2-appRect.left;
-          const cardCenterY=cardR.top+cardR.height/2-appRect.top;
-          const cardLeft=cardR.left-appRect.left;
-          const cardRight=cardR.right-appRect.left;
-          const groupBase=(target.group*14)%(F.length-13);
-          for(let j=0;j<14;j++){
-            const f=F[groupBase+j];
-            let q=pr[f.t];
-            // 球面点过暗时，改用最近的可见投影粒子，避免单组数据流数量缺失。
-            if(!q || q.length<4) continue;
-            if(q[3]<.08){
-              let best=null,bestScore=Infinity;
-              for(let k=0;k<pr.length;k++){
-                const candidate=pr[k];
-                if(!candidate || candidate.length<4 || candidate[3]<.08) continue;
-                const score=Math.abs(candidate[0]-cardCenterX)+Math.abs(candidate[1]-cardCenterY);
-                if(score<bestScore){best=candidate;bestScore=score;}
+      const time = ms / 1000;
+      const dt = lastTime ? Math.min(0.1, (ms - lastTime) / 1000) : 1 / 60;
+      lastTime = ms;
+      ctx.clearRect(0, 0, width, height);
+
+      const points = window.VegasOrbProjectedPoints;
+      if (Array.isArray(points) && points.length) {
+        const appRect = app.getBoundingClientRect();
+        const cards = document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]');
+        const targets = [];
+
+        cards.forEach(card => {
+          const rect = card.getBoundingClientRect();
+          const scroller = card.closest('.mc-side');
+          const clip = scroller ? scroller.getBoundingClientRect() : appRect;
+          const visibleWidth = Math.max(0, Math.min(rect.right, clip.right, appRect.right) - Math.max(rect.left, clip.left, appRect.left));
+          const visibleHeight = Math.max(0, Math.min(rect.bottom, clip.bottom, appRect.bottom) - Math.max(rect.top, clip.top, appRect.top));
+          const visibleRatio = rect.width > 0 && rect.height > 0
+            ? Math.min(1, visibleWidth * visibleHeight / (rect.width * rect.height)) : 0;
+          const slot = card.closest('.mc-slot');
+          const slotOpacity = slot ? Number.parseFloat(getComputedStyle(slot).opacity) : 1;
+          let state = states.get(card);
+          if (!state) {
+            state = { opacity: 0 };
+            states.set(card, state);
+            groups.set(card, nextGroup++);
+          }
+
+          const target = visibleRatio * (Number.isFinite(slotOpacity) ? Math.max(0, Math.min(1, slotOpacity)) : 1);
+          // 指数缓动不依赖帧率，滚动进入/离开时更自然。
+          state.opacity += (target - state.opacity) * (1 - Math.exp(-dt / FADE_SECONDS));
+          if (state.opacity > 0.003 && rect.width > 0 && rect.height > 0) {
+            targets.push({ rect, opacity: state.opacity, group: groups.get(card) });
+          }
+        });
+
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 1.9;
+
+        targets.forEach(({ rect, opacity, group }) => {
+          const centerX = rect.left + rect.width / 2 - appRect.left;
+          const centerY = rect.top + rect.height / 2 - appRect.top;
+          const leftX = rect.left - appRect.left;
+          const rightX = rect.right - appRect.left;
+          const base = (group * STREAMS_PER_CARD) % particles.length;
+
+          for (let j = 0; j < STREAMS_PER_CARD; j++) {
+            const p = particles[(base + j) % particles.length];
+            let point = points[p.point % points.length];
+            if (!point || point.length < 4) continue;
+
+            if (point[3] < 0.08) {
+              let nearest = null, nearestDistance = Infinity;
+              for (let k = 0; k < points.length; k++) {
+                const candidate = points[k];
+                if (!candidate || candidate.length < 4 || candidate[3] < 0.08) continue;
+                const distance = Math.abs(candidate[0] - centerX) + Math.abs(candidate[1] - centerY);
+                if (distance < nearestDistance) {
+                  nearest = candidate;
+                  nearestDistance = distance;
+                }
               }
-              if(best) q=best;
+              if (nearest) point = nearest;
             }
-            const fa=Math.max(.12,Math.min(1,q[3]||0));
-            const endX=q[0],endY=q[1];
-            const startX=endX>=cardCenterX?cardRight:cardLeft;
-            const y0=cardCenterY+(j-6.5)*3.5;
-            const c1x=(startX+endX)*.5;
-            const col='hsl('+SH[f.s]+',100%,62%)';
-            x.strokeStyle=col;x.globalAlpha=.52*fa*target.opacity;
-            x.beginPath();x.moveTo(startX,y0);x.quadraticCurveTo(c1x,y0,endX,endY);x.stroke();
-            const u=(t*f.v+f.o)%1,v=1-u;
-            const px=v*v*startX+2*v*u*c1x+u*u*endX;
-            const py=v*v*y0+2*v*u*y0+u*u*endY;
-            x.globalAlpha=Math.min(1,1.15*fa*target.opacity);x.fillStyle=col;x.shadowColor=col;x.shadowBlur=14;
-            x.beginPath();x.arc(px,py,2.1,0,Math.PI*2);x.fill();x.shadowBlur=0;
+
+            const visibility = Math.max(0.22, Math.min(1, point[3] || 0));
+            const endX = point[0], endY = point[1];
+            const startX = endX >= centerX ? rightX : leftX;
+            const startY = centerY + (j - (STREAMS_PER_CARD - 1) / 2) * 3.5;
+            const controlX = (startX + endX) / 2;
+            const color = 'hsl(' + COLORS[p.color] + ',100%,66%)';
+
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.quadraticCurveTo(controlX, startY, endX, endY);
+            ctx.strokeStyle = color;
+            ctx.globalAlpha = 0.78 * visibility * opacity;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 10;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            const phase = (time * p.speed + p.phase) % 1;
+            const inverse = 1 - phase;
+            const particleX = inverse * inverse * startX + 2 * inverse * phase * controlX + phase * phase * endX;
+            const particleY = inverse * inverse * startY + 2 * inverse * phase * startY + phase * phase * endY;
+            ctx.globalAlpha = Math.min(1, 1.35 * visibility * opacity);
+            ctx.fillStyle = color;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 18;
+            ctx.beginPath();
+            ctx.arc(particleX, particleY, 2.7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
           }
         });
       }
-      x.globalAlpha=1;x.globalCompositeOperation='source-over';
-      raf=requestAnimationFrame(frame);
+
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      raf = requestAnimationFrame(frame);
     }
 
-    window.VegasSignalDataStreams=Object.freeze({refresh:rs});
-    rs();
-    if(window.ResizeObserver)new ResizeObserver(rs).observe(app);
-    window.addEventListener('resize',rs,{passive:true});
-    raf=requestAnimationFrame(frame);
-    document.addEventListener('visibilitychange',function(){
-      if(document.hidden&&raf){cancelAnimationFrame(raf);raf=0;}
-      else if(!document.hidden&&!raf)raf=requestAnimationFrame(frame);
+    window.VegasSignalDataStreams = Object.freeze({ refresh: resize });
+    resize();
+    if (window.ResizeObserver) new ResizeObserver(resize).observe(app);
+    window.addEventListener('resize', resize, { passive: true });
+    raf = requestAnimationFrame(frame);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      } else if (!document.hidden && !raf) {
+        lastTime = 0;
+        raf = requestAnimationFrame(frame);
+      }
     });
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
-  else start();
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  } else {
+    start();
+  }
 })();
