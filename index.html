@@ -709,6 +709,11 @@ fourHourLayer.addEventListener('wheel',e=>{
   redrawActiveFourHour();
 },{passive:false});
 const fourHourSvg=fourHourLayer.querySelector('.o4-chart');
+document.addEventListener('pointerdown',e=>{
+  if(!activeFourHourCard||!fourHourLayer.classList.contains('is-visible'))return;
+  if(fourHourSvg.contains(e.target)||fourHourCloseButton.contains(e.target))return;
+  hideFourHour();
+},true);
 fourHourSvg.style.cursor='grab';
 fourHourSvg.style.touchAction='none';
 const fourHourPointers=new Map();
