@@ -260,8 +260,25 @@ function updatePageFade(){
  });
 }
 function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(()=>{updateFocusScale();updatePageFade();focusFrame=0})}
-let wheelLock=false;
-left.addEventListener('wheel',e=>{if(Math.abs(e.deltaY)<4)return;e.preventDefault();if(wheelLock)return;wheelLock=true;const slot=focusSlots.find(el=>el.getBoundingClientRect().bottom>left.getBoundingClientRect().top+2);const gap=parseFloat(getComputedStyle(left).rowGap)||10;left.scrollBy({top:((slot?slot.offsetHeight:150)+gap)*(e.deltaY>0?1:-1),behavior:'smooth'});setTimeout(()=>{wheelLock=false},420)},{passive:false});
+let wheelTarget=left.scrollTop,wheelFrame=0;
+function smoothWheelStep(){
+ wheelFrame=0;
+ const current=left.scrollTop,diff=wheelTarget-current;
+ if(Math.abs(diff)<.6){left.scrollTop=wheelTarget;queueFocusScale();return}
+ left.scrollTop=current+diff*.18;
+ queueFocusScale();
+ wheelFrame=requestAnimationFrame(smoothWheelStep);
+}
+left.addEventListener('wheel',e=>{
+ if(Math.abs(e.deltaY)<.5)return;
+ e.preventDefault();
+ const unit=e.deltaMode===1?16:e.deltaMode===2?left.clientHeight:1;
+ const delta=e.deltaY*unit;
+ const max=Math.max(0,left.scrollHeight-left.clientHeight);
+ wheelTarget=Math.max(0,Math.min(max,(wheelFrame?wheelTarget:left.scrollTop)+delta*1.15));
+ if(!wheelFrame)wheelFrame=requestAnimationFrame(smoothWheelStep);
+},{passive:false});
+left.addEventListener('scroll',()=>{if(!wheelFrame)wheelTarget=left.scrollTop},{passive:true});
 left.addEventListener('scroll',queueFocusScale,{passive:true});
 window.addEventListener('resize',queueFocusScale,{passive:true});
 queueFocusScale();
