@@ -6,7 +6,7 @@
 
   const style = document.createElement('style');
   style.textContent = `
-  #vegas-fifth-overlay{position:fixed;inset:0;z-index:20;display:none;background:transparent;pointer-events:none}
+  #vegas-fifth-overlay{position:fixed;inset:0;z-index:20;display:none;background:transparent;pointer-events:auto}
   #vegas-fifth-chart{position:absolute;inset:5vh 5vw;width:90vw;height:90vh;display:block;background:transparent;pointer-events:auto;touch-action:none;cursor:crosshair}
   #vegas-fifth-status{position:absolute;left:7vw;top:6vh;color:rgba(210,235,255,.78);font:12px/1.4 Inter,-apple-system,sans-serif;pointer-events:none;text-shadow:0 0 8px #02040a}
   `;
