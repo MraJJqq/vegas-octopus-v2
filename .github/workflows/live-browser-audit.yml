@@ -1,0 +1,126 @@
+name: Temporary Live Browser Integration Audit
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/live-browser-audit.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-browser-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Verify production page in Chromium
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+            const pageErrors = [];
+            await page.addInitScript(() => {
+              window.__fetchCalls = [];
+              const originalFetch = window.fetch.bind(window);
+              window.fetch = async (...args) => {
+                const url = String(args[0] && args[0].url ? args[0].url : args[0]);
+                const started = Date.now();
+                try {
+                  const response = await originalFetch(...args);
+                  window.__fetchCalls.push({ url, started, status: response.status });
+                  return response;
+                } catch (error) {
+                  window.__fetchCalls.push({ url, started, error: String(error) });
+                  throw error;
+                }
+              };
+              window.__wsMessages = [];
+              const NativeWebSocket = window.WebSocket;
+              function TrackedWebSocket(...args) {
+                const socket = new NativeWebSocket(...args);
+                socket.addEventListener('message', event => {
+                  window.__wsMessages.push({ data: String(event.data).slice(0, 500), at: Date.now() });
+                });
+                return socket;
+              }
+              TrackedWebSocket.prototype = NativeWebSocket.prototype;
+              Object.setPrototypeOf(TrackedWebSocket, NativeWebSocket);
+              window.WebSocket = TrackedWebSocket;
+            });
+            page.on('pageerror', error => pageErrors.push(String(error)));
+            await page.goto('https://mrajjqq.github.io/vegas-octopus-v2/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await page.waitForSelector('#mc-c26', { timeout: 30000 });
+            await page.waitForFunction(() => {
+              const cards = [...document.querySelectorAll('#market-cards-layer .mc-card[data-symbol]')];
+              return cards.length === 27 && cards.every(c => {
+                const p = c.querySelector('.mc-price')?.textContent || '';
+                return p !== '加载中' && p !== '行情暂不可用';
+              });
+            }, null, { timeout: 60000 }).catch(() => {});
+            await page.waitForTimeout(18000);
+            const market = await page.evaluate(() => {
+              const cards = [...document.querySelectorAll('#market-cards-layer .mc-card[data-symbol]')];
+              const names = cards.map(c => c.dataset.symbol);
+              const loaded = cards.filter(c => {
+                const p = c.querySelector('.mc-price')?.textContent || '';
+                return p !== '加载中' && p !== '行情暂不可用' && p !== '暂无行情' && p !== '数据无效';
+              }).length;
+              const calls = window.__fetchCalls || [];
+              const tickerCalls = calls.filter(c => /api\.bitget\.com\/api\/v[23]\/.*tickers/.test(c.url));
+              const eventCalls = calls.filter(c => c.url.includes('v9-signals.json'));
+              return { count: cards.length, loaded, names, tickerCalls, eventCalls, eventStocks: [...document.querySelectorAll('#v9Stocks .v9-symbol')].map(x => x.textContent.replace(/[▰\s]/g,'')), eventCore: [...document.querySelectorAll('#v9Core .v9-symbol')].map(x => x.textContent.replace(/[▰\s]/g,'')), eventStatus: document.querySelector('#v9Stocks')?.textContent || '' };
+            });
+            const expectedNames = ['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','QCOM','AMD','TSM','AVGO','ORCL','ARM','MU','ASML','SNDK','SKHYNIX','MRVL','GLW','HOOD','CBRS','SPCX','BTC','HYPE','XAU','CL'];
+            const namesMatch = JSON.stringify(market.names) === JSON.stringify(expectedNames);
+            const refreshObserved = market.tickerCalls.length >= 6;
+            const eventsLoaded = market.eventCalls.length >= 1 && !market.eventStatus.includes('读取失败');
+            const actualSignals = await page.evaluate(async () => {
+              const r = await fetch('https://raw.githubusercontent.com/MraJJqq/vegas-octopus-v2/main/v9-signals.json?audit=' + Date.now(), { cache: 'no-store' });
+              const j = await r.json();
+              const d = j.__daily_formal_signals__;
+              return { date: d?.date, symbols: [...new Set((d?.signals || []).filter(s => s && s.formal_signal === true).map(s => String(s.symbol || '').toUpperCase().replace(/USDT$/, '').replace(/^CLU$/, 'CL')))] };
+            });
+            const signalMapping = await page.evaluate(symbols => {
+              window.VegasFormalSignalSymbols = symbols;
+              window.VegasApplyFormalSignals();
+              return [...document.querySelectorAll('#market-cards-layer .mc-card[data-symbol]')].filter(c => c.hasAttribute('data-formal-signal')).map(c => c.dataset.symbol);
+            }, actualSignals.symbols);
+            const expectedMapped = expectedNames.filter(n => actualSignals.symbols.includes(n));
+            const signalLinkMatches = JSON.stringify(signalMapping) === JSON.stringify(expectedMapped);
+            const btc = page.locator('#mc-c23');
+            await btc.click({ force: true });
+            await page.waitForFunction(() => {
+              const s = window.VegasFifthLayer?.getState?.();
+              return !!s && s.visible && s.symbol === 'BTC' && s.candles >= 2;
+            }, null, { timeout: 45000 }).catch(() => {});
+            await page.waitForTimeout(8000);
+            const chart = await page.evaluate(() => {
+              const s = window.VegasFifthLayer?.getState?.();
+              return { state: s || null, wsMessages: (window.__wsMessages || []).length, wsPayloads: (window.__wsMessages || []).slice(-5) };
+            });
+            const wsOpen = !!chart.state?.websocket;
+            const wsMessageReceived = chart.wsMessages > 0;
+            const chartLoaded = chart.state?.symbol === 'BTC' && chart.state?.candles >= 2;
+            const result = {
+              page: 'https://mrajjqq.github.io/vegas-octopus-v2/',
+              cards: { total: market.count, priceLoaded: market.loaded, officialNamesMatch: namesMatch, repeatedTickerRequestsObserved: refreshObserved, tickerRequests: market.tickerCalls.length },
+              latestEvents: { fetched: eventsLoaded, date: actualSignals.date, stocks: market.eventStocks, core: market.eventCore, signalSymbols: actualSignals.symbols, cardSignalMappingMatches: signalLinkMatches, mappedCards: signalMapping },
+              kline: { chartLoaded, websocketOpen: wsOpen, websocketMessageReceived: wsMessageReceived, state: chart.state, websocketMessages: chart.wsMessages },
+              pageErrors
+            };
+            console.log('LIVE_AUDIT_RESULT=' + JSON.stringify(result));
+            await browser.close();
+            if (!namesMatch || market.count !== 27 || market.loaded < 24 || !refreshObserved || !eventsLoaded || !signalLinkMatches || !chartLoaded || !wsOpen || !wsMessageReceived || pageErrors.length) process.exit(1);
+          })().catch(error => { console.error(error); process.exit(1); });
+          NODE
