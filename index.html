@@ -176,21 +176,12 @@ html,body{width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavio
 #octopusMarketCardGrid.orb-stream-card-overlay{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;display:block;padding:0;max-height:none;perspective:1400px;z-index:5}#octopusMarketCardGrid.orb-stream-card-overlay #octopusMarketCardGrid .pos{pointer-events:auto}#octopusMarketCardGrid .pos{position:absolute;left:0;top:0;will-change:transform;cursor:pointer}#octopusMarketCardGrid .float{position:absolute;inset:0}#octopusMarketCardGrid.orb-stream-card-overlay{--bg:transparent;--ink:#e8f0ff;--mute:#7f8db0;--up:#2ee6a6;--dn:#ff5c7c;background:transparent;touch-action:pan-y}#octopusMarketCardGrid .pos{pointer-events:auto}
 @media(max-width:760px){#octopusMarketCardGrid .pos{font-size:clamp(6px,1.5vw,9px)!important}}#octopusFourHourHover{
   position:fixed;inset:0;z-index:9999;display:block;box-sizing:border-box;
-  padding:0 10vw;border:0;border-radius:0;background:transparent;box-shadow:none;
+  padding:0 10vw;border:0;border-radius:0;background:rgba(2,7,18,.985);box-shadow:none;
   backdrop-filter:none;-webkit-backdrop-filter:none;
   opacity:0;visibility:hidden;pointer-events:none;
   transform:none;transition:opacity .12s ease,visibility 0s linear .12s;
-}#octopusFourHourHover.is-visible{opacity:1;visibility:visible;pointer-events:none;transition:opacity .12s ease,visibility 0s}#octopusFourHourHover .o4-chart{display:block;width:100%;height:100%;min-height:100px;overflow:visible;pointer-events:auto}#octopusFourHourHover .o4-candles line{stroke-width:1.5;vector-effect:non-scaling-stroke}#octopusFourHourHover .o4-candles rect{stroke-width:1.25;vector-effect:non-scaling-stroke;filter:none}#octopusFourHourClose{
-  position:fixed;top:clamp(14px,3vh,30px);right:clamp(14px,3vw,34px);z-index:10001;
-  display:grid;place-items:center;width:44px;height:44px;border:1px solid rgba(137,210,255,.58);
-  border-radius:50%;background:rgba(5,15,30,.82);color:#eaf8ff;font-size:27px;line-height:1;
-  box-shadow:0 0 18px rgba(53,177,255,.24),inset 0 0 12px rgba(53,177,255,.1);
-  cursor:pointer;pointer-events:auto;opacity:0;visibility:hidden;transform:scale(.88);
-  transition:opacity .14s ease,transform .14s ease,background .14s ease;
-}#octopusFourHourHover.is-visible #octopusFourHourClose{opacity:1;visibility:visible;transform:scale(1)}#octopusFourHourClose:hover{background:rgba(20,55,82,.96);box-shadow:0 0 24px rgba(53,177,255,.42)}#octopusFourHourClose:focus-visible{outline:2px solid #8ee4ff;outline-offset:3px}
-@media(max-width:760px){#octopusFourHourHover{padding-left:10vw;padding-right:10vw}#octopusFourHourHover .o4-chart{min-height:90px}#octopusFourHourClose{width:40px;height:40px;font-size:25px}}
-
-</style>
+}#octopusFourHourHover.is-visible{opacity:1;visibility:visible;pointer-events:none;transition:opacity .12s ease,visibility 0s}#octopusFourHourHover .o4-chart{display:block;width:100%;height:100%;min-height:100px;overflow:visible;pointer-events:auto}#octopusFourHourHover .o4-candles line{stroke-width:1.5;vector-effect:non-scaling-stroke}#octopusFourHourHover .o4-candles rect{stroke-width:1.25;vector-effect:non-scaling-stroke;filter:none}
+@media(max-width:760px){#octopusFourHourHover{padding-left:10vw;padding-right:10vw}#octopusFourHourHover .o4-chart{min-height:90px}}</style>
 
 
 
@@ -710,7 +701,21 @@ fourHourLayer.addEventListener('wheel',e=>{
 const fourHourSvg=fourHourLayer.querySelector('.o4-chart');
 document.addEventListener('pointerdown',e=>{
   if(!activeFourHourCard||!fourHourLayer.classList.contains('is-visible'))return;
-  if(fourHourSvg.contains(e.target)||fourHourCloseButton.contains(e.target))return;
+  const target=e.target;
+  if(target instanceof Element&&target!==fourHourSvg&&target.closest('#octopusFourHourHover .o4-candles, #octopusFourHourHover .o4-emas'))return;
+  const previous=fourHourSvg.style.pointerEvents;
+  let under=[];
+  try{
+    fourHourSvg.style.pointerEvents='none';
+    under=document.elementsFromPoint(e.clientX,e.clientY);
+  }finally{
+    fourHourSvg.style.pointerEvents=previous;
+  }
+  const cardElement=under.find(el=>el instanceof Element&&el.closest('#octopusMarketCardGrid .pos'))?.closest('#octopusMarketCardGrid .pos');
+  if(cardElement){
+    const next=C.find(o=>o.pos===cardElement||o.pos.contains(cardElement)||cardElement.contains(o.pos)||o.card===cardElement||o.card.contains(cardElement));
+    if(next){e.preventDefault();e.stopImmediatePropagation();showFourHour(next);return;}
+  }
   hideFourHour();
 },true);
 fourHourSvg.style.cursor='grab';
