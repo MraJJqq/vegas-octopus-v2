@@ -3,97 +3,137 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>3D 悬浮行情卡片</title>
+<title>霓虹行情卡片模板</title>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#070b18;--ink:#e8f0ff;--mute:#7f8db0;--up:#2ee6a6;--dn:#ff5c7c;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *{box-sizing:inherit}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;min-height:100vh;background:radial-gradient(1100px 700px at 50% -10%,#18275a 0,var(--bg) 62%) fixed;color:var(--ink);font-family:'Chakra Petch',ui-sans-serif,system-ui,-apple-system,'PingFang SC',sans-serif}
-header{padding:28px 22px 6px;max-width:1100px;margin:0 auto}
-h1{margin:0 0 6px;font-size:26px;font-weight:700;letter-spacing:.02em}
-header p{margin:0 0 10px;color:var(--mute);font-size:14px}
-#grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;max-width:1100px;margin:0 auto;padding:18px 14px 60px}
+html,body{height:100%}
+body{margin:0;display:grid;place-items:center;background:radial-gradient(1100px 700px at 50% -10%,#18275a 0,var(--bg) 62%) fixed;color:var(--ink);font-family:'Chakra Petch',ui-sans-serif,system-ui,-apple-system,'PingFang SC',sans-serif}
 .slot{position:relative;perspective:900px;padding:18px 16px 34px}
-.float{transform-style:preserve-3d;animation:bob 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
-@keyframes bob{0%{transform:translateY(0) rotateY(-5deg) rotateX(2deg)}100%{transform:translateY(-12px) rotateY(5deg) rotateX(-2deg)}}
-.gshadow{position:absolute;left:14%;right:14%;bottom:8px;height:22px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.65),transparent);filter:blur(6px);animation:sh 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
+.float{transform-style:preserve-3d;will-change:transform;animation:bob 5.5s ease-in-out infinite alternate}
+@keyframes bob{0%{transform:translate3d(0,0,0) rotateY(-5deg) rotateX(2deg)}100%{transform:translate3d(0,-12px,0) rotateY(5deg) rotateX(-2deg)}}
+.gshadow{position:absolute;left:14%;right:14%;bottom:8px;height:22px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.65),transparent);filter:blur(6px);animation:sh 5.5s ease-in-out infinite alternate}
 @keyframes sh{0%{transform:scale(1);opacity:.9}100%{transform:scale(.82);opacity:.5}}
-.card{--c:var(--up);position:relative;transform-style:preserve-3d;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .14s ease-out;border-radius:22px;padding:20px;min-height:200px;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:default}
+.card{--c:var(--up);position:relative;width:min(84vw,280px);transform-style:preserve-3d;will-change:transform;border-radius:22px;padding:20px;touch-action:pan-y;user-select:none;-webkit-user-select:none}
 .card.up{--c:var(--up)}
 .card.dn{--c:var(--dn)}
-.bg{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(145deg,rgba(255,255,255,.13),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 30px 50px -24px rgba(0,0,0,.8)}
-.gl{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transform:translateZ(80px);background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.28),transparent 55%);transition:opacity .2s}
-.card.hot .gl{opacity:1}
+.bg{position:absolute;inset:0;border-radius:inherit;background:rgba(8,14,32,.88);border:1.5px solid var(--c);box-shadow:0 0 26px -6px var(--c),inset 0 0 26px -14px var(--c);transition:border-color .4s,box-shadow .4s}
+.g1,.g2{position:absolute;inset:0;border-radius:inherit;border:1.5px solid var(--c);pointer-events:none;transition:border-color .4s}
+.g1{transform:translateZ(-26px);opacity:.55}
+.g2{transform:translateZ(-52px);opacity:.25}
+.gl{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transform:translateZ(80px);background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.28),transparent 55%)}
 .l1,.l2,.l3,.l4{position:relative}
 .l1{transform:translateZ(24px)}
 .l2{transform:translateZ(46px)}
 .l3{transform:translateZ(60px)}
 .l4{transform:translateZ(78px)}
 .row{display:flex;align-items:center;gap:10px}
-.coin{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:15px;color:#07101f;background:var(--c);box-shadow:0 0 16px -2px var(--c)}
+.coin{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:15px;color:#07101f;background:var(--c);box-shadow:0 0 16px -2px var(--c);transition:background .4s}
 .sym{font-size:18px;font-weight:700}
 .sym small{font-size:12px;color:var(--mute);font-weight:500;margin-left:6px}
-.price{font-size:34px;font-weight:700;margin:14px 0 4px;font-variant-numeric:tabular-nums;transition:color .3s}
+.price{font-size:34px;font-weight:700;margin:14px 0 6px;font-variant-numeric:tabular-nums;transition:color .3s}
 .price.flash{color:var(--c)}
-.pct{display:inline-block;padding:3px 10px;border-radius:99px;font-size:14px;font-weight:700;color:#07101f;background:var(--c)}
-.spark{display:block;width:100%;height:50px;margin-top:12px}
-.spark .ln{fill:none;stroke:var(--c);stroke-width:2;vector-effect:non-scaling-stroke}
-.spark .ar{fill:var(--c);opacity:.14}
-.hl{margin-top:8px;font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums}
-.hl span{color:var(--ink);margin:0 12px 0 4px}
+.pct{display:inline-block;padding:3px 10px;border-radius:99px;font-size:14px;font-weight:700;color:#07101f;background:var(--c);transition:background .4s}
+#kline{display:block;width:100%;height:88px;margin-top:14px}
 @media (prefers-reduced-motion:reduce){.float,.gshadow{animation:none}}
 </style>
 </head>
 <body>
-<header>
-  <h1>行情悬浮卡</h1>
-  <p>模拟报价，每秒跳动。鼠标划过或手指按住卡片可倾斜。</p>
-</header>
-<main id="grid"></main>
+<div class="slot">
+  <div class="float">
+    <div class="card" id="card">
+      <div class="bg"></div><i class="g1"></i><i class="g2"></i><i class="gl" id="gl"></i>
+      <div class="row l2"><span class="coin" id="coin"></span><b class="sym"><span id="sym"></span><small id="quote"></small></b></div>
+      <div class="price l4" id="price"></div>
+      <div class="l3"><span class="pct" id="pct"></span></div>
+      <canvas class="l1" id="kline"></canvas>
+    </div>
+  </div>
+  <div class="gshadow"></div>
+</div>
 <script>
-const P=[["BTC",67850,.0009],["ETH",2610,.0013],["SOL",172,.002],["BNB",585,.001],["XRP",.52,.0018],["DOGE",.158,.0025]];
-const grid=document.getElementById('grid');
+/* ===== 模板配置：改这里 ===== */
+const CFG={symbol:"BTC",quote:"/USDT 永续",price:67850,vol:.0012,candles:30,ticksPerCandle:6};
+/* ========================== */
+const $=id=>document.getElementById(id),card=$('card'),gl=$('gl'),cv=$('kline'),ctx=cv.getContext('2d');
+const UP='#2ee6a6',DN='#ff5c7c';
 const fmt=p=>p>=100?p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):p>=1?p.toFixed(3):p.toFixed(4);
-const S=P.map(([s,p,v],i)=>{
-  const h=[];let x=p*(1+(Math.random()-.5)*.01);
-  for(let k=0;k<40;k++){x*=1+(Math.random()-.5)*2*v;h.push(x)}
-  return {s,v,p:h[39],o:h[0],h,i};
-});
-grid.innerHTML=S.map(d=>`<div class="slot"><div class="float" style="--d:${-d.i*.9}s"><div class="card" id="c${d.i}">
-<div class="bg"></div><i class="gl"></i>
-<div class="row l2"><span class="coin">${d.s[0]}</span><b class="sym">${d.s}<small>/USDT 永续</small></b></div>
-<div class="price l4"></div>
-<div class="l3"><span class="pct"></span></div>
-<svg class="spark l1" viewBox="0 0 200 50" preserveAspectRatio="none"><path class="ar"/><path class="ln"/></svg>
-<div class="hl l2">高<span class="hi"></span>低<span class="lo"></span></div>
-</div></div><div class="gshadow" style="--d:${-d.i*.9}s"></div></div>`).join('');
-function paint(d){
-  const c=document.getElementById('c'+d.i),q=s=>c.querySelector(s);
-  const up=d.p>=d.o;c.classList.toggle('up',up);c.classList.toggle('dn',!up);
-  q('.price').textContent=fmt(d.p);
-  q('.pct').textContent=(up?'+':'')+((d.p/d.o-1)*100).toFixed(2)+'%';
-  const mn=Math.min(...d.h),mx=Math.max(...d.h),r=mx-mn||1;
-  const pts=d.h.map((v,k)=>[k*200/39,46-(v-mn)/r*42]);
-  const ln='M'+pts.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join('L');
-  q('.ln').setAttribute('d',ln);q('.ar').setAttribute('d',ln+'L200 50L0 50Z');
-  q('.hi').textContent=fmt(mx);q('.lo').textContent=fmt(mn);
+$('coin').textContent=CFG.symbol[0];$('sym').textContent=CFG.symbol;$('quote').textContent=CFG.quote;
+
+/* ---- 行情数据（模拟） ---- */
+let p=CFG.price,tick=0;
+const newC=o=>({o,h:o,l:o,c:o});
+const step=c=>{p*=1+(Math.random()-.5)*2*CFG.vol;c.c=p;c.h=Math.max(c.h,p);c.l=Math.min(c.l,p)};
+const K=[];
+for(let i=0;i<CFG.candles;i++){const c=newC(p);for(let j=0;j<CFG.ticksPerCandle;j++)step(c);K.push(c)}
+const open=K[0].o;let dc=p;
+function paint(){
+  const up=p>=open;card.classList.toggle('up',up);card.classList.toggle('dn',!up);
+  $('price').textContent=fmt(p);
+  $('pct').textContent=(up?'+':'')+((p/open-1)*100).toFixed(2)+'%';
 }
-S.forEach(paint);
-setInterval(()=>{S.forEach(d=>{
-  d.p*=1+(Math.random()-.5)*2*d.v;d.h.push(d.p);d.h.shift();paint(d);
-  const pr=document.querySelector('#c'+d.i+' .price');pr.classList.add('flash');setTimeout(()=>pr.classList.remove('flash'),250);
-})},1000);
-document.querySelectorAll('.slot').forEach(el=>{
-  const c=el.querySelector('.card');
-  const off=()=>{c.style.setProperty('--rx','0deg');c.style.setProperty('--ry','0deg');c.classList.remove('hot')};
-  el.addEventListener('pointermove',e=>{
-    const r=el.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
-    c.style.setProperty('--ry',((x-.5)*34)+'deg');c.style.setProperty('--rx',((.5-y)*28)+'deg');
-    c.style.setProperty('--mx',x*100+'%');c.style.setProperty('--my',y*100+'%');c.classList.add('hot');
+paint();
+setInterval(()=>{
+  step(K[K.length-1]);tick++;
+  if(tick%CFG.ticksPerCandle===0){K.push(newC(p));K.shift()}
+  paint();
+  const e=$('price');e.classList.add('flash');setTimeout(()=>e.classList.remove('flash'),250);
+},1000);
+
+/* ---- K 线绘制 ---- */
+let W=0,H=0;
+function fit(){
+  const d=window.devicePixelRatio||1;W=cv.clientWidth;H=cv.clientHeight;
+  cv.width=W*d;cv.height=H*d;ctx.setTransform(d,0,0,d,0,0);
+}
+addEventListener('resize',fit);fit();
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  let mn=dc,mx=dc;K.forEach(c=>{mn=Math.min(mn,c.l);mx=Math.max(mx,c.h)});
+  const r=(mx-mn)||1,y=v=>H-5-(v-mn)/r*(H-10);
+  ctx.shadowBlur=0;ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=1;
+  for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,H*i/4);ctx.lineTo(W,H*i/4);ctx.stroke()}
+  const n=K.length,sw=W/n,bw=sw*.62;
+  K.forEach((c,i)=>{
+    const cl=i===n-1?dc:c.c,col=cl>=c.o?UP:DN,x=i*sw+sw/2;
+    ctx.shadowColor=col;ctx.shadowBlur=6;ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,y(c.h));ctx.lineTo(x,y(c.l));ctx.stroke();
+    const t=y(Math.max(c.o,cl)),b=y(Math.min(c.o,cl));
+    ctx.fillRect(x-bw/2,t,bw,Math.max(1.5,b-t));
   });
-  ['pointerleave','pointerup','pointercancel'].forEach(t=>el.addEventListener(t,off));
+  ctx.shadowBlur=0;ctx.setLineDash([3,4]);ctx.strokeStyle=dc>=open?UP:DN;ctx.globalAlpha=.5;
+  ctx.beginPath();ctx.moveTo(0,y(dc));ctx.lineTo(W,y(dc));ctx.stroke();
+  ctx.setLineDash([]);ctx.globalAlpha=1;
+}
+
+/* ---- 丝滑倾斜：目标值 + 逐帧缓动 ---- */
+const slot=document.querySelector('.slot');
+const T={rx:0,ry:0,mx:50,my:50,g:0},C={rx:0,ry:0,mx:50,my:50,g:0};
+let rect=slot.getBoundingClientRect();
+const upd=()=>{rect=slot.getBoundingClientRect()};
+addEventListener('resize',upd);addEventListener('scroll',upd,{passive:true});
+slot.addEventListener('pointerenter',upd);
+slot.addEventListener('pointermove',e=>{
+  const x=(e.clientX-rect.left)/rect.width,y=(e.clientY-rect.top)/rect.height;
+  T.ry=(x-.5)*34;T.rx=(.5-y)*28;T.mx=x*100;T.my=y*100;T.g=1;
 });
+const off=()=>{T.rx=0;T.ry=0;T.g=0};
+['pointerleave','pointerup','pointercancel'].forEach(t=>slot.addEventListener(t,off));
+let last=performance.now();
+function frame(t){
+  const dt=Math.min(64,t-last);last=t;
+  const a=1-Math.exp(-dt/85);
+  for(const k in C)C[k]+=(T[k]-C[k])*a;
+  card.style.transform='rotateX('+C.rx.toFixed(3)+'deg) rotateY('+C.ry.toFixed(3)+'deg)';
+  gl.style.opacity=C.g.toFixed(3);
+  gl.style.setProperty('--mx',C.mx.toFixed(1)+'%');gl.style.setProperty('--my',C.my.toFixed(1)+'%');
+  dc+=(p-dc)*(1-Math.exp(-dt/140));
+  draw();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
 </script>
 </body>
 </html>
