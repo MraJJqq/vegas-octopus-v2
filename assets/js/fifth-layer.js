@@ -17,9 +17,9 @@
   ];
   const style = document.createElement('style');
   style.textContent = `
-    #v5-chart-overlay[hidden]{display:none!important}
+    #vegas-chart-overlay[hidden]{display:none!important}
     /* 第五层以自适应透明悬浮窗显示，不铺满屏幕，不隐藏底层视觉。 */
-    body>#v5-chart-overlay{
+    body>#vegas-chart-overlay{
       position:fixed!important;
       inset:auto!important;
       left:50%!important;top:50%!important;
@@ -32,23 +32,23 @@
       pointer-events:none;
       touch-action:none;overscroll-behavior:contain;
     }
-    body>#v5-chart-overlay[hidden]{display:none!important}
-    #v5-chart-canvas{
+    body>#vegas-chart-overlay[hidden]{display:none!important}
+    #vegas-chart-canvas{
       position:absolute;inset:0;width:100%;height:100%;
       display:block;background:transparent;
       pointer-events:auto;touch-action:none;cursor:grab;
     }
-    #v5-chart-canvas:active{cursor:grabbing}
+    #vegas-chart-canvas:active{cursor:grabbing}
     @media(max-width:600px){
-      body>#v5-chart-overlay{width:96vw!important;height:70dvh!important}
+      body>#vegas-chart-overlay{width:96vw!important;height:70dvh!important}
     }
   `;
   document.head.appendChild(style);
 
   const overlay = document.createElement('div');
-  overlay.id = 'v5-chart-overlay';
+  overlay.id = 'vegas-chart-overlay';
   overlay.hidden = true;
-  overlay.innerHTML = '<canvas id="v5-chart-canvas" aria-label="4小时K线与Vegas均线图"></canvas>';
+  overlay.innerHTML = '<canvas id="vegas-chart-canvas" aria-label="4小时K线与Vegas均线图"></canvas>';
   document.body.appendChild(overlay);
   const canvas = overlay.querySelector('canvas');
   const ctx = canvas.getContext('2d');
