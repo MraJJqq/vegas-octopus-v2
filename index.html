@@ -1117,17 +1117,34 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       target.appendChild(item);
     });
   }
+  async function fetchStateJson(){
+    const urls=[
+      {url:STATE_URL+"?t="+Date.now(),mode:"json"},
+      {url:"https://api.github.com/repos/MraJJqq/vegas-signal-system/contents/v9/.signal-state.json?ref=main",mode:"github"}
+    ];
+    let lastError=null;
+    for(const source of urls){
+      try{
+        const response=await fetch(source.url,{cache:"no-store",headers:source.mode==="github"?{"Accept":"application/vnd.github+json"}:{}});
+        if(!response.ok)throw new Error("HTTP "+response.status);
+        if(source.mode==="json")return await response.json();
+        const file=await response.json();
+        if(!file||typeof file.content!=="string")throw new Error("GitHub API 返回格式无效");
+        const bytes=Uint8Array.from(atob(file.content.replace(/\\s/g,"")),c=>c.charCodeAt(0));
+        return JSON.parse(new TextDecoder("utf-8").decode(bytes));
+      }catch(error){lastError=error;console.warn("V9 state source failed:",source.mode,error);}
+    }
+    throw lastError||new Error("所有状态源均读取失败");
+  }
   async function refreshV9State(){
     const status=$("v9SyncStatus");
     try{
-      const response=await fetch(STATE_URL+"?t="+Date.now(),{cache:"no-store"});
-      if(!response.ok)throw new Error("HTTP "+response.status);
-      const state=await response.json();
+      const state=await fetchStateJson();
       const daily=state&&state.__daily_formal_signals__;
       if(!daily||!Array.isArray(daily.signals))throw new Error("状态格式无效");
       if(daily.date!==todayBeijing()){
         renderMessage("等待今日扫描");
-        if(status)status.textContent="V9 · 等待今日扫描";
+        if(status)status.textContent="V9 · 等待今日扫描（状态日期 "+String(daily.date||"未知")+"）";
         return;
       }
       const seen=new Set();
@@ -1140,8 +1157,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       renderSymbols("v9Core",CORE_ORDER.filter(s=>seen.has(s)));
       if(status)status.textContent="V9 · 每2小时扫描";
     }catch(error){
-      if(status)status.textContent="V9 · 数据暂不可用";
-      renderMessage("数据暂不可用");
+      const detail=String(error&&error.message||error).slice(0,70);
+      if(status)status.textContent="V9 · 读取失败："+detail;
+      renderMessage("读取失败："+detail);
       console.warn("V9 latest-events state unavailable:",error);
     }
   }
