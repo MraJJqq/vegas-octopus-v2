@@ -1615,7 +1615,7 @@ document.body.appendChild(fourHourLayer);
 const fourHourCloseButton=fourHourLayer.querySelector('#octopusFourHourClose');
 let activeFourHourCard=null,fourHourRefreshTimer=null;
 fourHourCloseButton.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();hideFourHour()});
-let fourHourViewCount=180,fourHourViewStart=null,fourHourUserNavigated=false,fourHourViewInitialized=false,fourHourViewAnchorTime=null,fourHourDrag=null;
+let fourHourViewCount=180,fourHourViewStart=null,fourHourUserNavigated=false,fourHourViewInitialized=false,fourHourViewAnchorTime=null,fourHourViewEndTime=null,fourHourDrag=null;
 const fourHourCache=new WeakMap();
 const setFourHourStatus=()=>{};
 function stopFourHourRefresh(){
@@ -1677,18 +1677,23 @@ function drawFourHour(candles){
   });
   const maxCount=Math.min(500,allRows.length);
   fourHourViewCount=Math.min(maxCount,Math.max(20,fourHourViewCount));
+  const nearestIndex=time=>{
+    let lo=0,hi=allRows.length-1;
+    while(lo<hi){const mid=(lo+hi)>>1;if(allRows[mid].t<time)lo=mid+1;else hi=mid;}
+    return lo>0&&Math.abs(allRows[lo-1].t-time)<=Math.abs(allRows[lo].t-time)?lo-1:lo;
+  };
   if(!fourHourViewInitialized){
     fourHourViewStart=Math.max(0,allRows.length-fourHourViewCount);
     fourHourViewInitialized=true;
-  }else if(fourHourViewAnchorTime!==null){
-    let lo=0,hi=allRows.length-1;
-    while(lo<hi){const mid=(lo+hi)>>1;if(allRows[mid].t<fourHourViewAnchorTime)lo=mid+1;else hi=mid;}
-    const idx=lo>0&&Math.abs(allRows[lo-1].t-fourHourViewAnchorTime)<=Math.abs(allRows[lo].t-fourHourViewAnchorTime)?lo-1:lo;
-    fourHourViewStart=idx;
+  }else if(fourHourViewAnchorTime!==null&&fourHourViewEndTime!==null){
+    const startIndex=nearestIndex(fourHourViewAnchorTime);
+    const endIndex=Math.max(startIndex,nearestIndex(fourHourViewEndTime));
+    fourHourViewStart=startIndex;
+    fourHourViewCount=Math.min(maxCount,Math.max(2,endIndex-startIndex+1));
   }
   const offset=Math.max(0,Math.min(allRows.length-fourHourViewCount,fourHourViewStart??Math.max(0,allRows.length-fourHourViewCount)));
   const rows=allRows.slice(offset,offset+fourHourViewCount);
-  if(rows.length)fourHourViewAnchorTime=rows[0].t;
+  if(rows.length){fourHourViewAnchorTime=rows[0].t;fourHourViewEndTime=rows[rows.length-1].t;}
   fourHourViewStart=offset;
   if(rows.length<2)return;
   const visibleEmas=periods.flatMap(p=>emaSeries[p].slice(offset,offset+rows.length).filter(Number.isFinite));
@@ -1814,7 +1819,7 @@ async function loadFourHourHistory(o){
 function showFourHour(o){
   if(activeFourHourCard!==o){
     fourHourLayer.querySelector('.o4-candles').replaceChildren();
-    fourHourViewCount=180;fourHourViewStart=null;fourHourUserNavigated=false;fourHourViewInitialized=false;fourHourViewAnchorTime=null;fourHourDrag=null;
+    fourHourViewCount=180;fourHourViewStart=null;fourHourUserNavigated=false;fourHourViewInitialized=false;fourHourViewAnchorTime=null;fourHourViewEndTime=null;fourHourDrag=null;
   }
   activeFourHourCard=o;
   fourHourLayer.classList.add('is-visible');
@@ -1829,6 +1834,7 @@ function redrawActiveFourHour(){
     const rows=cache.values;
     const start=Math.max(0,Math.min(rows.length-Math.min(rows.length,fourHourViewCount),fourHourViewStart??Math.max(0,rows.length-fourHourViewCount)));
     fourHourViewAnchorTime=rows[start]?.t??fourHourViewAnchorTime;
+    fourHourViewEndTime=rows[Math.min(rows.length-1,start+fourHourViewCount-1)]?.t??fourHourViewEndTime;
     drawFourHour(rows);
   }
 }
