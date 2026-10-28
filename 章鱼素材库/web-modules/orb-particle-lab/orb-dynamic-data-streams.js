@@ -10,7 +10,7 @@
   function start(){
     const stage=document.querySelector('.center-stage');
     const grid=document.getElementById('octopusMarketCardGrid');
-    const orb=stage&&stage.querySelector('.core-orb');
+    const orb=stage&&(stage.querySelector('.core-orb')||stage.querySelector('#orb-core-canvas'));
     if(!stage||!grid||!orb||document.getElementById('octopusDynamicDataStreams'))return;
     const canvas=document.createElement('canvas');
     canvas.id='octopusDynamicDataStreams';
