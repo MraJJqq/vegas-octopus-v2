@@ -102,7 +102,7 @@
         const request = db.transaction(CANDLE_STORE_NAME, 'readonly').objectStore(CANDLE_STORE_NAME).get(candleCacheKey(symbol, isReality));
         request.onsuccess = () => {
           const value = request.result;
-          resolve(value && Array.isArray(value.rows) ? normalize(value.rows) : null);
+          resolve(value && Array.isArray(value.rows) ? (value.rows.length && !Array.isArray(value.rows[0]) ? mergeCandles(value.rows) : normalize(value.rows)) : null);
         };
         request.onerror = () => resolve(null);
       } catch (_) { resolve(null); }
