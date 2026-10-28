@@ -23,6 +23,14 @@
   `;
   document.head.appendChild(style);
 
+  // 临时故障诊断标记：确认脚本初始化、点击是否被捕获、卡片选择器是否匹配。
+  const diagnostic = document.createElement('div');
+  diagnostic.id = 'v5-diagnostic';
+  diagnostic.textContent = '第五层诊断：脚本已启动，等待点击小卡片';
+  diagnostic.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:2147482999;max-width:calc(100vw - 24px);padding:7px 10px;border:1px solid rgba(49,217,255,.55);border-radius:6px;background:rgba(2,8,18,.88);color:#8fe9ff;font:12px/1.4 sans-serif;pointer-events:none;white-space:normal';
+  document.body.appendChild(diagnostic);
+  function diagnosticMessage(message) { diagnostic.textContent = '第五层诊断：' + message; }
+
   const overlay = document.createElement('div');
   overlay.id = 'v5-chart-overlay';
   overlay.hidden = true;
@@ -188,6 +196,7 @@
     } catch(error) {
       if(generation!==state.generation || overlay.hidden) return;
       setStatus(state.name+' · 加载失败：'+String(error&&error.message||error));
+      diagnosticMessage('大卡片已打开，但行情请求失败：' + String(error&&error.message||error));
       console.error('[Vegas Fifth Layer]',error);
     }
   }
@@ -200,6 +209,7 @@
     state.stock=STOCKS.has(symbol);
     state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=180;state.drag=null;
     overlay.hidden=false;
+    diagnosticMessage('已打开大卡片：' + symbol + '，正在请求行情');
     fitCanvas();
     loadData(false);
     if(state.timer) clearInterval(state.timer);
@@ -269,7 +279,14 @@
   document.addEventListener('click',event=>{
     if(!overlay.hidden) return;
     const card=findCard(event);
-    if(!card) return;
+    if(!card) {
+      const target=event.target;
+      if(target && target.closest && target.closest('#market-cards-layer')) {
+        diagnosticMessage('收到卡片区域点击，但没有匹配到 .mc-card[data-symbol]');
+      }
+      return;
+    }
+    diagnosticMessage('已捕获点击：' + (card.dataset.symbol || '无品种代码') + '，正在打开大卡片');
     event.preventDefault();
     event.stopPropagation();
     open(card);
@@ -295,5 +312,6 @@
   if(window.ResizeObserver) new ResizeObserver(fitCanvas).observe(canvas);
   window.VegasFifthLayer={open,close,refresh:()=>loadData(true),getState:()=>({symbol:state.symbol,visible:!overlay.hidden,candles:state.candles.length})};
   window.__VEGAS_FIFTH_LAYER_READY__=true;
+  diagnosticMessage('脚本初始化成功，找到 ' + document.querySelectorAll(CARD_SELECTOR).length + ' 张小卡片，等待点击');
   console.info('[Vegas Fifth Layer] initialized');
 })();
