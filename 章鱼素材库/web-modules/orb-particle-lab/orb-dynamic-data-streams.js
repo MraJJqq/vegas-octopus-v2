@@ -64,12 +64,11 @@
           });
           return {card:card,center:center,target:best,rect:r};
         });
-        // 150 条流均匀分配到当天正式信号卡片；七色循环覆盖每张卡片。
-        F.forEach(function(f,i){ f.cardIndex=i%targets.length; });
+        // 一张正式信号卡片只显示一条对应数据流；无对应信号的多余数据流不绘制。
         x.globalCompositeOperation='lighter';
         x.lineWidth=.8;
-        F.forEach(function(f,i){
-          const target=targets[f.cardIndex];
+        targets.forEach(function(target,i){
+          const f=F[i];
           const q=pr[target.target],fa=q[3];
           if(fa<.05)return;
           const cardR=target.rect;
