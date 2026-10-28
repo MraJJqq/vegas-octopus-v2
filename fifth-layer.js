@@ -118,7 +118,7 @@
   window.addEventListener('resize',resize,{passive:true});
   if(window.ResizeObserver)resizeObserver=new ResizeObserver(resize).observe(canvas);
   document.addEventListener('click',e=>{
-    if(overlay.style.display!=='none')return;
+    if(window.getComputedStyle(overlay).display!=='none')return;
     const card=e.target.closest('#market-cards-layer .mc-card[data-symbol]');
     if(card)open(card);
   });
