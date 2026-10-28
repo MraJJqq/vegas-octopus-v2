@@ -15,7 +15,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 /* 页面容器透明，所有内容叠加在第一层背景之上。 */
 .app{position:relative;z-index:1;width:100%;height:100dvh;min-height:0;padding:0;background:transparent;overflow:hidden}
 /* 第二层：最新事件悬浮模块。 */
-.topbar{position:absolute;z-index:3;top:clamp(12px,2.2vh,28px);right:clamp(12px,2.2vw,32px);width:clamp(150px,22vw,320px);min-width:0;max-height:calc(100dvh - 24px);display:block;overflow:hidden;pointer-events:none}
+.topbar{position:absolute;z-index:3;top:clamp(12px,2.2vh,28px);right:clamp(12px,2.2vw,32px);width:clamp(150px,22vw,320px);min-width:0;max-height:calc(100dvh - 24px);overflow:hidden;pointer-events:none}
 .event-top-card{width:100%;min-width:0;min-height:0;max-height:100%;padding:0;display:flex;flex-direction:column;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;pointer-events:auto}
 .panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 0 7px}
 .panel-title{display:flex;align-items:center;gap:7px;font-size:clamp(11px,.8vw,15px);font-weight:750;letter-spacing:.03em}
@@ -78,7 +78,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 <header class="topbar">
 <section class="event-top-card" aria-label="最新事件">
 <div class="panel-head"><div class="panel-title"><span class="icon">⌁</span>最新事件</div></div>
-<div class="v9-notification" id="eventList" aria-live="polite">
+<div class="v9-notification" aria-live="polite">
 <section class="v9-group"><div class="v9-group-title">🔸 美股巨头</div><div class="v9-symbols" id="v9Stocks"><span class="v9-nochange">▰ No change ▰</span></div></section>
 <section class="v9-group"><div class="v9-group-title">🔸 核心能源</div><div class="v9-symbols" id="v9Core"><span class="v9-nochange">▰ No change ▰</span></div></section>
 </div></section></header>
