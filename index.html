@@ -355,7 +355,7 @@ async function loadSparkline(d,symbol,isStock){
   const rows=await bitgetJson(path+'?'+params);
   d.candles=rows.filter(r=>Array.isArray(r)&&Number(r[1])>0&&Number(r[2])>0&&Number(r[3])>0&&Number(r[4])>0).sort((a,b)=>Number(a[0])-Number(b[0])).slice(-30).map(r=>({open:Number(r[1]),high:Number(r[2]),low:Number(r[3]),close:Number(r[4])}));
   d.candleUpdatedAt=Date.now();
- }catch(error){if(!d.candles.length)d.candles=[];d.candleUpdatedAt=Date.now()-CANDLE_REFRESH_MS+60000;console.warn('[Vegas Octopus] 1H candles failed for '+d.s+':',error)}
+ }catch(error){d.candleUpdatedAt=Date.now()-CANDLE_REFRESH_MS+60000;console.warn('[Vegas Octopus] 1H candles failed for '+d.s+':',error)}
  paint(d)
 }
 let marketLoadInFlight=false;
