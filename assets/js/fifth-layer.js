@@ -20,14 +20,16 @@
   const style = document.createElement('style');
   style.textContent = `
     #vegas-chart-overlay[hidden]{display:none!important}
-    /* 第五层以自适应透明悬浮窗显示，不铺满屏幕，不隐藏底层视觉。 */
+    /* 全屏透明悬浮层：K线始终处于最高层，底层场景仍透出。 */
     body>#vegas-chart-overlay{
       position:fixed!important;
-      inset:auto!important;
-      left:50%!important;top:50%!important;
-      width:min(92vw,1100px)!important;
-      height:min(78dvh,760px)!important;
-      transform:translate(-50%,-50%);
+      inset:0!important;
+      left:0!important;top:0!important;right:0!important;bottom:0!important;
+      width:100vw!important;
+      height:100vh!important;
+      height:100dvh!important;
+      margin:0!important;padding:0!important;
+      transform:none!important;
       z-index:2147483647!important;
       isolation:isolate;display:block;
       background:transparent!important;
@@ -41,9 +43,6 @@
       pointer-events:auto;touch-action:none;cursor:grab;
     }
     #vegas-chart-canvas:active{cursor:grabbing}
-    @media(max-width:600px){
-      body>#vegas-chart-overlay{width:96vw!important;height:70dvh!important}
-    }
   `;
   document.head.appendChild(style);
 
@@ -214,7 +213,7 @@
     // Keep the chart proportions responsive while preserving the user's pan position.
     if(oldWidth>1) state.panX*=state.width/oldWidth;
     if(oldHeight>1) state.priceShift*=state.height/oldHeight;
-    if(state.autoFitView) state.viewCount=Math.max(90,Math.min(360,Math.round((state.width-16)*0.86/4)));
+    if(state.autoFitView) state.viewCount=Math.min(state.candles.length || 540,540);
     const pixelW=Math.round(state.width*state.dpr),pixelH=Math.round(state.height*state.dpr);
     if(canvas.width!==pixelW) canvas.width=pixelW;
     if(canvas.height!==pixelH) canvas.height=pixelH;
@@ -304,7 +303,8 @@
       } else {
         state.candles=rows;
         state.endTime=rows[rows.length-1].t;
-        state.startTime=state.endTime-120*24*60*60*1000;
+        state.startTime=state.endTime-90*24*60*60*1000;
+        state.viewCount=Math.min(rows.length,540);
         rebuildSeries();
       }
 
@@ -352,7 +352,7 @@
     state.dataRequest++;
     state.symbol=symbol;
     state.contractSymbol='';
-    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=720;state.drag=null;state.priceShift=0;state.panX=0;state.autoFitView=true;state.error='';
+    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=540;state.drag=null;state.priceShift=0;state.panX=0;state.autoFitView=true;state.error='';
     overlay.hidden=false;
     fitCanvas();
     state.error=REALITY_STOCKS.has(symbol)?'正在连接 Bitget Reality 原生4H股票行情…':'正在连接 Bitget 原生4H合约行情…';draw();
@@ -412,7 +412,8 @@
     state.endTime=data[nextEnd-1].t;
     const appliedShift=nextStart-d.baseStart;
     state.panX=d.basePanX+dx+appliedShift*step;
-    state.priceShift=d.basePriceShift+dy;
+    const verticalLimit=Math.max(0,(state.height-50)*0.12);
+    state.priceShift=Math.max(-verticalLimit,Math.min(verticalLimit,d.basePriceShift+dy));
     draw();
   }
   function hitRenderedChart(x,y) {
