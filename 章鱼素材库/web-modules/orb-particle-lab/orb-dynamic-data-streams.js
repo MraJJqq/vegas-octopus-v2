@@ -54,6 +54,8 @@
       const points = window.VegasOrbProjectedPoints;
       if (Array.isArray(points) && points.length) {
         const appRect = app.getBoundingClientRect();
+        const orbRect = orbCanvas.getBoundingClientRect();
+        const orbCenterX = orbRect.left + orbRect.width / 2 - appRect.left;
         const cards = document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]');
         const targets = [];
 
@@ -111,12 +113,15 @@
             let point = points[p.point % points.length];
             if (!point || point.length < 4) continue;
 
+            const endpoint = state.endpoints[j];
             if (point[3] < 0.08) {
               let nearest = null, nearestDistance = Infinity;
+              const referenceX = endpoint ? endpoint.x : point[0];
+              const referenceY = endpoint ? endpoint.y : point[1];
               for (let k = 0; k < points.length; k++) {
                 const candidate = points[k];
                 if (!candidate || candidate.length < 4 || candidate[3] < 0.08) continue;
-                const distance = Math.abs(candidate[0] - centerX) + Math.abs(candidate[1] - centerY);
+                const distance = Math.hypot(candidate[0] - referenceX, candidate[1] - referenceY);
                 if (distance < nearestDistance) {
                   nearest = candidate;
                   nearestDistance = distance;
@@ -127,12 +132,13 @@
 
             const visibility = Math.max(0.22, Math.min(1, point[3] || 0));
             const targetX = point[0], targetY = point[1];
-            const endpoint = state.endpoints[j] || (state.endpoints[j] = { x: targetX, y: targetY });
-            const follow = 1 - Math.exp(-dt / 0.09);
-            endpoint.x += (targetX - endpoint.x) * follow;
-            endpoint.y += (targetY - endpoint.y) * follow;
-            const endX = endpoint.x, endY = endpoint.y;
-            const startX = endX >= centerX ? rightX : leftX;
+            const smoothEndpoint = endpoint || (state.endpoints[j] = { x: targetX, y: targetY });
+            // 使用更缓和的指数跟随，并以发光球相对卡片的位置固定数据流出发侧，避免旋转时左右端点突变。
+            const follow = 1 - Math.exp(-dt / 0.22);
+            smoothEndpoint.x += (targetX - smoothEndpoint.x) * follow;
+            smoothEndpoint.y += (targetY - smoothEndpoint.y) * follow;
+            const endX = smoothEndpoint.x, endY = smoothEndpoint.y;
+            const startX = orbCenterX >= centerX ? rightX : leftX;
             const startY = centerY + (j - (STREAMS_PER_CARD - 1) / 2) * 3.5;
             const controlX = (startX + endX) / 2;
             const color = 'hsl(' + COLORS[p.color] + ',100%,62%)';
