@@ -41,12 +41,22 @@
       const t=ms/1000;
       x.clearRect(0,0,W,H);
       const pr=getProjectedOrb();
+      const appRect=app.getBoundingClientRect();
+      // 只为当前滚动视口内实际可见的正式信号卡片绘制数据流。
+      // 被滚动到视口之外的卡片不参与连接，滚回可见区域后自动恢复。
       const cards=Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]'));
-      if (pr && cards.length) {
-        const appRect=app.getBoundingClientRect();
-        const targets=cards.map(function(card){
-          return {rect:card.getBoundingClientRect()};
-        });
+      const targets=cards.map(function(card){
+        const rect=card.getBoundingClientRect();
+        const scroller=card.closest('.mc-side');
+        const clip=scroller ? scroller.getBoundingClientRect() : appRect;
+        const visible=rect.width>0 && rect.height>0 &&
+          rect.right>clip.left && rect.left<clip.right &&
+          rect.bottom>clip.top && rect.top<clip.bottom &&
+          rect.right>appRect.left && rect.left<appRect.right &&
+          rect.bottom>appRect.top && rect.top<appRect.bottom;
+        return visible ? {rect:rect} : null;
+      }).filter(Boolean);
+      if (pr && targets.length) {
         // 原版 F 总计 150 根，是全页面总量，不是每张卡片各 150 根。
         // 将这 150 根分配给当前正式信号卡片，每根只绘制一次，避免按卡片数量倍增。
         x.globalCompositeOperation='lighter';
