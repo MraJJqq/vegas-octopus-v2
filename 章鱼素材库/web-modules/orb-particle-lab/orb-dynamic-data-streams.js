@@ -140,11 +140,7 @@
             const endX = smoothEndpoint.x, endY = smoothEndpoint.y;
             const startX = orbCenterX >= centerX ? rightX : leftX;
             // 卡片出口先收束成窄束，再沿曲线向不同球面端点逐渐散开。
-            const startY = centerY + (j - (STREAMS_PER_CARD - 1) / 2) * 0.08;
-            // 控制点缓慢摆动，让整条数据流呈现连续、柔和的丝带姿态。
-            const sway = time * 0.62 + group * 0.37 + j * 0.71;
-            const controlX = (startX + endX) / 2 + Math.sin(sway) * 22;
-            const controlY = (startY + endY) / 2 + Math.sin(sway * 0.83 + 0.9) * 30;
+            const startY = c            const controlX = (startX + endX) / 2;
             const color = 'hsl(' + COLORS[p.color] + ',100%,62%)';
 
             const elapsed = Math.max(0, time - state.visibleSince);
@@ -153,11 +149,17 @@
             const phase = travel % 1;
             const inverse = 1 - phase;
             const particleX = inverse * inverse * startX + 2 * inverse * phase * controlX + phase * phase * endX;
-            const particleY = inverse * inverse * startY + 2 * inverse * phase * controlY + phase * phase * endY;
+            const particleY = inverse * inverse * startY + 2 * inverse * phase * startY + phase * phase * endY;
             ctx.beginPath();
             ctx.moveTo(startX, startY);
             if (state.connected) {
               // 首次抵达发光球后保留完整连接线，粒子继续沿线循环运动。
+              ctx.quadraticCurveTo(controlX, startY, endX, endY);
+            } else {
+              const partialControlX = startX + phase * (controlX - startX);
+              ctx.quadraticCurveTo(partialControlX, startY, particleX, particleY);
+            }
+球后保留完整连接线，粒子继续沿线循环运动。
               ctx.quadraticCurveTo(controlX, controlY, endX, endY);
             } else {
               const partialControlX = startX + phase * (controlX - startX);
@@ -170,10 +172,10 @@
             ctx.stroke();
 
             // 恢复原版粒子的透明度与辉光样式；连接状态和运动进度逻辑保持不变。
-            ctx.globalAlpha = Math.min(1, 0.95 * visibility * opacity);
+            ctx.globalAlpha = Math.min(1, 1.35 * visibility * opacity);
             ctx.fillStyle = color;
             ctx.shadowColor = color;
-            ctx.shadowBlur = 8;
+            ctx.shadowBlur = 18;
             ctx.beginPath();
             ctx.arc(particleX, particleY, 2.7, 0, Math.PI * 2);
             ctx.fill();
