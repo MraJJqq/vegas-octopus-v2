@@ -8,7 +8,7 @@
   const SH = [0, 28, 52, 150, 190, 245, 320];
   const F = [];
   for (let i = 0; i < 150; i++) {
-    F.push({ s: i % 7, t: Math.floor(Math.random() * 900), o: Math.random(), v: 0.18 + Math.random() * 0.25, cardIndex: i % 1 });
+    F.push({ s: i % 7, t: Math.floor(Math.random() * 900), o: Math.random(), v: 0.18 + Math.random() * 0.25 });
   }
 
   function start() {
@@ -31,26 +31,16 @@
       x.setTransform(dpr,0,0,dpr,0,0);
     }
 
-    function getProjectedOrb(t) {
-      if (!Array.isArray(window.P) || typeof window.pj!=='function' || !window.V ||
-          typeof window.rot!=='number' || typeof window.pitB!=='number') return null;
-      const P=window.P,V=window.V,cx=W*.66,cy=H*.5;
-      const roomX=Math.min(cx-8,W-cx-8),roomY=Math.max(1,H*.46);
-      const Rr=Math.max(1,Math.min(roomX,roomY)*V.zm);
-      const pit=window.pitB+.1*Math.sin(t*.17),cp=Math.cos(pit),spp=Math.sin(pit);
-      return P.map(function(p){
-        const yw=window.rot*(.8+.4*p.k);
-        const q=window.pj([p.x,p.y,p.z],Math.cos(yw),Math.sin(yw),cp,spp,cx,cy,Rr);
-        const u=(q[0]-(cx-Rr))/(2*Rr);
-        q.push(Math.max(0,Math.min(1,(.6-u)/.22)),(q[2]+1)/2);
-        return q;
-      });
+    function getProjectedOrb() {
+      // 直接读取发光球自身每帧生成的投影点，确保数据流终点与球面粒子完全重合。
+      const points=window.VegasOrbProjectedPoints;
+      return Array.isArray(points) && points.length ? points : null;
     }
 
     function frame(ms) {
       const t=ms/1000;
       x.clearRect(0,0,W,H);
-      const pr=getProjectedOrb(t);
+      const pr=getProjectedOrb();
       const cards=Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]'));
       if (pr && cards.length) {
         const appRect=app.getBoundingClientRect();
