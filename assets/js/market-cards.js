@@ -61,7 +61,9 @@ function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(updat
 let wheelTarget=left.scrollTop,wheelFrame=0,wheelVelocity=0,wheelLastTime=0,loopDirection=1;
 function cardStep(){
  const first=left.firstElementChild;
- return first?first.getBoundingClientRect().height+(parseFloat(getComputedStyle(left).rowGap)||0):0;
+ const style=getComputedStyle(left);
+ const gap=parseFloat(style.rowGap)||parseFloat(style.gap)||0;
+ return first?first.offsetHeight+gap:0;
 }
 function normalizeLoopPosition(){
  if(focusSlots.length<2)return;
@@ -137,19 +139,25 @@ function autoWaveScroll(now){
  if(!autoLastTime)autoLastTime=now;
  const dt=Math.min(40,Math.max(0,now-autoLastTime))/1000;
  autoLastTime=now;
- if(!wheelFrame&&now>=autoResumeAt){
+ if(now>=autoResumeAt){
+  if(wheelFrame){
+   cancelAnimationFrame(wheelFrame);
+   wheelFrame=0;wheelLastTime=0;wheelVelocity=0;
+  }
   if(!autoWaveScroll.nextChange||now>=autoWaveScroll.nextChange){
    const cycleSpeed=Math.max(1,cardStep()*focusSlots.length/120);
    autoWaveScroll.targetSpeed=cycleSpeed*(.72+Math.random()*.56);
    autoWaveScroll.nextChange=now+2200+Math.random()*3600;
   }
-  const speed=autoWaveScroll.speed??22;
+  const speed=autoWaveScroll.speed??Math.max(1,cardStep()*focusSlots.length/120);
   autoWaveScroll.speed=speed+(autoWaveScroll.targetSpeed-speed)*(1-Math.exp(-dt/2.2));
-  left.scrollTop+=autoWaveScroll.speed*dt;
-  loopDirection=1;
-  normalizeLoopPosition();
-  wheelTarget=left.scrollTop;
-  queueFocusScale();
+  if(focusSlots.length>1&&cardStep()>0){
+   left.scrollTop=left.scrollTop+autoWaveScroll.speed*dt;
+   loopDirection=1;
+   normalizeLoopPosition();
+   wheelTarget=left.scrollTop;
+   queueFocusScale();
+  }
  }
  autoFrame=requestAnimationFrame(autoWaveScroll);
 }
