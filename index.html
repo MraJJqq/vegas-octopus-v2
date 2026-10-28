@@ -1182,8 +1182,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         const seed=(i*37+11)%17;
         const jitterX=(seed/16-.5)*(mobile?W*.012:W*.018);
         const jitterY=(((i*13+5)%11)/10-.5)*Math.min(3,rowStep*.05);
-        const x=Math.max(sideMargin+cardW/2,Math.min(W-sideMargin-cardW/2,W*centers[col]+jitterX));
-        const y=Math.max(cardH/2+5,Math.min(H-cardH/2-5,(row+.5)*rowStep+jitterY));
+        // Reserve room for the 1.5x hover enlargement and tilt, not just the resting card box.
+        const safeHalfW=cardW*.84, safeHalfH=cardH*.9;
+        const x=Math.max(sideMargin+safeHalfW,Math.min(W-sideMargin-safeHalfW,W*centers[col]+jitterX));
+        const y=Math.max(safeHalfH+3,Math.min(H-safeHalfH-3,(row+.5)*rowStep+jitterY));
         const st=el.style;
         st.setProperty('position','absolute','important');
         st.setProperty('left',x+'px','important');
