@@ -221,8 +221,8 @@ const fmt=p=>p>=1000?p.toLocaleString('en-US',{maximumFractionDigits:1}):p>=100?
 const S=P.map(([s,api],i)=>({s,api,i,p:0,o:0,h:[],ready:false}));
 const left=document.getElementById('mc-left'),right=document.getElementById('mc-right');
 S.forEach(d=>{
- const host=d.i<14?left:right;
- host.insertAdjacentHTML('beforeend',`<div class="mc-slot"><div class="mc-float" style="--d:${-d.i*.9}s"><div class="mc-card" id="mc-c${d.i}"><div class="mc-bg"></div><i class="mc-gl"></i><div class="mc-row mc-l2"><span class="mc-coin">${d.s[0]}</span><b class="mc-sym">${d.s}<small>${d.s==="USOIL"?"原油":d.s==="XAUUSD"?"黄金":"/USDT 永续"}</small></b></div><div class="mc-price mc-l4">加载中</div><div class="mc-l3"><span class="mc-pct">--</span></div><svg class="mc-spark mc-l1" viewBox="0 0 200 35" preserveAspectRatio="none"><path class="mc-ar"/><path class="mc-ln"/></svg><div class="mc-hl mc-l2">高<span class="mc-hi">--</span>低<span class="mc-lo">--</span></div></div></div><div class="mc-gshadow" style="--d:${-d.i*.9}s"></div></div>`);
+ const host=d.i%2===0?left:right;
+ host.insertAdjacentHTML('beforeend',`<div class="mc-slot"><div class="mc-float" style="--d:${-d.i*.9}s"><div class="mc-card" id="mc-c${d.i}"><div class="mc-bg"></div><i class="mc-gl"></i><div class="mc-row mc-l2"><span class="mc-coin">${d.s[0]}</span><b class="mc-sym">${d.s}<small>${"/USDT 永续"}</small></b></div><div class="mc-price mc-l4">加载中</div><div class="mc-l3"><span class="mc-pct">--</span></div><svg class="mc-spark mc-l1" viewBox="0 0 200 35" preserveAspectRatio="none"><path class="mc-ar"/><path class="mc-ln"/></svg><div class="mc-hl mc-l2">高<span class="mc-hi">--</span>低<span class="mc-lo">--</span></div></div></div><div class="mc-gshadow" style="--d:${-d.i*.9}s"></div></div>`);
 });
 function paint(d){
  const c=document.getElementById('mc-c'+d.i),q=s=>c.querySelector(s);
