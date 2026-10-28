@@ -18,7 +18,7 @@
   const canvas = overlay.querySelector('canvas'), ctx = canvas.getContext('2d'), status = overlay.querySelector('#vegas-fifth-status');
   const API='https://api.bitget.com';
   const EMA_SPECS=[{p:12,c:'#ffd84a'},{p:36,c:'#f4f8ff'},{p:43,c:'#f4f8ff'},{p:144,c:'#ffd84a'},{p:169,c:'#ffd84a'},{p:576,c:'#ff4c62'},{p:676,c:'#ff4c62'}];
-  let candles=[], series=[], activeSymbol='', activeName='', isStock=false, viewEnd=0, viewCount=90, panStart=null, lastPointer=null, refreshTimer=null, resizeObserver=null, dpr=1, W=1,H=1, hitSegments=[];
+  let candles=[], series=[], activeSymbol='', activeName='', isStock=false, viewEnd=0, viewCount=180, panStart=null, lastPointer=null, refreshTimer=null, resizeObserver=null, dpr=1, W=1,H=1, hitSegments=[];
   const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function resize(){
     const r=canvas.getBoundingClientRect(); dpr=Math.max(1,window.devicePixelRatio||1); W=Math.max(1,r.width); H=Math.max(1,r.height);
@@ -93,7 +93,7 @@
     const symbol=String(card.dataset.symbol||'').toUpperCase();if(!symbol)return;
     activeSymbol=symbol;activeName=(card.querySelector('.mc-sym')?.childNodes[0]?.textContent||symbol).trim();
     isStock=['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','QCOM','AMD','TSM','AVGO','ORCL','ARM','MU','ASML','SNDK','SKHYNIX','MRVL','GLW','HOOD','CBRS','SPCX'].includes(symbol);
-    viewCount=90;viewEnd=0;overlay.style.display='block';resize();load();
+    viewCount=180;viewEnd=0;overlay.style.display='block';resize();load();
     if(refreshTimer)clearInterval(refreshTimer);refreshTimer=setInterval(()=>{if(overlay.style.display!=='none')load();},60000);
   }
   function close(){overlay.style.display='none';if(refreshTimer){clearInterval(refreshTimer);refreshTimer=null;}panStart=null;}
