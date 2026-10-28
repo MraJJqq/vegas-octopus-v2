@@ -284,7 +284,6 @@ function normalizeLoopPosition(){
  }
  if(Math.abs(top-left.scrollTop)>.1)left.scrollTop=top;
  loopBusy=false;
- queueFocusScale();
 }
 function smoothWheelStep(now){
  if(!wheelLastTime)wheelLastTime=now;
@@ -319,7 +318,6 @@ left.addEventListener('scroll',()=>{
 left.addEventListener('touchstart',()=>{wheelVelocity=0;wheelTarget=left.scrollTop},{passive:true});
 left.addEventListener('touchend',()=>{wheelTarget=left.scrollTop;wheelVelocity=0},{passive:true});
 window.addEventListener('resize',queueFocusScale,{passive:true});
-left.style.scrollSnapType='none';
 left.style.scrollBehavior='auto';
 queueFocusScale();
 const API='https://api.bitget.com';
