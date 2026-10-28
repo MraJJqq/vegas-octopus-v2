@@ -1152,40 +1152,37 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 </script>
 
 <script id="octopus-square-scatter-layout-script">
-/* Vegas 章鱼｜方形行情卡片：取消公转，分散排列在舞台左右边缘，按网格间距防止重叠。 */
+/* Vegas 章鱼｜27张行情卡片：动态检测卡片生成与舞台尺寸，所有定位均限制在可视舞台内。 */
 (function(){
   function start(){
     const grid=document.getElementById('octopusMarketCardGrid');
     const stage=grid&&grid.closest('.center-stage');
     if(!grid||!stage)return;
-    const cards=[...grid.querySelectorAll('.pos')];
-    if(!cards.length)return;
-    let W=1,H=1;
+    let scheduled=false;
     function sizeAndPlace(){
-      W=Math.max(1,stage.clientWidth);
-      H=Math.max(1,stage.clientHeight);
+      scheduled=false;
+      const cards=[...grid.querySelectorAll('.pos')];
+      if(!cards.length)return;
+      const W=Math.max(1,stage.clientWidth),H=Math.max(1,stage.clientHeight);
       const mobile=W<=760,cols=4,rows=Math.ceil(cards.length/cols);
-      const sideMargin=mobile?W*.012:W*.006;
       const centers=mobile?[.12,.35,.65,.88]:[.08,.245,.755,.92];
+      const sideMargin=Math.max(2,W*.006);
       const rowStep=H/rows;
-      // Fit each card inside its responsive grid cell; never enforce a height that causes row overlap.
-      const nearestColGap=Math.min(...centers.slice(1).map((v,i)=>(v-centers[i])*W));
-      const cardW=Math.max(24,Math.min(mobile?W*.215:W*.145,mobile?108:188,nearestColGap*.86,W-sideMargin*2));
-      const cardH=Math.max(16,Math.min(mobile?54:78,rowStep*.72,H/rows*.72));
-      const ordered=cards.slice().sort((a,b)=>{
-        const na=(a.querySelector('.sym')?.textContent||'').trim().toUpperCase();
-        const nb=(b.querySelector('.sym')?.textContent||'').trim().toUpperCase();
-        return na.localeCompare(nb);
-      });
+      const nearestGap=Math.min(...centers.slice(1).map((v,i)=>(v-centers[i])*W));
+      // Limit dimensions first, then reserve the full 1.5x hover footprint at every edge.
+      const cardW=Math.min(mobile?108:188,W*(mobile?.215:.145),nearestGap*.72,Math.max(1,(W-sideMargin*2)/2));
+      const cardH=Math.min(mobile?54:78,rowStep*.62,H/rows*.62);
+      const halfW=cardW*.78,halfH=cardH*.78;
+      const ordered=cards.slice().sort((a,b)=>(a.querySelector('.sym')?.textContent||'').trim().localeCompare((b.querySelector('.sym')?.textContent||'').trim()));
       ordered.forEach((el,i)=>{
         const col=i%cols,row=Math.floor(i/cols);
         const seed=(i*37+11)%17;
-        const jitterX=(seed/16-.5)*(mobile?W*.012:W*.018);
-        const jitterY=(((i*13+5)%11)/10-.5)*Math.min(3,rowStep*.05);
-        // Reserve room for the 1.5x hover enlargement and tilt, not just the resting card box.
-        const safeHalfW=cardW*.84, safeHalfH=cardH*.9;
-        const x=Math.max(sideMargin+safeHalfW,Math.min(W-sideMargin-safeHalfW,W*centers[col]+jitterX));
-        const y=Math.max(safeHalfH+3,Math.min(H-safeHalfH-3,(row+.5)*rowStep+jitterY));
+        const jitterX=(seed/16-.5)*(mobile?W*.008:W*.01);
+        const jitterY=(((i*13+5)%11)/10-.5)*Math.min(2,rowStep*.025);
+        const minX=Math.min(W/2,sideMargin+halfW),maxX=Math.max(minX,W-sideMargin-halfW);
+        const minY=Math.min(H/2,halfH+2),maxY=Math.max(minY,H-halfH-2);
+        const x=Math.max(minX,Math.min(maxX,W*centers[col]+jitterX));
+        const y=Math.max(minY,Math.min(maxY,(row+.5)*rowStep+jitterY));
         const st=el.style;
         st.setProperty('position','absolute','important');
         st.setProperty('left',x+'px','important');
@@ -1193,24 +1190,28 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         st.setProperty('width',cardW+'px','important');
         st.setProperty('height',cardH+'px','important');
         st.setProperty('transform','translate(-50%,-50%)','important');
+        st.setProperty('right','auto','important');
+        st.setProperty('bottom','auto','important');
+        st.setProperty('margin','0','important');
         st.setProperty('opacity','1','important');
         st.setProperty('filter','none','important');
         st.setProperty('z-index',String(10+(i%3)),'important');
         st.setProperty('will-change','auto','important');
-        const card=el.querySelector('.card');
-        if(card){
-          card.style.setProperty('--sphere-rx','0deg');
-          card.style.setProperty('--sphere-ry','0deg');
-          card.style.setProperty('transform','none','important');
-        }
       });
-      grid.style.setProperty('perspective','none','important');
-      grid.style.setProperty('transform-style','flat','important');
+      grid.style.setProperty('position','absolute','important');
+      grid.style.setProperty('inset','0','important');
+      grid.style.setProperty('width','100%','important');
+      grid.style.setProperty('height','100%','important');
       grid.style.setProperty('overflow','hidden','important');
+      grid.style.setProperty('perspective','none','important');
+      stage.style.setProperty('position','relative','important');
+      stage.style.setProperty('overflow','hidden','important');
     }
+    function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(sizeAndPlace)}
     sizeAndPlace();
-    if(window.ResizeObserver)new ResizeObserver(sizeAndPlace).observe(stage);
-    window.addEventListener('resize',sizeAndPlace,{passive:true});
+    if(window.ResizeObserver)new ResizeObserver(schedule).observe(stage);
+    window.addEventListener('resize',schedule,{passive:true});
+    new MutationObserver(schedule).observe(grid,{childList:true,subtree:true});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
