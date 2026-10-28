@@ -86,7 +86,7 @@
         ctx.globalCompositeOperation = 'lighter';
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        ctx.lineWidth = 2.4;
+        ctx.lineWidth = 0.8;
 
         targets.forEach(({ rect, opacity, group }) => {
           const centerX = rect.left + rect.width / 2 - appRect.left;
@@ -119,20 +119,15 @@
             const startX = endX >= centerX ? rightX : leftX;
             const startY = centerY + (j - (STREAMS_PER_CARD - 1) / 2) * 3.5;
             const controlX = (startX + endX) / 2;
-            const color = 'hsl(' + COLORS[p.color] + ',100%,66%)';
+            const color = 'hsl(' + COLORS[p.color] + ',100%,62%)';
 
             ctx.beginPath();
             ctx.moveTo(startX, startY);
             ctx.quadraticCurveTo(controlX, startY, endX, endY);
             ctx.strokeStyle = color;
-            ctx.globalAlpha = Math.min(1, 0.92 * visibility * opacity);
-            ctx.shadowColor = color;
-            ctx.shadowBlur = 22;
-            ctx.stroke();
-            ctx.globalAlpha = Math.min(1, 0.95 * visibility * opacity);
-            ctx.shadowBlur = 5;
-            ctx.stroke();
+            ctx.globalAlpha = Math.min(1, 0.26 * visibility * opacity);
             ctx.shadowBlur = 0;
+            ctx.stroke();
 
             const phase = (time * p.speed + p.phase) % 1;
             const inverse = 1 - phase;
