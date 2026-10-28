@@ -1,5 +1,4 @@
 /* 第二层：最新事件模块，读取正式信号状态。 */
-/* 第二层：最新事件模块，读取正式信号状态。 */
 (function(){
   const STATE_URL="https://raw.githubusercontent.com/MraJJqq/vegas-octopus-v2/main/v9-signals.json";
   const CORE_ORDER=["BTC","HYPE","XAU","CL"];
