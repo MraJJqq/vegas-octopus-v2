@@ -850,10 +850,22 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   canvas.addEventListener('pointermove',pointerMove);
   canvas.addEventListener('pointerup',pointerUp);
   canvas.addEventListener('pointercancel',()=>{state.drag=null;});
-  canvas.addEventListener('wheel',event=>{
+  // Consume wheel gestures at the overlay boundary so they cannot bubble
+  // into page/scroll handlers. Wheel zoom is local-only: it must never close
+  // the chart or trigger a market-data request.
+  let lastWheelZoomAt=0;
+  function handleChartWheel(event) {
     if(overlay.hidden) return;
-    event.preventDefault();changeZoom(event.deltaY);
-  },{passive:false});
+    event.preventDefault();
+    event.stopPropagation();
+    if(typeof event.stopImmediatePropagation==='function') event.stopImmediatePropagation();
+    const now=performance.now();
+    if(now-lastWheelZoomAt<45) return;
+    lastWheelZoomAt=now;
+    changeZoom(event.deltaY);
+  }
+  overlay.addEventListener('wheel',handleChartWheel,{passive:false,capture:true});
+  canvas.addEventListener('wheel',handleChartWheel,{passive:false});
   overlay.addEventListener('click',event=>{if(event.target===overlay)close();});
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!overlay.hidden)close();});
   window.addEventListener('resize',fitCanvas,{passive:true});
