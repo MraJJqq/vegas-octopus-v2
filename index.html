@@ -497,6 +497,53 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     }
     return Array.from(byTime.values()).sort((a,b)=>a.t-b.t);
   }
+  const CACHE_PREFIX='vegas-v5-4h-cache:';
+  const CACHE_TTL=24*60*60*1000;
+  function writeCandleCache(symbol, rows) {
+    try {
+      const payload={savedAt:Date.now(),rows:rows.slice(-700)};
+      localStorage.setItem(CACHE_PREFIX+symbol,JSON.stringify(payload));
+    } catch (_) {}
+  }
+  function readCandleCache(symbol) {
+    try {
+      const payload=JSON.parse(localStorage.getItem(CACHE_PREFIX+symbol)||'null');
+      if(!payload||!Array.isArray(payload.rows)||!payload.rows.length) return null;
+      return normalize(payload.rows);
+    } catch (_) { return null; }
+  }
+  function showCachedCandles(symbol) {
+    const rows=readCandleCache(symbol);
+    if(!rows||rows.length<2) return false;
+    state.candles=rows;
+    state.endTime=rows[rows.length-1].t;
+    state.startTime=state.endTime-90*24*60*60*1000;
+    rebuildSeries();
+    const range=visibleIndices();
+    state.viewCount=Math.max(1,range.end-range.start);
+    draw();
+    return true;
+  }
+  async function warmCandleCache() {
+    let symbols=Array.from(STOCKS);
+    symbols.push('BTC','HYPE','XAU','CL');
+    let next=0;
+    async function worker() {
+      while(next<symbols.length) {
+        const symbol=symbols[next++];
+        if(readCandleCache(symbol)) continue;
+        try {
+          const stock=STOCKS.has(symbol);
+          const apiSymbol=stock?await resolveStock(symbol):symbol;
+          const rows=normalize(await getJson(candlePath(apiSymbol,stock)));
+          if(rows.length>1) writeCandleCache(symbol,rows);
+        } catch(error) {
+          console.warn('[Vegas Fifth Layer] 预热失败：'+symbol,error);
+        }
+      }
+    }
+    await Promise.all([worker(),worker(),worker()]);
+  }
   function calcEma(values, period) {
     const result = Array(values.length).fill(null);
     const k = 2 / (period + 1);
@@ -584,8 +631,8 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
       const rows=normalize(await getJson(candlePath(apiSymbol,state.stock)));
       if(generation!==state.generation || overlay.hidden) return;
       if(rows.length<2) throw new Error('交易所返回的4H K线不足');
+      writeCandleCache(state.symbol,rows);
       if(isRefresh && state.candles.length) {
-        // Merge new data while preserving the exact visible time window.
         const oldStart=state.startTime,oldEnd=state.endTime;
         state.candles=normalize(state.candles.concat(rows));
         rebuildSeries();
@@ -593,9 +640,8 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
         state.endTime=oldEnd;
       } else {
         state.candles=rows;
-        state.viewCount=Math.min(180,rows.length);
         state.endTime=rows[rows.length-1].t;
-        state.startTime=rows[Math.max(0,rows.length-state.viewCount)].t;
+        state.startTime=state.endTime-90*24*60*60*1000;
         rebuildSeries();
       }
       const range=visibleIndices();
@@ -640,9 +686,10 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     state.symbol=symbol;
     state.name=(card.querySelector('.mc-sym')?.childNodes[0]?.textContent||symbol).trim();
     state.stock=STOCKS.has(symbol);
-    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=180;state.drag=null;state.panX=0;state.priceShift=0;state.historyLoading=false;
+    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=540;state.drag=null;state.panX=0;state.priceShift=0;state.historyLoading=false;
     overlay.hidden=false;
     fitCanvas();
+    showCachedCandles(symbol);
     loadData(false);
     if(state.timer) clearInterval(state.timer);
     state.timer=window.setInterval(()=>{if(!overlay.hidden)loadData(true);},60000);
@@ -739,6 +786,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   if(window.ResizeObserver) new ResizeObserver(fitCanvas).observe(canvas);
   window.VegasFifthLayer={open,close,refresh:()=>loadData(true),getState:()=>({symbol:state.symbol,visible:!overlay.hidden,candles:state.candles.length})};
   window.__VEGAS_FIFTH_LAYER_READY__=true;
+  window.setTimeout(()=>{if(!document.hidden)warmCandleCache();},350);
   console.info('[Vegas Fifth Layer] initialized');
 })();
 </script>
