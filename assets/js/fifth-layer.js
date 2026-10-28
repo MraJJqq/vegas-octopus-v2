@@ -171,7 +171,7 @@
     }
     // If the newest-candles endpoint returns no usable rows and there is no cache,
     // start history pagination from the current time instead of failing before fallback.
-    let combined = normalize([...(stored || []), ...latest]);
+    let combined = mergeCandles(stored || [], latest);
     let pages = 0;
     let cursorTime = combined.length ? combined[0].t - 1 : Date.now();
     const maxPages = Math.ceil(EMA_WARMUP_BARS / 100) + 2;
@@ -188,7 +188,7 @@
       const page = normalize(rawPage);
       if (!page.length) break;
       const oldestBefore = combined.length ? combined[0].t : Infinity;
-      const next = normalize(page.concat(combined));
+      const next = mergeCandles(page, combined);
       if (next.length <= combined.length) break;
       if (Number.isFinite(oldestBefore) && next[0].t >= oldestBefore) break;
       combined = next;
@@ -265,6 +265,18 @@
       const c = {t:Number(row[0]),o:Number(row[1]),h:Number(row[2]),l:Number(row[3]),c:Number(row[4])};
       if (![c.t,c.o,c.h,c.l,c.c].every(Number.isFinite) || c.t <= 0 || c.o <= 0 || c.h <= 0 || c.l <= 0 || c.c <= 0) continue;
       byTime.set(c.t,c);
+    }
+    return Array.from(byTime.values()).sort((a,b)=>a.t-b.t);
+  }
+  // Merge already-normalized candle objects by timestamp; normalize() is only for raw exchange arrays.
+  function mergeCandles(...groups) {
+    const byTime = new Map();
+    for (const group of groups) {
+      for (const candle of Array.isArray(group) ? group : []) {
+        if (!candle || ![candle.t,candle.o,candle.h,candle.l,candle.c].every(Number.isFinite)) continue;
+        if (candle.t <= 0 || candle.o <= 0 || candle.h <= 0 || candle.l <= 0 || candle.c <= 0) continue;
+        byTime.set(candle.t,candle);
+      }
     }
     return Array.from(byTime.values()).sort((a,b)=>a.t-b.t);
   }
