@@ -54,12 +54,14 @@
         targets.forEach(function(target){
           const cardR=target.rect;
           const startX=cardR.right-appRect.left;
-          const startY=cardR.top+cardR.height/2-appRect.top;
-          const y0=startY;
-          const c1x=(W*.66)*.5;
+          const cardCenterY=cardR.top+cardR.height/2-appRect.top;
           F.forEach(function(f){
             const q=pr[f.t],fa=q[3];
             if(fa<.05)return;
+            // 保留原版按七色序号分层的起点高度，并整体锚定到对应卡片中心。
+            const laneOffset=H*(.12+f.s*.12)-H*.48;
+            const y0=cardCenterY+laneOffset;
+            const c1x=(startX+q[0])*.5;
             const endX=q[0],endY=q[1];
             const col='hsl('+SH[f.s]+',100%,62%)';
             x.strokeStyle=col;x.globalAlpha=.26*fa;
