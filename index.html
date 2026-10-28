@@ -179,8 +179,8 @@ html,body{width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavio
   padding:0 10vw;border:0;border-radius:0;background:transparent;box-shadow:none;
   backdrop-filter:none;-webkit-backdrop-filter:none;
   opacity:0;visibility:hidden;pointer-events:none;
-  transform:none;transition:opacity .12s ease,visibility .12s;
-}#octopusFourHourHover.is-visible{opacity:1;visibility:visible;pointer-events:none}#octopusFourHourHover .o4-chart{display:block;width:100%;height:100%;min-height:100px;overflow:visible;pointer-events:auto}#octopusFourHourHover .o4-candles line{stroke-width:1.5;vector-effect:non-scaling-stroke}#octopusFourHourHover .o4-candles rect{stroke-width:1.25;vector-effect:non-scaling-stroke;filter:none}#octopusFourHourClose{
+  transform:none;transition:opacity .12s ease,visibility 0s linear .12s;
+}#octopusFourHourHover.is-visible{opacity:1;visibility:visible;pointer-events:none;transition:opacity .12s ease,visibility 0s}#octopusFourHourHover .o4-chart{display:block;width:100%;height:100%;min-height:100px;overflow:visible;pointer-events:auto}#octopusFourHourHover .o4-candles line{stroke-width:1.5;vector-effect:non-scaling-stroke}#octopusFourHourHover .o4-candles rect{stroke-width:1.25;vector-effect:non-scaling-stroke;filter:none}#octopusFourHourClose{
   position:fixed;top:clamp(14px,3vh,30px);right:clamp(14px,3vw,34px);z-index:10001;
   display:grid;place-items:center;width:44px;height:44px;border:1px solid rgba(137,210,255,.58);
   border-radius:50%;background:rgba(5,15,30,.82);color:#eaf8ff;font-size:27px;line-height:1;
@@ -487,11 +487,13 @@ function normalizeFourHourRows(rows){
 function mergeFourHourRows(...sets){
   return cleanFourHourCandles(sets.flat());
 }
+let fourHourLastDrawInput=null,fourHourLastDrawStart=null,fourHourLastDrawCount=null,fourHourLastDrawAnchor=null,fourHourLastDrawEnd=null;
 function drawFourHour(candles){
+  if(fourHourLastDrawInput===candles&&fourHourLastDrawStart===fourHourViewStart&&fourHourLastDrawCount===fourHourViewCount&&fourHourLastDrawAnchor===fourHourViewAnchorTime&&fourHourLastDrawEnd===fourHourViewEndTime)return;
   const candleGroup=fourHourLayer.querySelector('.o4-candles');
   const emaGroup=fourHourLayer.querySelector('.o4-emas');
-  candleGroup.replaceChildren();emaGroup.replaceChildren();
   const allRows=cleanFourHourCandles(candles);
+  candleGroup.replaceChildren();emaGroup.replaceChildren();
   if(allRows.length<2)return;
   // Vegas lines use only 4H closes. Seed each EMA with the first-period SMA, then apply the standard EMA recurrence.
   const periods=[12,36,43,144,169,576,676];
@@ -562,6 +564,11 @@ function drawFourHour(candles){
     body.setAttribute('x',x-bodyW/2);body.setAttribute('y',top);body.setAttribute('width',bodyW);body.setAttribute('height',height);
     body.setAttribute('fill',risingBody?'transparent':fallingBody?color:'none');body.setAttribute('stroke',color);candleGroup.appendChild(body);
   });
+  fourHourLastDrawInput=candles;
+  fourHourLastDrawStart=fourHourViewStart;
+  fourHourLastDrawCount=fourHourViewCount;
+  fourHourLastDrawAnchor=fourHourViewAnchorTime;
+  fourHourLastDrawEnd=fourHourViewEndTime;
 }
 async function loadFourHourData(o,forceRefresh=false){
   const cache=fourHourCache.get(o);
@@ -859,8 +866,16 @@ function frame(t){
     const z=(e>.01||o.on)?100:10+o.l;if(o.z!==z){o.z=z;st.zIndex=z}
     if(o.lh!==e){o.lh=e;st.setProperty('--hv',e)}
   }
-  requestAnimationFrame(frame)}
-requestAnimationFrame(frame);
+  frameRequest=requestAnimationFrame(frame)}
+let frameRequest=requestAnimationFrame(frame);
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){
+    if(frameRequest){cancelAnimationFrame(frameRequest);frameRequest=0;}
+  }else if(!frameRequest){
+    last=0;
+    frameRequest=requestAnimationFrame(frame);
+  }
+});
 
 function paint(d){
   const c=d.card,q=s=>c.querySelector(s);
@@ -1028,13 +1043,13 @@ loadMarketData();
 setInterval(loadMarketData,15000);
 
 // 悬停只负责卡片放大、发光和倾斜；单击一次才打开大卡片。离开后的收起规则保持不变。
-C.forEach(o=>{const el=o.pos,c=o.card;let t;
+C.forEach(o=>{const el=o.pos,c=o.card;let t,moveFrame=0,lastMove=null;
   el.addEventListener('pointerenter',()=>{clearTimeout(t);o.on=true});
   el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(e.detail>1)return;showFourHour(o)});
   const off=e=>{clearTimeout(t);t=setTimeout(()=>{o.on=false;o.tiltX=0;o.tiltY=0},e.pointerType==='touch'?1500:80)};
   el.addEventListener('pointerleave',off);el.addEventListener('pointercancel',off);
-  el.addEventListener('pointermove',e=>{const r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
-    o.tiltY=(x-.5)*14;o.tiltX=(.5-y)*16;c.style.setProperty('--mx',x*100+'%');c.style.setProperty('--my',y*100+'%')})});
+  el.addEventListener('pointermove',e=>{lastMove=e;if(moveFrame)return;moveFrame=requestAnimationFrame(()=>{moveFrame=0;const p=lastMove;if(!p)return;const r=c.getBoundingClientRect(),x=(p.clientX-r.left)/Math.max(1,r.width),y=(p.clientY-r.top)/Math.max(1,r.height);
+    o.tiltY=(x-.5)*14;o.tiltX=(.5-y)*16;c.style.setProperty('--mx',x*100+'%');c.style.setProperty('--my',y*100+'%')})})});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
