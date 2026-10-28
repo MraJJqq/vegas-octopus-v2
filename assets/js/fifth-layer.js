@@ -54,7 +54,7 @@
   const state = {
     symbol:'', contractSymbol:'', candles:[], series:[], ws:null, wsReconnect:0, wsHeartbeat:0, pendingDraw:false,
     startTime:null, endTime:null, viewCount:720,
-    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, pendingRefresh:false, priceShift:0, error:''
+    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, pendingRefresh:false, offsetX:null, offsetY:null, error:''
   };
 
   const EMA_WARMUP_BARS = 1400;
@@ -206,8 +206,13 @@
     const oldWidth=state.width,oldHeight=state.height;
     state.dpr=Math.max(1,window.devicePixelRatio||1);
     state.width=Math.max(1,rect.width); state.height=Math.max(1,rect.height);
-    if(oldHeight>1) state.priceShift*=state.height/oldHeight;
-    state.priceShift=Math.max(-Math.min(120,state.height*.15),Math.min(Math.min(120,state.height*.15),state.priceShift));
+    if(state.offsetX==null) state.offsetX=state.width*.07;
+    else if(oldWidth>1) state.offsetX*=state.width/oldWidth;
+    if(state.offsetY==null) state.offsetY=state.height*.11;
+    else if(oldHeight>1) state.offsetY*=state.height/oldHeight;
+    const frameW=Math.min(state.width, state.width*.86), frameH=Math.min(state.height, state.height*.78);
+    state.offsetX=Math.max(0,Math.min(Math.max(0,state.width-frameW),state.offsetX));
+    state.offsetY=Math.max(0,Math.min(Math.max(0,state.height-frameH),state.offsetY));
     // Resize must not reset the user's historical viewport or zoom level.
     const pixelW=Math.round(state.width*state.dpr),pixelH=Math.round(state.height*state.dpr);
     if(canvas.width!==pixelW) canvas.width=pixelW;
@@ -229,14 +234,16 @@
     }
     const {start,end}=visibleIndices(), rows=data.slice(start,end);
     if(!rows.length) return;
-    const pad={left:8,right:8,top:38,bottom:12};
-    // Reserve a vertical safety band so panning never pushes the plotted candles
-    // beyond the screen edges. The band scales with viewport height.
-    const verticalLimit=Math.max(0,Math.min(120,H*.15));
-    const plotTop=pad.top+verticalLimit;
-    const plotW=Math.max(1,(W-pad.left-pad.right)*0.86);
-    const plotH=Math.max(1,H-plotTop-pad.bottom-verticalLimit); // 右侧保留约14%空白
-    state.priceShift=Math.max(-verticalLimit,Math.min(verticalLimit,state.priceShift));
+    const pad={left:8,right:8,top:30,bottom:12};
+    // The transparent full-screen overlay stays fixed at the top z-index;
+    // the chart viewport itself can be moved anywhere within the page bounds.
+    const frameW=Math.max(1,Math.min(W,W*.86)), frameH=Math.max(1,Math.min(H,H*.78));
+    state.offsetX=Math.max(0,Math.min(Math.max(0,W-frameW),state.offsetX||0));
+    state.offsetY=Math.max(0,Math.min(Math.max(0,H-frameH),state.offsetY||0));
+    const plotLeft=state.offsetX+pad.left;
+    const plotTop=state.offsetY+pad.top;
+    const plotW=Math.max(1,frameW-pad.left-pad.right);
+    const plotH=Math.max(1,frameH-pad.top-pad.bottom);
     const step=plotW/rows.length, bodyW=Math.max(1,Math.min(8,step*.62));
     let min=Infinity,max=-Infinity;
     rows.forEach(c=>{min=Math.min(min,c.l);max=Math.max(max,c.h);});
@@ -245,9 +252,9 @@
     const margin=(max-min)*.055 || Math.max(max*.004,0.0001); min-=margin; max+=margin;
     // Horizontal history navigation is handled by the time window itself; do not
     // add a second pixel offset, which could clip candles after repeated zoom/pan.
-    const xAt=i=>pad.left+(i-start+.5)*step;
+    const xAt=i=>plotLeft+(i-start+.5)*step;
     // Keep all drawing inside the reserved plot area while allowing bounded vertical movement.
-    const yAt=v=>plotTop+(max-v)/(max-min)*plotH+state.priceShift;
+    const yAt=v=>plotTop+(max-v)/(max-min)*plotH;
 
     rows.forEach((c,j)=>{
       const i=start+j,x=xAt(i),up=c.c>=c.o,color=up?'#2ee6a6':'#ff5c7c';
@@ -368,7 +375,7 @@
     state.dataRequest++;
     state.symbol=symbol;
     state.contractSymbol='';
-    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=540;state.drag=null;state.priceShift=0;state.error='';
+    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=540;state.drag=null;state.offsetX=state.width*.07;state.offsetY=state.height*.11;state.error='';
     overlay.hidden=false;
     fitCanvas();
     state.error=REALITY_STOCKS.has(symbol)?'正在连接 Bitget Reality 原生4H股票行情…':'正在连接 Bitget 原生4H合约行情…';draw();
@@ -403,7 +410,7 @@
     const range=visibleIndices();
     state.drag={
       x:e.clientX,y:e.clientY,
-      basePriceShift:state.priceShift,
+      baseOffsetX:state.offsetX,baseOffsetY:state.offsetY,
       baseStart:range.start,baseEnd:range.end,
       baseCount:Math.max(1,range.end-range.start),moved:false
     };
@@ -415,23 +422,13 @@
     if(Math.hypot(dx,dy)>3) state.drag.moved=true;
     if(!state.drag.moved) return;
 
-    // Horizontal dragging changes the actual candle time window, not just the
-    // canvas offset, so users can browse loaded historical candles.
-    const d=state.drag,data=state.candles;
-    const plotW=Math.max(1,(state.width-16)*0.86);
-    const step=plotW/Math.max(1,d.baseCount);
-    const requestedShift=Math.round(-dx/Math.max(1,step));
-    const maxStart=Math.max(0,data.length-d.baseCount);
-    const nextStart=Math.max(0,Math.min(maxStart,d.baseStart+requestedShift));
-    const nextEnd=Math.min(data.length,nextStart+d.baseCount);
-    state.viewCount=Math.max(1,nextEnd-nextStart);
-    state.startTime=data[nextStart].t;
-    state.endTime=data[nextEnd-1].t;
-    // The visible time range already accounts for horizontal movement. A separate
-    // pixel translation would push candles off-screen after repeated drag/zoom cycles.
-    // Bound vertical movement to the reserved safety band so the chart stays on-screen.
-    const verticalLimit=Math.max(0,Math.min(120,state.height*.15));
-    state.priceShift=Math.max(-verticalLimit,Math.min(verticalLimit,d.basePriceShift+dy));
+    // Drag the entire chart viewport; clamp its frame to all four page edges.
+    // Zoom remains independent, and the transparent overlay stays fixed above all layers.
+    const d=state.drag;
+    const frameW=Math.max(1,Math.min(state.width,state.width*.86));
+    const frameH=Math.max(1,Math.min(state.height,state.height*.78));
+    state.offsetX=Math.max(0,Math.min(Math.max(0,state.width-frameW),d.baseOffsetX+dx));
+    state.offsetY=Math.max(0,Math.min(Math.max(0,state.height-frameH),d.baseOffsetY+dy));
     draw();
   }
   function hitRenderedChart(x,y) {
