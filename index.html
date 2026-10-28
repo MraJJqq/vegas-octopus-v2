@@ -457,7 +457,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   const canvas = overlay.querySelector('canvas');
   const ctx = canvas.getContext('2d');
   const state = {
-    symbol:'', stock:false, candles:[], series:[],
+    symbol:'', stock:false, apiSymbol:'', candles:[], series:[],
     startTime:null, endTime:null, viewCount:180,
     width:1,height:1,dpr:1, drag:null, timer:0, generation:0, panX:0, priceShift:0, historyLoading:false
   };
@@ -607,7 +607,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     state.series.forEach(s=>{for(let i=start;i<end;i++){const v=s.values[i];if(Number.isFinite(v)){min=Math.min(min,v);max=Math.max(max,v);}}});
     if(!Number.isFinite(min)||!Number.isFinite(max)) return;
     const margin=(max-min)*.055 || Math.max(max*.004,0.0001); min-=margin; max+=margin;
-    const xAt=i=>pad.left+(i-start+.5)*step+state.panX;
+    const xAt=i=>pad.left+(i-start+.5)*step;
     const yAt=v=>pad.top+(max-v)/(max-min)*plotH+state.priceShift;
 
     rows.forEach((c,j)=>{
@@ -656,6 +656,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
       const range=visibleIndices();
       state.viewCount=Math.max(1,range.end-range.start);
       draw();
+      state.apiSymbol=apiSymbol;
       if(!isRefresh && rows.length >= 900) loadOlderHistory(generation,apiSymbol);
     } catch(error) {
       if(generation!==state.generation || overlay.hidden) return;
@@ -694,13 +695,14 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     if(!symbol) return;
     state.symbol=symbol;
     state.stock=STOCKS.has(symbol);
+    state.apiSymbol='';
     state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=540;state.drag=null;state.panX=0;state.priceShift=0;state.historyLoading=false;
     overlay.hidden=false;
     fitCanvas();
     showCachedCandles(symbol);
     loadData(false);
     if(state.timer) clearInterval(state.timer);
-    state.timer=window.setInterval(()=>{if(!overlay.hidden)loadData(true);},60000);
+    state.timer=window.setInterval(()=>{if(!overlay.hidden)loadData(true);},15000);
   }
   function close() {
     overlay.hidden=true;state.drag=null;state.generation++;
@@ -724,7 +726,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   }
   function pointerDown(e) {
     if(overlay.hidden || !state.candles.length) return;
-    state.drag={x:e.clientX,y:e.clientY,basePanX:state.panX,basePanY:state.priceShift,moved:false};
+    state.drag={x:e.clientX,y:e.clientY,baseStart:state.startTime,baseEnd:state.endTime,basePriceShift:state.priceShift,moved:false};
     try{canvas.setPointerCapture(e.pointerId);}catch(_){}
   }
   function pointerMove(e) {
@@ -732,10 +734,20 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     const dx=e.clientX-state.drag.x,dy=e.clientY-state.drag.y;
     if(Math.hypot(dx,dy)>3) state.drag.moved=true;
     if(!state.drag.moved) return;
-    // Translate the complete chart continuously in any direction, with no edge clamping.
-    state.panX=state.drag.basePanX+dx;
-    state.priceShift=state.drag.basePanY+dy;
+    // 横向拖动真正平移时间窗口：向左拖动浏览更早行情；纵向仍可自由平移。
+    const range=visibleIndices();
+    const count=Math.max(1,range.end-range.start);
+    const plotW=Math.max(1,(state.width-16)*0.86);
+    const step=plotW/count;
+    const timeShift=dx*(4*60*60*1000)/Math.max(.01,step);
+    state.startTime=state.drag.baseStart+timeShift;
+    state.endTime=state.drag.baseEnd+timeShift;
+    state.priceShift=state.drag.basePriceShift+dy;
     draw();
+    const oldest=state.candles[0]?.t;
+    if(Number.isFinite(oldest) && state.startTime<oldest+100*4*60*60*1000 && state.apiSymbol) {
+      loadOlderHistory(state.generation,state.apiSymbol);
+    }
   }
   function pointDistance(p,s) {
     const dx=s.x2-s.x1,dy=s.y2-s.y1,len=dx*dx+dy*dy;
