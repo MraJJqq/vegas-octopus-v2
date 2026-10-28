@@ -5,6 +5,8 @@
   const COLORS = [0, 28, 52, 150, 190, 245, 320];
   const STREAMS_PER_CARD = 14;
   const FADE_SECONDS = 0.14;
+  // 同步原版参数面板的数据流强度上限，并固定使用最大值 3.00。
+  const STREAM_INTENSITY = 3.0;
   const particles = Array.from({ length: 300 }, (_, i) => ({
     color: i % COLORS.length,
     point: Math.floor(Math.random() * 900),
@@ -163,15 +165,15 @@
               ctx.quadraticCurveTo(partialControlX, startY, particleX, particleY);
             }
             ctx.strokeStyle = color;
-            ctx.globalAlpha = Math.min(1, 0.26 * visibility * opacity);
+            ctx.globalAlpha = Math.min(1, 0.26 * STREAM_INTENSITY * visibility * opacity);
             ctx.shadowBlur = 0;
             ctx.stroke();
 
             // 恢复原版粒子的透明度与辉光样式；连接状态和运动进度逻辑保持不变。
-            ctx.globalAlpha = Math.min(1, 1.35 * visibility * opacity);
+            ctx.globalAlpha = Math.min(1, 1.35 * STREAM_INTENSITY * visibility * opacity);
             ctx.fillStyle = color;
             ctx.shadowColor = color;
-            ctx.shadowBlur = 18;
+            ctx.shadowBlur = 18 * STREAM_INTENSITY;
             ctx.beginPath();
             ctx.arc(particleX, particleY, 2.7, 0, Math.PI * 2);
             ctx.fill();
