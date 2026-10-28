@@ -24,7 +24,7 @@
     canvas.id = 'octopusDynamicDataStreams';
     Object.assign(canvas.style, {
       position: 'absolute', inset: '0', width: '100%', height: '100%',
-      pointerEvents: 'none', zIndex: '2'
+      pointerEvents: 'none', zIndex: '2', background: 'transparent'
     });
     const cardLayer = document.getElementById('market-cards-layer');
     app.insertBefore(canvas, cardLayer?.parentElement === app ? cardLayer : null);
