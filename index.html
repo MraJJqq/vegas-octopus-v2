@@ -216,7 +216,8 @@ else if(!orbFrame){last=0;orbFrame=requestAnimationFrame(frame)}
     }
   }
   refreshV9State();
-  window.setInterval(refreshV9State,15000);
+  window.setInterval(refreshV9State,15*60*1000);
+})();
 </script>
 <script>
 /* 第三层：27张行情卡片。卡片视觉参数保留，左右两列独立滚动，每侧显示两张。 */
