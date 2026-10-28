@@ -557,20 +557,21 @@
     } catch (_) {}
     return false;
   }
-  function pointerUp(e) {
+  function finishPointerGesture(e,allowTapClose=true) {
     const drag=state.drag;
     state.drag=null;
     if(state.pendingDraw){state.pendingDraw=false;draw();}
-    // If a refresh completed during the gesture, apply it only after the
-    // drag ends; merge data without forcing the viewport back to the latest bar.
+    // Cancel/lost-capture must finish exactly like pointerup, otherwise a touch
+    // interruption can leave the chart stuck in drag mode or delay live refresh.
     if(state.pendingRefresh && !overlay.hidden) {
       state.pendingRefresh=false;
       window.setTimeout(()=>{if(!overlay.hidden && !state.drag) loadData(true);},0);
     }
-    if(!drag || drag.moved || overlay.hidden) return;
+    if(!allowTapClose || !drag || drag.moved || overlay.hidden || !e) return;
     // A tap on a candle or EMA keeps the chart open; every other area exits.
     if(!hitRenderedChart(e.clientX,e.clientY)) close();
   }
+  function pointerUp(e) { finishPointerGesture(e,true); }
   // Capture clicks before page-level handlers; pointer events also cover touch devices.
   function findCard(event) {
     const path=typeof event.composedPath==='function'?event.composedPath():[];
@@ -596,7 +597,8 @@
   canvas.addEventListener('pointerdown',pointerDown);
   canvas.addEventListener('pointermove',pointerMove);
   canvas.addEventListener('pointerup',pointerUp);
-  canvas.addEventListener('pointercancel',()=>{state.drag=null;if(state.pendingDraw){state.pendingDraw=false;draw();}});
+  canvas.addEventListener('pointercancel',()=>finishPointerGesture(null,false));
+  canvas.addEventListener('lostpointercapture',()=>{if(state.drag)finishPointerGesture(null,false);});
   // Consume wheel gestures at the overlay boundary so they cannot bubble
   // into page/scroll handlers. Wheel zoom is local-only: it must never close
   // the chart or trigger a market-data request.
@@ -614,7 +616,17 @@
   overlay.addEventListener('wheel',handleChartWheel,{passive:false,capture:true});
   // Tapping outside the plotted chart closes it; dragging anywhere pans the chart.
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!overlay.hidden)close();});
+  // Keep the drawing surface and drag bounds synchronized with dynamic mobile
+  // viewport changes (browser chrome, split view, and device rotation).
   window.addEventListener('resize',fitCanvas,{passive:true});
+  window.addEventListener('orientationchange',()=>window.setTimeout(fitCanvas,80),{passive:true});
+  if(window.screen&&screen.orientation&&screen.orientation.addEventListener) {
+    screen.orientation.addEventListener('change',()=>window.setTimeout(fitCanvas,80));
+  }
+  if(window.visualViewport) {
+    window.visualViewport.addEventListener('resize',fitCanvas,{passive:true});
+    window.visualViewport.addEventListener('scroll',fitCanvas,{passive:true});
+  }
   if(window.ResizeObserver) new ResizeObserver(fitCanvas).observe(canvas);
   function prewarmSymbol(symbol){
     symbol=String(symbol||'').trim().toUpperCase();
