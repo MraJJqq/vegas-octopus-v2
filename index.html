@@ -444,15 +444,16 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   const style = document.createElement('style');
   style.textContent = `
     #v5-chart-overlay[hidden]{display:none!important}
-    #v5-chart-overlay{position:fixed;inset:0;z-index:2147483000;display:block;background:transparent;touch-action:none}
+    #v5-chart-overlay{position:fixed;inset:0;z-index:2147483000;display:block;background:transparent;touch-action:none;overscroll-behavior:contain}
     #v5-chart-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:transparent;touch-action:none;cursor:grab} #v5-chart-canvas:active{cursor:grabbing}
+    #v5-chart-close{position:absolute;top:max(14px,env(safe-area-inset-top));right:max(14px,env(safe-area-inset-right));z-index:2;width:42px;height:42px;border:1px solid rgba(180,220,255,.45);border-radius:50%;background:rgba(5,12,25,.72);color:#eaf6ff;font:26px/1 system-ui;cursor:pointer;touch-action:manipulation;backdrop-filter:blur(8px)}
   `;
   document.head.appendChild(style);
 
   const overlay = document.createElement('div');
   overlay.id = 'v5-chart-overlay';
   overlay.hidden = true;
-  overlay.innerHTML = '<canvas id="v5-chart-canvas" aria-label="4小时K线与Vegas均线图"></canvas>';
+  overlay.innerHTML = '<canvas id="v5-chart-canvas" aria-label="4小时K线与Vegas均线图"></canvas><button id="v5-chart-close" type="button" aria-label="关闭K线图" title="关闭">×</button>';
   document.body.appendChild(overlay);
   const canvas = overlay.querySelector('canvas');
   const ctx = canvas.getContext('2d');
@@ -865,8 +866,8 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     changeZoom(event.deltaY);
   }
   overlay.addEventListener('wheel',handleChartWheel,{passive:false,capture:true});
-  canvas.addEventListener('wheel',handleChartWheel,{passive:false});
-  overlay.addEventListener('click',event=>{if(event.target===overlay)close();});
+  // Only the explicit close control may exit the chart; backdrop gestures/clicks never close it.
+  overlay.querySelector('#v5-chart-close').addEventListener('click',event=>{event.preventDefault();event.stopPropagation();close();});
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!overlay.hidden)close();});
   window.addEventListener('resize',fitCanvas,{passive:true});
   if(window.ResizeObserver) new ResizeObserver(fitCanvas).observe(canvas);
