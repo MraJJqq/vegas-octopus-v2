@@ -1346,11 +1346,7 @@ body{position:fixed;inset:0}
 }
 </style>
 
-<style id="octopus-volatility-stream-style">
-.center-stage{position:relative}
-.center-stage .octopus-volatility-streams{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
-@media(prefers-reduced-motion:reduce){.center-stage .octopus-volatility-streams{opacity:.85}}
-</style>
+
 
 <style id="octopus-square-scatter-layout">
 /* Restore card appearance and internal layout to the supplied 27-card reference; leave card placement and all other modules unchanged. */
@@ -1505,91 +1501,8 @@ const P=[["AAPL","AAPLUSDT"],["MSFT","MSFTUSDT"],["GOOGL","GOOGLUSDT"],["AMZN","
 const sh=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
 const fmt=p=>p>=1000?p.toLocaleString('en-US',{maximumFractionDigits:1}):p>=100?p.toFixed(2):p>=1?p.toFixed(3):p>=.01?p.toFixed(4):p.toFixed(6);
 const stage=document.getElementById('octopusMarketCardGrid');
-const centerStage=stage.closest('.center-stage');
 
-/* Volatility-driven data streams: connect the three most volatile live symbols to the orb. */
-const streamNS='http://www.w3.org/2000/svg';
-const streamSvg=document.createElementNS(streamNS,'svg');
-streamSvg.setAttribute('class','octopus-volatility-streams');
-streamSvg.setAttribute('aria-hidden','true');
-streamSvg.innerHTML='<defs><filter id="octVolStreamGlow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="3.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
-streamSvg.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none;overflow:visible';
-centerStage.appendChild(streamSvg);
-const streamPalette=['#31d9ff','#a45dff','#ffbd5a','#00e0bd','#ff547b','#2787ff','#e8f5ff'];
-const streamSlots=Array.from({length:3},(_,i)=>{
-  const group=document.createElementNS(streamNS,'g');
-  const glow=document.createElementNS(streamNS,'path');
-  const line=document.createElementNS(streamNS,'path');
-  const particle=document.createElementNS(streamNS,'circle');
-  const core=document.createElementNS(streamNS,'circle');
-  glow.setAttribute('fill','none');glow.setAttribute('stroke-width','5');glow.setAttribute('opacity','.22');glow.setAttribute('filter','url(#octVolStreamGlow)');
-  line.setAttribute('fill','none');line.setAttribute('stroke-width','1.35');line.setAttribute('stroke-linecap','round');line.setAttribute('opacity','.88');
-  particle.setAttribute('r','2.2');particle.setAttribute('filter','url(#octVolStreamGlow)');
-  core.setAttribute('r','.8');
-  group.append(glow,line,particle,core);streamSvg.appendChild(group);
-  const color=streamPalette[i];
-  [glow,line,particle,core].forEach(el=>el.setAttribute(el.tagName==='path'?'stroke':'fill',color));
-  return{group,glow,line,particle,core,color,item:null,score:0};
-});
-let streamRankAt=0,streamRank=[];
-function volatilityScore(o){
-  if(!o.ready||!Array.isArray(o.h)||o.h.length<9)return 0;
-  const prices=o.h.slice(-13).filter(v=>Number.isFinite(v)&&v>0);
-  if(prices.length<9)return 0;
-  const returns=[];
-  for(let i=1;i<prices.length;i++)returns.push(Math.log(prices[i]/prices[i-1]));
-  if(returns.length<8)return 0;
-  const mean=returns.reduce((a,b)=>a+b,0)/returns.length;
-  const variance=returns.reduce((sum,v)=>sum+(v-mean)*(v-mean),0)/returns.length;
-  return Math.sqrt(variance);
-}
-function refreshStreamRanking(now){
-  if(now-streamRankAt<1800)return;
-  streamRankAt=now;
-  streamRank=C.map(o=>({item:o,score:volatilityScore(o)}))
-    .filter(v=>v.score>0)
-    .sort((a,b)=>b.score-a.score)
-    .slice(0,streamSlots.length);
-  streamSlots.forEach((slot,i)=>{
-    const next=streamRank[i];
-    slot.item=next?.item||null;slot.score=next?.score||0;
-    slot.group.style.display=slot.item?'':'none';
-  });
-}
-function streamPoint(a,b,c,t){
-  const u=1-t,v=1-u;
-  return{x:v*v*a.x+2*v*u*b.x+u*u*c.x,y:v*v*a.y+2*v*u*b.y+u*u*c.y};
-}
-function drawVolatilityStreams(ms){
-  const now=ms/1000,rect=centerStage.getBoundingClientRect();
-  refreshStreamRanking(ms);
-  const cx=rect.width/2,cy=rect.height/2,orbR=Math.min(rect.width*.38,rect.height*.39)*.9;
-  streamSlots.forEach((slot,i)=>{
-    const o=slot.item;
-    if(!o){slot.group.style.display='none';return}
-    const cr=o.card.getBoundingClientRect();
-    if(!cr.width||!cr.height){slot.group.style.display='none';return}
-    slot.group.style.display='';
-    const tx=cr.left+cr.width/2-rect.left,ty=cr.top+cr.height/2-rect.top;
-    const dx=tx-cx,dy=ty-cy,len=Math.max(1,Math.hypot(dx,dy)),ux=dx/len,uy=dy/len;
-    const cardR=Math.min(cr.width,cr.height)*.46;
-    const a={x:tx-ux*cardR,y:ty-uy*cardR};
-    const c={x:cx+ux*orbR,y:cy+uy*orbR};
-    const bend=Math.sin(now*.75+i*1.9)*Math.min(34,len*.09);
-    const b={x:(a.x+c.x)/2-uy*bend,y:(a.y+c.y)/2+ux*bend};
-    const d='M'+a.x.toFixed(1)+' '+a.y.toFixed(1)+' Q'+b.x.toFixed(1)+' '+b.y.toFixed(1)+' '+c.x.toFixed(1)+' '+c.y.toFixed(1);
-    slot.glow.setAttribute('d',d);slot.line.setAttribute('d',d);
-    const strength=streamRank.length?slot.score/Math.max(streamRank[0].score,1e-9):0;
-    slot.line.setAttribute('stroke-width',(1.1+strength*1.25).toFixed(2));
-    slot.glow.setAttribute('opacity',String(.12+strength*.22));
-    const u=(now*(.24+i*.035)+i*.31)%1,p=streamPoint(a,b,c,u);
-    slot.particle.setAttribute('cx',p.x.toFixed(1));slot.particle.setAttribute('cy',p.y.toFixed(1));
-    slot.particle.setAttribute('r',(1.6+strength*1.25).toFixed(2));
-    slot.core.setAttribute('cx',p.x.toFixed(1));slot.core.setAttribute('cy',p.y.toFixed(1));
-  });
-  requestAnimationFrame(drawVolatilityStreams);
-}
-requestAnimationFrame(drawVolatilityStreams);
+
 const fourHourLayer=document.createElement('div');
 fourHourLayer.id='octopusFourHourHover';
 fourHourLayer.setAttribute('aria-hidden','true');
