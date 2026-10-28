@@ -1093,6 +1093,53 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 
 
+
+<style id="octopus-market-card-emergency-visibility">
+#octopusMarketCardGrid.orb-stream-card-overlay>.pos{display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+#octopusMarketCardGrid.orb-stream-card-overlay>.pos>.float{display:block!important;visibility:visible!important;opacity:1!important}
+#octopusMarketCardGrid.orb-stream-card-overlay>.pos>.float>.card{display:grid!important;visibility:visible!important;opacity:1!important}
+</style>
+<script id="octopus-market-card-emergency-render-guard">
+(function(){
+  const symbols=['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','QCOM','AMD','TSM','AVGO','ORCL','ARM','MU','ASML','SNDK','SKHYNIX','MRVL','GLW','HOOD','CBRS','SPCX','BTC','HYPE','XAUUSD','USOIL'];
+  function repair(){
+    const grid=document.getElementById('octopusMarketCardGrid');
+    if(!grid)return;
+    let cards=[...grid.querySelectorAll(':scope > .pos')];
+    if(cards.length!==27){
+      grid.replaceChildren();
+      cards=symbols.map(symbol=>{
+        const pos=document.createElement('div');pos.className='pos';
+        pos.innerHTML='<div class="float"><div class="card"><div class="bg"></div><i class="gl"></i><i class="dim"></i><span class="coin"></span><b class="sym"></b><span class="price">行情加载中</span><svg class="spark" viewBox="0 0 100 26" preserveAspectRatio="none"><path class="ar"></path><path class="ln"></path></svg><span class="pct">--</span></div></div>';
+        pos.querySelector('.coin').textContent=symbol.slice(0,4);
+        pos.querySelector('.sym').innerHTML=symbol+'<small>/USDT 永续</small>';
+        grid.appendChild(pos);
+        return pos;
+      });
+    }
+    grid.style.setProperty('display','block','important');
+    grid.style.setProperty('visibility','visible','important');
+    grid.style.setProperty('opacity','1','important');
+    cards.forEach((pos,i)=>{
+      pos.style.setProperty('display','block','important');
+      pos.style.setProperty('visibility','visible','important');
+      pos.style.setProperty('opacity','1','important');
+      pos.style.setProperty('z-index',String(20+i%3),'important');
+      if(!pos.style.left||!pos.style.top){
+        const col=i%4,row=Math.floor(i/4);
+        pos.style.setProperty('position','absolute','important');
+        pos.style.setProperty('left',((col+.5)/4*100)+'%','important');
+        pos.style.setProperty('top',((row+.5)/7*100)+'%','important');
+        pos.style.setProperty('width','min(20vw,188px)','important');
+        pos.style.setProperty('height','min(11vh,78px)','important');
+        pos.style.setProperty('transform','translate(-50%,-50%)','important');
+      }
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>requestAnimationFrame(repair),{once:true});
+  else requestAnimationFrame(repair);
+})();
+</script>
 <script>
 /* Mirror the daily formal-signal list from VEGAS V9's persisted state. */
 (function(){
