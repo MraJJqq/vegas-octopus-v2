@@ -169,16 +169,17 @@
       }
       throw error;
     }
-    if (latest.length < 2 && (!stored || stored.length < 2)) throw new Error('交易所返回的4H K线不足');
+    // If the newest-candles endpoint returns no usable rows and there is no cache,
+    // start history pagination from the current time instead of failing before fallback.
     let combined = normalize([...(stored || []), ...latest]);
     let pages = 0;
+    let cursorTime = combined.length ? combined[0].t - 1 : Date.now();
     const maxPages = Math.ceil(EMA_WARMUP_BARS / 100) + 2;
     while (combined.length < EMA_WARMUP_BARS && pages < maxPages) {
-      const oldest = combined[0];
-      if (!oldest || !Number.isFinite(oldest.t)) break;
+      if (!Number.isFinite(cursorTime) || cursorTime <= 0) break;
       let rawPage;
       try {
-        rawPage = await getJson(historyCandlePath(apiSymbol,oldest.t - 1,isReality));
+        rawPage = await getJson(historyCandlePath(apiSymbol,cursorTime,isReality));
       } catch (error) {
         console.warn('[Vegas Fifth Layer] 历史预热请求失败，保留已取得的4H K线：' + apiSymbol, error);
         break;
@@ -186,12 +187,18 @@
       pages++;
       const page = normalize(rawPage);
       if (!page.length) break;
+      const oldestBefore = combined.length ? combined[0].t : Infinity;
       const next = normalize(page.concat(combined));
-      if (next.length <= combined.length || next[0].t >= oldest.t) break;
+      if (next.length <= combined.length) break;
+      if (Number.isFinite(oldestBefore) && next[0].t >= oldestBefore) break;
       combined = next;
+      cursorTime = combined[0].t - 1;
       if (page.length < 100) break;
       // Keep page-by-page requests paced to reduce exchange rate-limit pressure.
       await delay(120);
+    }
+    if (combined.length < 2) {
+      throw new Error('最新及历史接口均未返回足够的有效4H K线（最新=' + latest.length + '，缓存=' + (stored ? stored.length : 0) + '，历史页=' + pages + '）');
     }
     if (combined.length < EMA_WARMUP_BARS) {
       console.info('[Vegas Fifth Layer] 可用历史K线：' + apiSymbol + '，' + combined.length + '/' + EMA_WARMUP_BARS +
