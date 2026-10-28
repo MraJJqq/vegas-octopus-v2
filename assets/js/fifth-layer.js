@@ -371,6 +371,8 @@
     overlay.hidden=false;
     fitCanvas();
     state.error=REALITY_STOCKS.has(symbol)?'正在连接 Bitget Reality 原生4H股票行情…':'正在连接 Bitget 原生4H合约行情…';draw();
+    // Prioritize the tapped card immediately; loadData shares this in-flight prewarm promise.
+    prewarmSymbol(symbol);
     loadData(false);
     if(state.timer) clearInterval(state.timer);
     state.timer=window.setInterval(()=>{if(!overlay.hidden&&!state.drag&&(!state.ws||state.ws.readyState!==WebSocket.OPEN))loadData(true);},15000);
