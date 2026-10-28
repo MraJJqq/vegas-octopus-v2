@@ -982,6 +982,7 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 #octopusMarketCardGrid .bg{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(145deg,rgba(255,255,255,.14),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:var(--sh)}
 #octopusMarketCardGrid .bg::after{content:"";position:absolute;inset:0;border-radius:inherit;border:1px solid rgba(255,255,255,.5);box-shadow:0 44px 60px -18px rgba(0,0,0,.95),0 0 34px -6px var(--c);opacity:var(--hv,0);pointer-events:none}
 #octopusMarketCardGrid .gl{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:var(--hv,0);background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.26),transparent 55%)}
+#octopusMarketCardGrid .dim{position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:var(--bg);opacity:0}
 #octopusMarketCardGrid .coin{position:relative;width:1.8em;height:1.8em;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.9em;color:#07101f;background:var(--c);box-shadow:0 0 .9em -.15em var(--c)}
 #octopusMarketCardGrid .sym{position:relative;font-size:1em;font-weight:700;line-height:1.1}
 #octopusMarketCardGrid .sym small{display:block;font-size:.62em;color:var(--mute);font-weight:500}
@@ -995,7 +996,7 @@ html,body,.app,.topbar,.main-grid,.bottom-grid,.left-col,.right-col,.panel,.top-
 
 #octopusMarketCardGrid.orb-stream-card-overlay{--bg:transparent;--ink:#e8f0ff;--mute:#7f8db0;--up:#2ee6a6;--dn:#ff5c7c;background:transparent;touch-action:pan-y}
 #octopusMarketCardGrid .pos{pointer-events:auto}
-#octopusMarketCardGrid .card{border-radius:10px;padding:.45em .55em;column-gap:.35em;row-gap:.1em}
+#octopusMarketCardGrid .card{border-radius:.9em;padding:.55em .75em;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:1fr auto;column-gap:.5em;row-gap:.2em;align-items:center}
 @media(max-width:760px){#octopusMarketCardGrid .pos{font-size:clamp(6px,1.5vw,9px)!important}}
 
 #octopusFourHourHover{
@@ -1382,6 +1383,7 @@ body{position:fixed;inset:0}
 #octopusMarketCardGrid .bg{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:var(--sh),inset 0 1px 0 rgba(255,255,255,.25)}
 #octopusMarketCardGrid .bg::after{content:"";position:absolute;inset:0;border-radius:inherit;background:rgba(14,20,38,.9);border:1px solid rgba(255,255,255,.5);box-shadow:0 44px 60px -18px rgba(0,0,0,.95),0 0 34px -6px var(--c);opacity:var(--hv,0);pointer-events:none}
 #octopusMarketCardGrid .gl{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:var(--hv,0);background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.26),transparent 55%)}
+#octopusMarketCardGrid .dim{position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:var(--bg);opacity:0}
 #octopusMarketCardGrid .coin{position:relative;width:1.8em;height:1.8em;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.9em;color:#07101f;background:var(--c);box-shadow:0 0 .9em -.15em var(--c)}
 #octopusMarketCardGrid .sym{position:relative;font-size:1em;font-weight:700;line-height:1.1}
 #octopusMarketCardGrid .sym small{display:block;font-size:.62em;color:var(--mute);font-weight:500}
@@ -1421,7 +1423,6 @@ body{position:fixed;inset:0}
   <main class="main-grid">
     <section class="center-stage orb-original-stage" aria-label="中央发光球核心区域">
       <div id="octopusMarketCardGrid" class="orb-stream-card-overlay" aria-label="27张悬浮行情卡片"></div>
-      <div class="orb-stage-label"><strong>VEGAS ORB</strong><span>CORE PARTICLE SYSTEM</span></div>
       <canvas id="orb-core-canvas" aria-label="动态发光粒子球"></canvas>
     </section>
 
@@ -1950,14 +1951,14 @@ const C=P.map(([n,api],i)=>{
   const st=pos.style;st.zIndex=10+l;st.opacity=OP[l];st.setProperty('--sh',SH[l]);
   st.setProperty('--t',(3.5+Math.random()*3).toFixed(1)+'s');st.setProperty('--d',(-Math.random()*6).toFixed(1)+'s');
   st.setProperty('--ax',(3+Math.random()*4).toFixed(1)+'px');st.setProperty('--ay',(5+Math.random()*7).toFixed(1)+'px');
-  pos.innerHTML=`<div class="float"><div class="card"><div class="bg"></div><i class="gl"></i>
+  pos.innerHTML=`<div class="float"><div class="card"><div class="bg"></div><i class="gl"></i><i class="dim"></i>
   <span class="coin">${n[0]}</span><b class="sym">${n}<small>/USDT 永续</small></b><span class="price"></span>
   <svg class="spark" viewBox="0 0 100 26" preserveAspectRatio="none"><path class="ar"/><path class="ln"/></svg><span class="pct"></span></div></div>`;
   stage.appendChild(pos);
   return{n,api,s,l,v,h:hh,p:0,o:0,ready:false,pos,card:pos.querySelector('.card'),x:0,y:0,vx:0,vy:0,sx:0,sy:0,on:false,hv:0,rx:0,ry:0,tiltX:0,tiltY:0,z:0,lh:-1,c:[0,0,0,0],cv:[0,0,0,0],tc:[0,0,0,0],ax:3+Math.random()*4,ay:5+Math.random()*7,w1:.5+Math.random()*.4,w2:.5+Math.random()*.4,p1:Math.random()*6.283,p2:Math.random()*6.283};
 });
 const G=[C.filter(o=>o.s===0),C.filter(o=>o.s===1)];
-function apply(){C.forEach(o=>{const st=o.pos.style;st.width=w+'px';st.height=h+'px';st.fontSize=w/13.5+'px';bounds(o)})}
+function apply(){C.forEach(o=>{const st=o.pos.style;st.width=w+'px';st.height=h+'px';st.fontSize=w/12.4+'px';bounds(o)})}
 const KW=9,DW=1.5,KC=5,DC=1.5,CAP=.45;     // 软墙 / 软碰撞：弹簧刚度与阻尼
 function bounds(o){const x0=o.s?rightMin:0,x1=o.s?W:leftMax+w;o.x=Math.min(Math.max(o.x,x0),x1-w);o.y=Math.min(Math.max(o.y,0),H-h)}
 function clampHard(o){const x0=o.s?rightMin:0,x1=o.s?W:leftMax+w,mx=w*CAP,my=h*CAP;   // 兜底：压入超过上限才强制推回
@@ -2195,7 +2196,8 @@ setInterval(loadMarketData,15000);
 
 // 悬停：状态只切换目标值，放大/阴影/倾斜全部在帧循环里平滑插值；松开留 80ms 缓冲防抖，触屏松手后保持 1.5 秒
 C.forEach(o=>{const el=o.pos,c=o.card;let t;
-  el.addEventListener('pointerenter',()=>{clearTimeout(t);o.on=true;showFourHour(o)});
+  el.addEventListener('pointerenter',()=>{clearTimeout(t);o.on=true});
+  el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();showFourHour(o)});
   const off=e=>{clearTimeout(t);t=setTimeout(()=>{o.on=false;o.tiltX=0;o.tiltY=0},e.pointerType==='touch'?1500:80)};
   el.addEventListener('pointerleave',off);el.addEventListener('pointercancel',off);
   el.addEventListener('pointermove',e=>{const r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
