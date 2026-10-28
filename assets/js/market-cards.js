@@ -139,7 +139,8 @@ function autoWaveScroll(now){
  autoLastTime=now;
  if(!wheelFrame&&now>=autoResumeAt){
   if(!autoWaveScroll.nextChange||now>=autoWaveScroll.nextChange){
-   autoWaveScroll.targetSpeed=18+Math.random()*24;
+   const cycleSpeed=Math.max(1,cardStep()*focusSlots.length/120);
+   autoWaveScroll.targetSpeed=cycleSpeed*(.72+Math.random()*.56);
    autoWaveScroll.nextChange=now+2200+Math.random()*3600;
   }
   const speed=autoWaveScroll.speed??22;
@@ -152,8 +153,8 @@ function autoWaveScroll(now){
  }
  autoFrame=requestAnimationFrame(autoWaveScroll);
 }
-autoWaveScroll.speed=22;
-autoWaveScroll.targetSpeed=22;
+autoWaveScroll.speed=Math.max(1,cardStep()*focusSlots.length/120);
+autoWaveScroll.targetSpeed=autoWaveScroll.speed;
 autoFrame=requestAnimationFrame(autoWaveScroll);
 left.addEventListener('wheel',()=>{autoResumeAt=performance.now()+1800},{passive:true});
 window.addEventListener('resize',queueFocusScale,{passive:true});
