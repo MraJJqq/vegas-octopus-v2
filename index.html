@@ -459,7 +459,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   const state = {
     symbol:'', stock:false, apiSymbol:'', candles:[], series:[],
     startTime:null, endTime:null, viewCount:180,
-    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, panX:0, priceShift:0, historyLoading:false, historyLoadingGeneration:0
+    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, panX:0, priceShift:0, historyLoading:false, historyLoadingGeneration:0, error:''
   };
 
   function candlePath(symbol, stock, endTime) {
@@ -622,7 +622,13 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     ctx.clearRect(0,0,W,H);
     state.hitSegments=[];
     const data=state.candles;
-    if(!data.length) return;
+    if(!data.length) {
+      ctx.fillStyle='rgba(225,238,255,.82)';
+      ctx.font='14px system-ui,-apple-system,sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText(state.error || '正在加载4H行情…',W/2,H/2);
+      return;
+    }
     const {start,end}=visibleIndices(), rows=data.slice(start,end);
     if(!rows.length) return;
     const pad={left:8,right:8,top:38,bottom:12};
@@ -670,6 +676,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
       const rows=normalize(await getJson(candlePath(apiSymbol,state.stock)));
       if(generation!==state.generation || request!==state.dataRequest || overlay.hidden) return;
       if(rows.length<2) throw new Error('交易所返回的4H K线不足');
+      state.error='';
       writeCandleCache(state.symbol,rows);
       if(isRefresh && state.candles.length) {
         const oldStart=state.startTime,oldEnd=state.endTime;
@@ -701,6 +708,10 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
       if(!isRefresh && rows.length >= 900) loadOlderHistory(generation,apiSymbol);
     } catch(error) {
       if(generation!==state.generation || request!==state.dataRequest || overlay.hidden) return;
+      if(!state.candles.length) {
+        state.error='4H行情加载失败，请稍后重试';
+        draw();
+      }
       console.error('[Vegas Fifth Layer]',error);
     }
   }
@@ -745,7 +756,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     state.symbol=symbol;
     state.stock=STOCKS.has(symbol);
     state.apiSymbol='';
-    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=540;state.drag=null;state.panX=0;state.priceShift=0;state.historyLoading=false;state.historyLoadingGeneration=0;
+    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=540;state.drag=null;state.panX=0;state.priceShift=0;state.historyLoading=false;state.historyLoadingGeneration=0;state.error='';
     overlay.hidden=false;
     fitCanvas();
     showCachedCandles(symbol);
