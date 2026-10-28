@@ -1373,39 +1373,26 @@ body{position:fixed;inset:0}
 </style>
 
 <style id="octopus-square-scatter-layout">
-/* 方块行情卡片：保持原始信息结构，改为横向矩形终端样式。 */
+/* Restore card appearance and internal layout to the supplied 27-card reference; leave card placement and all other modules unchanged. */
 #octopusMarketCardGrid.orb-stream-card-overlay{perspective:none!important;transform-style:flat!important;overflow:hidden!important}
 #octopusMarketCardGrid.orb-stream-card-overlay .pos{transform-style:flat!important;animation:none!important}
 #octopusMarketCardGrid.orb-stream-card-overlay .float{animation:none!important;transform:none!important;transform-style:flat!important}
-#octopusMarketCardGrid.orb-stream-card-overlay .card{
-  width:100%!important;height:100%!important;min-height:0!important;box-sizing:border-box!important;
-  border-radius:8px!important;padding:5px 7px!important;overflow:hidden!important;
-  display:grid!important;grid-template-columns:18px minmax(0,1fr)!important;
-  grid-template-rows:auto auto 8px auto!important;align-content:center!important;align-items:center!important;
-  justify-items:start!important;gap:1px 5px!important;text-align:left!important;
-  transform:none!important;transform-style:flat!important;
-  background:linear-gradient(135deg,rgba(14,36,61,.94),rgba(4,12,27,.94))!important;
-  border:1px solid rgba(91,188,255,.42)!important;
-  box-shadow:inset 0 1px 0 rgba(200,238,255,.07),0 3px 12px rgba(0,0,0,.2),0 0 9px rgba(0,143,255,.08)!important;
-  backdrop-filter:blur(8px)!important;-webkit-backdrop-filter:blur(8px)!important;
-}
-#octopusMarketCardGrid.orb-stream-card-overlay .bg{inset:0!important;border-radius:7px!important;background:linear-gradient(135deg,rgba(66,150,220,.08),rgba(4,13,30,.05))!important;border:0!important;box-shadow:none!important}
-#octopusMarketCardGrid.orb-stream-card-overlay .gl{border-radius:7px!important;opacity:.35!important;pointer-events:none!important}
-#octopusMarketCardGrid.orb-stream-card-overlay .coin{grid-column:1!important;grid-row:1!important;width:16px!important;height:16px!important;margin:0!important;font-size:8px!important}
-#octopusMarketCardGrid.orb-stream-card-overlay .sym{grid-column:2!important;grid-row:1!important;min-width:0!important;max-width:100%!important;font-size:clamp(8px,.72vw,11px)!important;line-height:1.05!important;text-align:left!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
-#octopusMarketCardGrid.orb-stream-card-overlay .sym small{display:none!important}
-#octopusMarketCardGrid.orb-stream-card-overlay .price{grid-column:1/-1!important;grid-row:2!important;max-width:100%!important;margin:1px 0 0!important;font-size:clamp(9px,.88vw,13px)!important;line-height:1!important;text-align:left!important}
-#octopusMarketCardGrid.orb-stream-card-overlay .spark{grid-column:1/-1!important;grid-row:3!important;width:100%!important;height:8px!important;min-height:8px!important;margin:0!important;flex:none!important;opacity:.72!important}
-#octopusMarketCardGrid.orb-stream-card-overlay .pct{grid-column:1/-1!important;grid-row:4!important;justify-self:start!important;max-width:100%!important;margin:1px 0 0!important;padding:1px 4px!important;border-radius:3px!important;font-size:clamp(7px,.58vw,9px)!important;line-height:1!important}
-@media(max-width:760px){
- #octopusMarketCardGrid.orb-stream-card-overlay .card{padding:3px 4px!important;grid-template-columns:13px minmax(0,1fr)!important;grid-template-rows:auto auto 6px auto!important;gap:1px 3px!important;border-radius:6px!important}
- #octopusMarketCardGrid.orb-stream-card-overlay .coin{width:12px!important;height:12px!important;font-size:7px!important}
- #octopusMarketCardGrid.orb-stream-card-overlay .sym{font-size:clamp(7px,2vw,9px)!important}
- #octopusMarketCardGrid.orb-stream-card-overlay .price{font-size:clamp(8px,2.5vw,10px)!important}
- #octopusMarketCardGrid.orb-stream-card-overlay .spark{height:6px!important;min-height:6px!important}
- #octopusMarketCardGrid.orb-stream-card-overlay .pct{font-size:7px!important;padding:1px 3px!important}
-}
-@media(prefers-reduced-motion:reduce){#octopusMarketCardGrid.orb-stream-card-overlay *{animation:none!important;transition:none!important}}
+#octopusMarketCardGrid .card{--c:var(--up);position:absolute;inset:0;border-radius:.9em;padding:.55em .75em;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:1fr auto;column-gap:.5em;row-gap:.2em;align-items:center}
+#octopusMarketCardGrid .card.up{--c:var(--up)}#octopusMarketCardGrid .card.dn{--c:var(--dn)}
+#octopusMarketCardGrid .bg{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:var(--sh),inset 0 1px 0 rgba(255,255,255,.25)}
+#octopusMarketCardGrid .bg::after{content:"";position:absolute;inset:0;border-radius:inherit;background:rgba(14,20,38,.9);border:1px solid rgba(255,255,255,.5);box-shadow:0 44px 60px -18px rgba(0,0,0,.95),0 0 34px -6px var(--c);opacity:var(--hv,0);pointer-events:none}
+#octopusMarketCardGrid .gl{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:var(--hv,0);background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.26),transparent 55%)}
+#octopusMarketCardGrid .coin{position:relative;width:1.8em;height:1.8em;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.9em;color:#07101f;background:var(--c);box-shadow:0 0 .9em -.15em var(--c)}
+#octopusMarketCardGrid .sym{position:relative;font-size:1em;font-weight:700;line-height:1.1}
+#octopusMarketCardGrid .sym small{display:block;font-size:.62em;color:var(--mute);font-weight:500}
+#octopusMarketCardGrid .price{position:relative;font-size:.95em;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;transition:color .3s}
+#octopusMarketCardGrid .price.flash{color:var(--c)}
+#octopusMarketCardGrid .spark{position:relative;grid-column:1/3;width:100%;height:1.5em}
+#octopusMarketCardGrid .spark .ln{fill:none;stroke:var(--c);stroke-width:1.5;vector-effect:non-scaling-stroke}
+#octopusMarketCardGrid .spark .ar{fill:var(--c);opacity:.14}
+#octopusMarketCardGrid .pct{position:relative;font-size:.8em;font-weight:700;color:var(--c);font-variant-numeric:tabular-nums;text-align:right}
+@media(max-width:760px){#octopusMarketCardGrid .pos{font-size:clamp(6px,1.5vw,9px)!important}}
+@media(prefers-reduced-motion:reduce){#octopusMarketCardGrid .float{animation:none}}
 </style>
 </head>
 <body>
@@ -1942,7 +1929,7 @@ const C=P.map(([n,api],i)=>{
   st.setProperty('--t',(3.5+Math.random()*3).toFixed(1)+'s');st.setProperty('--d',(-Math.random()*6).toFixed(1)+'s');
   st.setProperty('--ax',(3+Math.random()*4).toFixed(1)+'px');st.setProperty('--ay',(5+Math.random()*7).toFixed(1)+'px');
   pos.innerHTML=`<div class="float"><div class="card"><div class="bg"></div><i class="gl"></i>
-  <span class="coin">${n[0]}</span><b class="sym">${n}<small>资金池</small></b><span class="price"></span>
+  <span class="coin">${n[0]}</span><b class="sym">${n}<small>/USDT 永续</small></b><span class="price"></span>
   <svg class="spark" viewBox="0 0 100 26" preserveAspectRatio="none"><path class="ar"/><path class="ln"/></svg><span class="pct"></span></div></div>`;
   stage.appendChild(pos);
   return{n,api,s,l,v,h:hh,p:0,o:0,ready:false,pos,card:pos.querySelector('.card'),x:0,y:0,vx:0,vy:0,sx:0,sy:0,on:false,hv:0,rx:0,ry:0,tiltX:0,tiltY:0,z:0,lh:-1,c:[0,0,0,0],cv:[0,0,0,0],tc:[0,0,0,0],ax:3+Math.random()*4,ay:5+Math.random()*7,w1:.5+Math.random()*.4,w2:.5+Math.random()*.4,p1:Math.random()*6.283,p2:Math.random()*6.283};
