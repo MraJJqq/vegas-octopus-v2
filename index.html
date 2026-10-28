@@ -459,7 +459,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   const state = {
     symbol:'', stock:false, candles:[], series:[],
     startTime:null, endTime:null, viewCount:180,
-    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, priceShift:0, error:''
+    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, priceShift:0, panX:0, error:''
   };
 
   function candlePath(symbol, stock, endTime) {
@@ -638,7 +638,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     state.series.forEach(s=>{for(let i=start;i<end;i++){const v=s.values[i];if(Number.isFinite(v)){min=Math.min(min,v);max=Math.max(max,v);}}});
     if(!Number.isFinite(min)||!Number.isFinite(max)) return;
     const margin=(max-min)*.055 || Math.max(max*.004,0.0001); min-=margin; max+=margin;
-    const xAt=i=>pad.left+(i-start+.5)*step;
+    const xAt=i=>pad.left+(i-start+.5)*step+state.panX;
     // Preserve the full vertical drag distance so diagonal and vertical pans follow the pointer.
     const yAt=v=>pad.top+(max-v)/(max-min)*plotH+state.priceShift;
 
@@ -717,7 +717,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     state.dataRequest++;
     state.symbol=symbol;
     state.stock=STOCKS.has(symbol);
-    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=540;state.drag=null;state.priceShift=0;state.error='';
+    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=540;state.drag=null;state.priceShift=0;state.panX=0;state.error='';
     overlay.hidden=false;
     fitCanvas();
     showCachedCandles(symbol);
@@ -747,7 +747,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   }
   function pointerDown(e) {
     if(overlay.hidden || !state.candles.length) return;
-    state.drag={x:e.clientX,y:e.clientY,baseStart:state.startTime,baseEnd:state.endTime,basePriceShift:state.priceShift,moved:false};
+    state.drag={x:e.clientX,y:e.clientY,basePanX:state.panX,basePriceShift:state.priceShift,moved:false};
     try{canvas.setPointerCapture(e.pointerId);}catch(_){}
   }
   function pointerMove(e) {
@@ -755,36 +755,31 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     const dx=e.clientX-state.drag.x,dy=e.clientY-state.drag.y;
     if(Math.hypot(dx,dy)>3) state.drag.moved=true;
     if(!state.drag.moved) return;
-    // 横向拖动时图表内容跟随指针：向右拖动浏览更早行情；纵向仍可自由平移。
-    const {start,end}=visibleIndices();
-    const count=Math.max(1,end-start);
-    const plotW=Math.max(1,(state.width-16)*0.86);
-    const step=plotW/count;
-    // Two-axis free pan: horizontal motion moves the time window; vertical motion moves price levels.
-    // Keep time calculations anchored to pointer-down to avoid accumulated drift over repeated moves.
-    const timeShift=-dx*(4*60*60*1000)/Math.max(.01,step);
-    const oldest=state.candles[0]?.t;
-    const newest=state.candles[state.candles.length-1]?.t;
-    const span=Math.max(4*60*60*1000,state.drag.baseEnd-state.drag.baseStart);
-    // Pan only inside the data already loaded; dragging must not trigger a
-    // background history request or make the viewport jump to another range.
-    const minStart=oldest;
-    const maxStart=Math.max(oldest,newest-span);
-    state.startTime=Math.max(minStart,Math.min(maxStart,state.drag.baseStart+timeShift));
-    state.endTime=state.startTime+span;
+    // Move the rendered chart directly with the pointer on both axes.
+    // This permits unrestricted diagonal panning without fetching or reloading data.
+    state.panX=state.drag.basePanX+dx;
     state.priceShift=state.drag.basePriceShift+dy;
     draw();
+  }
+  function hitRenderedChart(x,y) {
+    // The canvas is transparent; only candle and EMA strokes have non-zero alpha.
+    // A small tolerance makes thin EMA lines and candle wicks practical to tap.
+    const dpr=state.dpr||1, cx=Math.round(x*dpr),cy=Math.round(y*dpr),radius=Math.max(3,Math.round(5*dpr));
+    const left=Math.max(0,cx-radius),top=Math.max(0,cy-radius);
+    const right=Math.min(canvas.width-1,cx+radius),bottom=Math.min(canvas.height-1,cy+radius);
+    if(right<left||bottom<top)return false;
+    try {
+      const pixels=ctx.getImageData(left,top,right-left+1,bottom-top+1).data;
+      for(let i=3;i<pixels.length;i+=4) if(pixels[i]>24)return true;
+    } catch (_) {}
+    return false;
   }
   function pointerUp(e) {
     const drag=state.drag;
     state.drag=null;
     if(!drag || drag.moved || overlay.hidden) return;
-    // The canvas covers the viewport for reliable dragging. Treat taps in the
-    // unused margin/header outside the plotted chart as backdrop clicks.
-    const x=e.clientX,y=e.clientY;
-    const plotRight=8+Math.max(1,(state.width-16)*0.86);
-    const plotBottom=state.height-12;
-    if(x<8 || x>plotRight || y<38 || y>plotBottom) close();
+    // A tap on a candle or EMA keeps the chart open; every other area exits.
+    if(!hitRenderedChart(e.clientX,e.clientY)) close();
   }
   // Capture clicks before page-level handlers; pointer events also cover touch devices.
   function findCard(event) {
