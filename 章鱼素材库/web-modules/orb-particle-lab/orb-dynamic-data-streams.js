@@ -139,11 +139,14 @@
             smoothEndpoint.y += (targetY - smoothEndpoint.y) * follow;
             const endX = smoothEndpoint.x, endY = smoothEndpoint.y;
             const startX = orbCenterX >= centerX ? rightX : leftX;
-            // 卡片出口先收束成窄束，再沿曲线向不同球面端点逐渐散开。
-            const startY = c            const controlX = (startX + endX) / 2;
+            // 保留已确认的集中出发位置。
+            const startY = centerY + (j - (STREAMS_PER_CARD - 1) / 2) * 0.08;
+            // 原版流动轨迹：使用稳定的二次曲线，不额外摆动控制点。
+            const controlX = (startX + endX) / 2;
             const color = 'hsl(' + COLORS[p.color] + ',100%,62%)';
 
             const elapsed = Math.max(0, time - state.visibleSince);
+            // 保留错开的初始相位，让粒子持续流动，同时不改变连接状态判断。
             const travel = elapsed * p.speed + p.phaseOffset;
             if (travel >= 1) state.connected = true;
             const phase = travel % 1;
@@ -153,18 +156,11 @@
             ctx.beginPath();
             ctx.moveTo(startX, startY);
             if (state.connected) {
-              // 首次抵达发光球后保留完整连接线，粒子继续沿线循环运动。
+              // 连接逻辑保持原样：首次抵达后保留完整连接线。
               ctx.quadraticCurveTo(controlX, startY, endX, endY);
             } else {
               const partialControlX = startX + phase * (controlX - startX);
               ctx.quadraticCurveTo(partialControlX, startY, particleX, particleY);
-            }
-球后保留完整连接线，粒子继续沿线循环运动。
-              ctx.quadraticCurveTo(controlX, controlY, endX, endY);
-            } else {
-              const partialControlX = startX + phase * (controlX - startX);
-              const partialControlY = startY + phase * (controlY - startY);
-              ctx.quadraticCurveTo(partialControlX, partialControlY, particleX, particleY);
             }
             ctx.strokeStyle = color;
             ctx.globalAlpha = Math.min(1, 0.26 * visibility * opacity);
