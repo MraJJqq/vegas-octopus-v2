@@ -1,5 +1,5 @@
 /* Vegas 章鱼｜第四层：七色数据流连接正式信号卡片与发光球
- * 保留素材库原版七色、150 粒子、曲线/速度/透明度/辉光参数。
+ * 保留素材库原版七色、150 粒子、曲线控制方式、速度、透明度与辉光参数。
  * 每帧读取当天正式信号卡片；每张正式卡片匹配最近的实时球面粒子作为连接终点。
  * 不修改行情、信号识别、正式信号推送规则。
  */
@@ -73,18 +73,17 @@
           const q=pr[target.target],fa=q[3];
           if(fa<.05)return;
           const cardR=target.rect;
-          const startX=(cardR.left+cardR.width/2)-appRect.left;
-          const startY=(cardR.top+cardR.height/2)-appRect.top;
+          // 只把流的起点同步到正式信号卡片右侧；沿用素材库原版曲线控制方式。
+          const startX=cardR.right-appRect.left;
+          const startY=cardR.top+cardR.height/2-appRect.top;
           const endX=q[0],endY=q[1];
-          // 原版二次曲线样式，控制点位于卡片与球面终点之间。
-          const c1x=(startX+endX)*.5;
-          const c1y=(startY+endY)*.5;
+          const y0=startY,c1x=(W*.66)*.5;
           const col='hsl('+SH[f.s]+',100%,62%)';
           x.strokeStyle=col;x.globalAlpha=.26*fa;
-          x.beginPath();x.moveTo(startX,startY);x.quadraticCurveTo(c1x,c1y,endX,endY);x.stroke();
+          x.beginPath();x.moveTo(startX,y0);x.quadraticCurveTo(c1x,y0,endX,endY);x.stroke();
           const u=(t*f.v+f.o)%1,v=1-u;
           const px=v*v*startX+2*v*u*c1x+u*u*endX;
-          const py=v*v*startY+2*v*u*c1y+u*u*endY;
+          const py=v*v*y0+2*v*u*y0+u*u*endY;
           x.globalAlpha=.95*fa;x.fillStyle=col;x.shadowColor=col;x.shadowBlur=8;
           x.beginPath();x.arc(px,py,1.6,0,Math.PI*2);x.fill();x.shadowBlur=0;
         });
