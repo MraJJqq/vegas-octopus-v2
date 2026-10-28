@@ -80,5 +80,5 @@
     }
   }
   refreshV9State();
-  window.setInterval(refreshV9State,15*60*1000);
+  window.setInterval(refreshV9State,30*1000);
 })();
