@@ -57,11 +57,80 @@
     width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, pendingRefresh:false, offsetX:null, offsetY:null, error:''
   };
 
-  const EMA_WARMUP_BARS = 1400;
-  const MAX_CANDLE_BARS = 1600;
+  // 4H candles are persisted per instrument in IndexedDB; 4,400 bars cover roughly two calendar years for 24/7 markets.
+  const EMA_WARMUP_BARS = 4400;
+  const MAX_CANDLE_BARS = 5000;
   const PREWARM_CACHE = new Map();
   const PREWARM_MAX_AGE = 4 * 60 * 60 * 1000;
   const INITIAL_HISTORY_MS = 90 * 24 * 60 * 60 * 1000;
+  const CANDLE_DB_NAME = 'vegas-octopus-market-cache';
+  const CANDLE_DB_VERSION = 1;
+  const CANDLE_STORE_NAME = 'candles';
+  let candleDbPromise = null;
+
+  function openCandleDb() {
+    if (!('indexedDB' in window)) return Promise.resolve(null);
+    if (candleDbPromise) return candleDbPromise;
+    candleDbPromise = new Promise(resolve => {
+      let request;
+      try { request = indexedDB.open(CANDLE_DB_NAME, CANDLE_DB_VERSION); }
+      catch (_) { resolve(null); return; }
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(CANDLE_STORE_NAME)) {
+          db.createObjectStore(CANDLE_STORE_NAME, {keyPath:'key'});
+        }
+      };
+      request.onsuccess = () => {
+        const db = request.result;
+        db.onversionchange = () => { db.close(); candleDbPromise = null; };
+        resolve(db);
+      };
+      request.onerror = () => { candleDbPromise = null; resolve(null); };
+      request.onblocked = () => { candleDbPromise = null; resolve(null); };
+    });
+    return candleDbPromise;
+  }
+  function candleCacheKey(symbol, isReality) {
+    return (isReality ? 'SPOT:' : 'USDT-FUTURES:') + String(symbol || '').toUpperCase() + ':4H';
+  }
+  async function readPersistentCandles(symbol, isReality) {
+    const db = await openCandleDb();
+    if (!db) return null;
+    return new Promise(resolve => {
+      try {
+        const request = db.transaction(CANDLE_STORE_NAME, 'readonly').objectStore(CANDLE_STORE_NAME).get(candleCacheKey(symbol, isReality));
+        request.onsuccess = () => {
+          const value = request.result;
+          resolve(value && Array.isArray(value.rows) ? normalize(value.rows) : null);
+        };
+        request.onerror = () => resolve(null);
+      } catch (_) { resolve(null); }
+    });
+  }
+  async function writePersistentCandles(symbol, isReality, rows) {
+    const db = await openCandleDb();
+    if (!db || !Array.isArray(rows) || !rows.length) return false;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(CANDLE_STORE_NAME, 'readwrite');
+        tx.objectStore(CANDLE_STORE_NAME).put({
+          key:candleCacheKey(symbol, isReality),
+          symbol:String(symbol || '').toUpperCase(),
+          market:isReality ? 'SPOT' : 'USDT-FUTURES',
+          interval:'4H',
+          rows:rows.slice(-MAX_CANDLE_BARS),
+          count:Math.min(rows.length, MAX_CANDLE_BARS),
+          oldestTime:rows[0].t,
+          newestTime:rows[rows.length-1].t,
+          updatedAt:Date.now()
+        });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = tx.onabort = () => resolve(false);
+      } catch (_) { resolve(false); }
+    });
+  }
+  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
   function candlePath(symbol,endTime,isReality=false){
     if(isReality){const q=new URLSearchParams({category:'SPOT',symbol,interval:'4H',limit:'1000',...(Number.isFinite(endTime)?{endTime:String(endTime)}:{})});return '/api/v3/market/candles?'+q;}
@@ -73,23 +142,31 @@
   }
 
   async function loadCandlesWithWarmup(apiSymbol,isReality=false) {
-    const latest = normalize(await getJson(candlePath(apiSymbol,undefined,isReality)));
-    if (latest.length < 2) throw new Error('交易所返回的4H K线不足');
-
-    // EMA_WARMUP_BARS 是总目标根数，不是额外追加的历史根数。
-    // 最新接口已返回的 K 线计入目标，减少不必要的历史请求和限频风险。
-    let combined = latest;
+    // Persistent cache survives page refreshes. Merge it with the newest exchange candles
+    // first, then request older pages only when the saved history does not cover the target.
+    const stored = await readPersistentCandles(apiSymbol,isReality);
+    let latest = [];
+    try {
+      latest = normalize(await getJson(candlePath(apiSymbol,undefined,isReality)));
+    } catch (error) {
+      if (stored && stored.length >= 2) {
+        console.warn('[Vegas Fifth Layer] 最新行情暂不可用，先使用本地4H缓存：' + apiSymbol, error);
+        return stored.slice(-MAX_CANDLE_BARS);
+      }
+      throw error;
+    }
+    if (latest.length < 2 && (!stored || stored.length < 2)) throw new Error('交易所返回的4H K线不足');
+    let combined = normalize([...(stored || []), ...latest]);
     let pages = 0;
-    const maxPages = Math.ceil(EMA_WARMUP_BARS / 200) + 1;
+    const maxPages = Math.ceil(EMA_WARMUP_BARS / 200) + 2;
     while (combined.length < EMA_WARMUP_BARS && pages < maxPages) {
       const oldest = combined[0];
       if (!oldest || !Number.isFinite(oldest.t)) break;
       let rawPage;
       try {
-        rawPage = await getJson(historyCandlePath(apiSymbol, oldest.t - 1,isReality));
+        rawPage = await getJson(historyCandlePath(apiSymbol,oldest.t - 1,isReality));
       } catch (error) {
-        // 历史预热属于可选增强；历史端点失败时仍使用已经成功取得的原生4H K线。
-        console.warn('[Vegas Fifth Layer] 历史预热请求失败，继续使用已有4H K线：' + apiSymbol, error);
+        console.warn('[Vegas Fifth Layer] 历史预热请求失败，保留已取得的4H K线：' + apiSymbol, error);
         break;
       }
       pages++;
@@ -99,12 +176,16 @@
       if (next.length <= combined.length || next[0].t >= oldest.t) break;
       combined = next;
       if (page.length < 200) break;
+      // Keep page-by-page requests paced to reduce exchange rate-limit pressure.
+      await delay(120);
     }
     if (combined.length < EMA_WARMUP_BARS) {
-      console.warn('[Vegas Fifth Layer] EMA历史预热不足：' + apiSymbol +
-        '，已取得 ' + combined.length + '/' + EMA_WARMUP_BARS + ' 根总K线');
+      console.info('[Vegas Fifth Layer] 可用历史K线：' + apiSymbol + '，' + combined.length + '/' + EMA_WARMUP_BARS +
+        ' 根；若交易所没有更早数据，将保存现有全部历史。');
     }
-    return combined.slice(-MAX_CANDLE_BARS);
+    combined = combined.slice(-MAX_CANDLE_BARS);
+    await writePersistentCandles(apiSymbol,isReality,combined);
+    return combined;
   }
   async function getJson(url) {
     const response = await fetch('https://api.bitget.com' + url, {cache:'no-store'});
@@ -536,12 +617,12 @@
         await new Promise(resolve=>setTimeout(resolve,180));
       }
     }
-    await Promise.all([worker(),worker(),worker()]);
+    await Promise.all([worker(),worker()]);
   }
-  window.VegasFifthLayer={open,close,refresh:()=>loadData(true),prewarm:()=>startBackgroundPrewarm(),getState:()=>({symbol:state.symbol,contractSymbol:state.contractSymbol,productType:REALITY_STOCKS.has(state.symbol)?'SPOT':'USDT-FUTURES',granularity:'4H',websocket:!!(state.ws&&state.ws.readyState===WebSocket.OPEN),visible:!overlay.hidden,candles:state.candles.length,prewarmed:PREWARM_CACHE.size})};
+  window.VegasFifthLayer={open,close,refresh:()=>loadData(true),prewarm:()=>startBackgroundPrewarm(),getState:()=>({symbol:state.symbol,contractSymbol:state.contractSymbol,productType:REALITY_STOCKS.has(state.symbol)?'SPOT':'USDT-FUTURES',granularity:'4H',websocket:!!(state.ws&&state.ws.readyState===WebSocket.OPEN),visible:!overlay.hidden,candles:state.candles.length,prewarmed:PREWARM_CACHE.size,cacheStorage:'IndexedDB',historyTarget:EMA_WARMUP_BARS,cacheBars:MAX_CANDLE_BARS})};
   window.__VEGAS_FIFTH_LAYER_READY__=true;
 
   console.info('[Vegas Fifth Layer] initialized');
-  // Warm all 27 instruments in the background; each cache contains enough native 4H bars for the initial 90-day view.
+  // Warm all instruments with a paced queue; IndexedDB retains up to 4,400 native 4H candles per instrument across page reloads.
   startBackgroundPrewarm();
 })();
