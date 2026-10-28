@@ -458,7 +458,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   const ctx = canvas.getContext('2d');
   const state = {
     symbol:'', stock:false, candles:[], series:[],
-    startTime:null, endTime:null, viewCount:180,
+    startTime:null, endTime:null, viewCount:720,
     width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, priceShift:0, panX:0, error:''
   };
 
@@ -537,7 +537,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     if(!rows||rows.length<2) return false;
     state.candles=rows;
     state.endTime=rows[rows.length-1].t;
-    state.startTime=state.endTime-90*24*60*60*1000;
+    state.startTime=state.endTime-120*24*60*60*1000;
     rebuildSeries();
     const range=visibleIndices();
     if(range.end>range.start) state.viewCount=range.end-range.start;
@@ -693,7 +693,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
       } else {
         state.candles=rows;
         state.endTime=rows[rows.length-1].t;
-        state.startTime=state.endTime-90*24*60*60*1000;
+        state.startTime=state.endTime-120*24*60*60*1000;
         rebuildSeries();
       }
       const range=visibleIndices();
@@ -717,7 +717,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     state.dataRequest++;
     state.symbol=symbol;
     state.stock=STOCKS.has(symbol);
-    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=540;state.drag=null;state.priceShift=0;state.panX=0;state.error='';
+    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=720;state.drag=null;state.priceShift=0;state.panX=0;state.error='';
     overlay.hidden=false;
     fitCanvas();
     showCachedCandles(symbol);
