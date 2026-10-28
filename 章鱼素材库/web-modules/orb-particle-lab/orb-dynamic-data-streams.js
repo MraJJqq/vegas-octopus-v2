@@ -153,10 +153,13 @@
             ctx.shadowBlur = 0;
             ctx.stroke();
 
-            ctx.globalAlpha = Math.min(1, 1.35 * visibility * opacity);
+            const particleOpacity = state.connected
+              ? Math.max(0.85, opacity) * Math.max(0.7, visibility)
+              : opacity * visibility;
+            ctx.globalAlpha = Math.min(1, 1.6 * particleOpacity);
             ctx.fillStyle = color;
             ctx.shadowColor = color;
-            ctx.shadowBlur = 18;
+            ctx.shadowBlur = state.connected ? 22 : 18;
             ctx.beginPath();
             ctx.arc(particleX, particleY, 2.7, 0, Math.PI * 2);
             ctx.fill();
