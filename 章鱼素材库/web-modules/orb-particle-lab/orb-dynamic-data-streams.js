@@ -64,15 +64,17 @@
         F.forEach(function(f,index){
           const target=targets[index%targets.length];
           const cardR=target.rect;
-          const startX=cardR.right-appRect.left;
+          const cardCenterX=cardR.left+cardR.width/2-appRect.left;
           const cardCenterY=cardR.top+cardR.height/2-appRect.top;
           const q=pr[f.t],fa=q[3];
           if(fa<.05)return;
-          // 保留原版七色分层起点，并锚定到分配给它的正式信号卡片。
-          const laneOffset=H*(.12+f.s*.12)-H*.48;
-          const y0=cardCenterY+laneOffset;
-          const c1x=(startX+q[0])*.5;
+          // 连接点始终以卡片垂直中心为准，并根据球面终点所在方向选择卡片左右边缘。
           const endX=q[0],endY=q[1];
+          const cardLeft=cardR.left-appRect.left;
+          const cardRight=cardR.right-appRect.left;
+          const startX=endX>=cardCenterX?cardRight:cardLeft;
+          const y0=cardCenterY;
+          const c1x=(startX+endX)*.5;
           const col='hsl('+SH[f.s]+',100%,62%)';
           x.strokeStyle=col;x.globalAlpha=.26*fa;
           x.beginPath();x.moveTo(startX,y0);x.quadraticCurveTo(c1x,y0,endX,endY);x.stroke();
