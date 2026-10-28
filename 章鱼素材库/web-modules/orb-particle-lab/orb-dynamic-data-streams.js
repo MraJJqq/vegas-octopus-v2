@@ -7,7 +7,7 @@
   'use strict';
   const SH = [0, 28, 52, 150, 190, 245, 320];
   const F = [];
-  for (let i = 0; i < 150; i++) {
+  for (let i = 0; i < 300; i++) {
     F.push({ s: i % 7, t: Math.floor(Math.random() * 900), o: Math.random(), v: 0.18 + Math.random() * 0.25 });
   }
 
@@ -77,15 +77,15 @@
       if (pr && targets.length) {
         // 每张卡片固定一组七色数据流，始终绘制七根；不会因球面粒子透明度而随机少线。
         x.globalCompositeOperation='lighter';
-        x.lineWidth=.8;
+        x.lineWidth=1.2;
         targets.forEach(function(target){
           const cardR=target.rect;
           const cardCenterX=cardR.left+cardR.width/2-appRect.left;
           const cardCenterY=cardR.top+cardR.height/2-appRect.top;
           const cardLeft=cardR.left-appRect.left;
           const cardRight=cardR.right-appRect.left;
-          const groupBase=(target.group*7)%147;
-          for(let j=0;j<7;j++){
+          const groupBase=(target.group*14)%(F.length-13);
+          for(let j=0;j<14;j++){
             const f=F[groupBase+j];
             let q=pr[f.t];
             // 球面点过暗时，改用最近的可见投影粒子，避免单组数据流数量缺失。
@@ -103,16 +103,16 @@
             const fa=Math.max(.12,Math.min(1,q[3]||0));
             const endX=q[0],endY=q[1];
             const startX=endX>=cardCenterX?cardRight:cardLeft;
-            const y0=cardCenterY+(j-3)*4;
+            const y0=cardCenterY+(j-6.5)*3.5;
             const c1x=(startX+endX)*.5;
             const col='hsl('+SH[f.s]+',100%,62%)';
-            x.strokeStyle=col;x.globalAlpha=.26*fa*target.opacity;
+            x.strokeStyle=col;x.globalAlpha=.52*fa*target.opacity;
             x.beginPath();x.moveTo(startX,y0);x.quadraticCurveTo(c1x,y0,endX,endY);x.stroke();
             const u=(t*f.v+f.o)%1,v=1-u;
             const px=v*v*startX+2*v*u*c1x+u*u*endX;
             const py=v*v*y0+2*v*u*y0+u*u*endY;
-            x.globalAlpha=.95*fa*target.opacity;x.fillStyle=col;x.shadowColor=col;x.shadowBlur=8;
-            x.beginPath();x.arc(px,py,1.6,0,Math.PI*2);x.fill();x.shadowBlur=0;
+            x.globalAlpha=Math.min(1,1.15*fa*target.opacity);x.fillStyle=col;x.shadowColor=col;x.shadowBlur=14;
+            x.beginPath();x.arc(px,py,2.1,0,Math.PI*2);x.fill();x.shadowBlur=0;
           }
         });
       }
