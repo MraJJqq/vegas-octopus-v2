@@ -238,8 +238,31 @@ function paint(d){
  const values=d.h.filter(v=>Number.isFinite(v)&&v>0);
  if(values.length>1){const mn=Math.min(...values),mx=Math.max(...values),r=mx-mn||1;const pts=values.map((v,k)=>[k*200/(values.length-1),32-(v-mn)/r*28]);const ln='M'+pts.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join('L');q('.mc-ln').setAttribute('d',ln);q('.mc-ar').setAttribute('d',ln+'L200 35L0 35Z');q('.mc-hi').textContent=fmt(mx);q('.mc-lo').textContent=fmt(mn)}
 }
-const focusSlots=Array.from(left.querySelectorAll('.mc-slot'));
-let focusFrame=0;
+let focusSlots=Array.from(left.querySelectorAll('.mc-slot'));
+let focusFrame=0,loopAdjusting=false;
+function refreshFocusSlots(){focusSlots=Array.from(left.querySelectorAll('.mc-slot'))}
+function loopCardScroll(){
+ if(loopAdjusting)return;
+ const first=left.firstElementChild,last=left.lastElementChild;
+ if(!first||!last)return;
+ const style=getComputedStyle(left),gap=parseFloat(style.rowGap)||0;
+ const step=first.getBoundingClientRect().height+gap;
+ if(!step)return;
+ loopAdjusting=true;
+ if(left.scrollTop>=step){
+  left.appendChild(first);
+  left.scrollTop=Math.max(0,left.scrollTop-step);
+  wheelTarget=Math.max(0,wheelTarget-step);
+  refreshFocusSlots();
+ }else if(left.scrollTop<=0){
+  const lastStep=last.getBoundingClientRect().height+gap;
+  left.insertBefore(last,first);
+  left.scrollTop+=lastStep;
+  wheelTarget+=lastStep;
+  refreshFocusSlots();
+ }
+ loopAdjusting=false;
+}
 function updateFocusScale(){
  focusFrame=0;
  const view=left.getBoundingClientRect(),center=view.top+view.height/2,range=Math.max(1,view.height*.52),available=Math.max(1,left.clientWidth-8);
@@ -290,7 +313,10 @@ left.addEventListener('wheel',e=>{
  if((wheelTarget<=0&&wheelVelocity<0)||(wheelTarget>=max&&wheelVelocity>0))wheelVelocity=0;
  if(!wheelFrame)wheelFrame=requestAnimationFrame(smoothWheelStep);
 },{passive:false});
-left.addEventListener('scroll',()=>{if(!wheelFrame){wheelTarget=left.scrollTop;wheelVelocity=0}},{passive:true});
+left.addEventListener('scroll',()=>{
+ loopCardScroll();
+ if(!wheelFrame){wheelTarget=left.scrollTop;wheelVelocity=0}
+},{passive:true});
 left.addEventListener('scroll',queueFocusScale,{passive:true});
 window.addEventListener('resize',queueFocusScale,{passive:true});
 queueFocusScale();
