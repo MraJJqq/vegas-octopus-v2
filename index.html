@@ -562,10 +562,17 @@ function drawFourHour(candles){
     const risingBody=c.c>c.o,fallingBody=c.c<c.o;
     // Exchange-native hollow-up mode: bullish candles are hollow green, bearish candles are filled red.
     const color=risingBody?'#00c087':fallingBody?'#f6465d':c.c>prevClose?'#00c087':c.c<prevClose?'#f6465d':'#9aa4b2';
-    const wick=document.createElementNS(ns,'line');
-    wick.setAttribute('x1',x);wick.setAttribute('x2',x);wick.setAttribute('y1',y(c.h));wick.setAttribute('y2',y(c.l));wick.setAttribute('stroke',color);candleGroup.appendChild(wick);
+    const top=Math.min(y(c.o),y(c.c)),height=Math.max(1.5,Math.abs(y(c.o)-y(c.c))),bottom=top+height;
+    // Split the wick into upper and lower segments so it never shows through a hollow bullish body.
+    if(y(c.h)<top){
+      const upperWick=document.createElementNS(ns,'line');
+      upperWick.setAttribute('x1',x);upperWick.setAttribute('x2',x);upperWick.setAttribute('y1',y(c.h));upperWick.setAttribute('y2',top);upperWick.setAttribute('stroke',color);candleGroup.appendChild(upperWick);
+    }
+    if(y(c.l)>bottom){
+      const lowerWick=document.createElementNS(ns,'line');
+      lowerWick.setAttribute('x1',x);lowerWick.setAttribute('x2',x);lowerWick.setAttribute('y1',bottom);lowerWick.setAttribute('y2',y(c.l));lowerWick.setAttribute('stroke',color);candleGroup.appendChild(lowerWick);
+    }
     const body=document.createElementNS(ns,'rect');
-    const top=Math.min(y(c.o),y(c.c)),height=Math.max(1.5,Math.abs(y(c.o)-y(c.c)));
     body.setAttribute('x',x-bodyW/2);body.setAttribute('y',top);body.setAttribute('width',bodyW);body.setAttribute('height',height);
     body.setAttribute('fill',risingBody?'transparent':fallingBody?color:'none');body.setAttribute('stroke',color);candleGroup.appendChild(body);
   });
