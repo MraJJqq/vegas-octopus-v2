@@ -38,7 +38,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 #market-cards-layer{--up:#2ee6a6;--dn:#ff5c7c;--mute:#7f8db0;--ink:#e8f0ff;position:absolute;z-index:2;inset:0;min-width:0;min-height:0;pointer-events:none;overflow:hidden}
 #market-cards-layer .mc-columns{position:absolute;top:clamp(66px,10vh,110px);right:auto;bottom:clamp(12px,2vh,28px);left:0;width:36%;height:auto;max-height:none;min-width:0;min-height:0;box-sizing:border-box;overflow:visible;pointer-events:auto;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 #market-cards-layer .mc-columns::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;background:linear-gradient(to bottom,#02040a 0%,rgba(2,4,10,.72) 3%,rgba(2,4,10,0) 17%,rgba(2,4,10,0) 83%,rgba(2,4,10,.72) 97%,#02040a 100%),linear-gradient(to right,#02040a 0%,rgba(2,4,10,.72) 3%,rgba(2,4,10,0) 18%,rgba(2,4,10,0) 82%,rgba(2,4,10,.72) 97%,#02040a 100%);}
-#market-cards-layer .mc-side{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:clamp(8px,1.2vh,16px);min-width:0;min-height:0;width:100%;height:100%;max-height:100%;box-sizing:border-box;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scroll-snap-type:y mandatory;scroll-padding-block:28px; padding-block:28px;scrollbar-width:none;-ms-overflow-style:none;pointer-events:auto;cursor:default;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}#market-cards-layer .mc-side::-webkit-scrollbar{display:none;width:0;height:0}
+#market-cards-layer .mc-side{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:clamp(8px,1.2vh,16px);min-width:0;min-height:0;width:100%;height:100%;max-height:100%;box-sizing:border-box;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scroll-snap-type:y proximity;scroll-padding-block:28px; padding-block:28px;scrollbar-width:none;-ms-overflow-style:none;pointer-events:auto;cursor:default;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}#market-cards-layer .mc-side::-webkit-scrollbar{display:none;width:0;height:0}
 #market-cards-layer .mc-slot{position:relative;flex:0 0 auto;perspective:900px;width:min(100%,clamp(126px,18vw,238px));min-width:0;max-width:100%;box-sizing:border-box;padding:5px 4px 16px;pointer-events:auto;scroll-snap-align:start;scroll-snap-stop:always;opacity:var(--mc-page-opacity,1);filter:blur(var(--mc-page-blur,0px));transition:transform .12s linear,opacity .28s ease,filter .28s ease;transform:scale(var(--mc-focus-scale,1));transform-origin:center center;will-change:transform}
 #market-cards-layer .mc-float{transform-style:preserve-3d;animation:mc-bob 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
 @keyframes mc-bob{0%{transform:translateY(0) rotateY(-5deg) rotateX(2deg)}100%{transform:translateY(-7px) rotateY(5deg) rotateX(-2deg)}}
@@ -260,13 +260,23 @@ function updatePageFade(){
  });
 }
 function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(()=>{updateFocusScale();updatePageFade();focusFrame=0})}
-let wheelTarget=left.scrollTop,wheelFrame=0;
-function smoothWheelStep(){
- wheelFrame=0;
+let wheelTarget=left.scrollTop,wheelFrame=0,wheelVelocity=0,wheelLastTime=0;
+function smoothWheelStep(now){
+ if(!wheelLastTime)wheelLastTime=now;
+ const dt=Math.min(32,Math.max(1,now-wheelLastTime));
+ wheelLastTime=now;
  const current=left.scrollTop,diff=wheelTarget-current;
- if(Math.abs(diff)<.6){left.scrollTop=wheelTarget;queueFocusScale();return}
- left.scrollTop=current+diff*.18;
+ if(Math.abs(diff)>.6)left.scrollTop=current+diff*Math.min(.42,dt*.012);
+ else left.scrollTop=wheelTarget;
+ const max=Math.max(0,left.scrollHeight-left.clientHeight);
+ if(Math.abs(wheelVelocity)>.025){
+  wheelTarget=Math.max(0,Math.min(max,wheelTarget+wheelVelocity*dt));
+  wheelVelocity*=Math.pow(.92,dt/16.67);
+ }else wheelVelocity=0;
  queueFocusScale();
+ if(Math.abs(wheelTarget-left.scrollTop)<.7&&Math.abs(wheelVelocity)<.025){
+  left.scrollTop=wheelTarget;wheelFrame=0;wheelLastTime=0;return;
+ }
  wheelFrame=requestAnimationFrame(smoothWheelStep);
 }
 left.addEventListener('wheel',e=>{
@@ -275,10 +285,12 @@ left.addEventListener('wheel',e=>{
  const unit=e.deltaMode===1?16:e.deltaMode===2?left.clientHeight:1;
  const delta=e.deltaY*unit;
  const max=Math.max(0,left.scrollHeight-left.clientHeight);
- wheelTarget=Math.max(0,Math.min(max,(wheelFrame?wheelTarget:left.scrollTop)+delta*1.15));
+ wheelTarget=Math.max(0,Math.min(max,(wheelFrame?wheelTarget:left.scrollTop)+delta*1.05));
+ wheelVelocity=Math.max(-1.8,Math.min(1.8,wheelVelocity+delta*.035));
+ if((wheelTarget<=0&&wheelVelocity<0)||(wheelTarget>=max&&wheelVelocity>0))wheelVelocity=0;
  if(!wheelFrame)wheelFrame=requestAnimationFrame(smoothWheelStep);
 },{passive:false});
-left.addEventListener('scroll',()=>{if(!wheelFrame)wheelTarget=left.scrollTop},{passive:true});
+left.addEventListener('scroll',()=>{if(!wheelFrame){wheelTarget=left.scrollTop;wheelVelocity=0}},{passive:true});
 left.addEventListener('scroll',queueFocusScale,{passive:true});
 window.addEventListener('resize',queueFocusScale,{passive:true});
 queueFocusScale();
