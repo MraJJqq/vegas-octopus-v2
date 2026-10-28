@@ -219,7 +219,7 @@
     if(!realityInfoPromise)realityInfoPromise=getJson('/api/v3/reality/market/stock-info').catch(error=>{realityInfoPromise=null;throw error;});
     const rows=await realityInfoPromise;
     let found=rows.find(row=>row&&String(row.code||'').trim().toUpperCase()===symbol);
-    if(symbol==='SKHYNIX'&&!found)found=rows.find(row=>row&&(/SK\\s*HYNIX/i.test(String(row.name||''))||/RSKHYUSDT/i.test(String(row.symbol||''))));
+    if(symbol==='SKHYNIX'&&!found)found=rows.find(row=>row&&(/SK\s*HYNIX/i.test(String(row.name||''))||/RSKHYUSDT/i.test(String(row.symbol||''))));
     if(!found||!found.symbol)throw new Error('Bitget Reality 未返回该股票的交易所代码：'+symbol+'；请检查股票代码是否仍在 Reality 上市');
     return String(found.symbol).trim().toUpperCase();
   }
