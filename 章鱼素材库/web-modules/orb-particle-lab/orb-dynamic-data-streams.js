@@ -45,7 +45,12 @@
       const time = ms / 1000;
       const dt = lastTime ? Math.min(0.1, (ms - lastTime) / 1000) : 1 / 60;
       lastTime = ms;
-      ctx.clearRect(0, 0, width, height);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       const points = window.VegasOrbProjectedPoints;
       if (Array.isArray(points) && points.length) {
