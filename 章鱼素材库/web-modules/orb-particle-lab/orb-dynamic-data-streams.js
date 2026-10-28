@@ -54,27 +54,29 @@
           });
           return {card:card,center:center,target:best,rect:r};
         });
-        // 一张正式信号卡片只显示一条对应数据流；无对应信号的多余数据流不绘制。
+        // 每张正式信号卡片对应一整组原版数据流；每组沿用原版 F 的全部 150 根。
+        // 只为现存正式信号卡片绘制数据流组，不存在卡片时不绘制孤立数据流。
         x.globalCompositeOperation='lighter';
         x.lineWidth=.8;
-        targets.forEach(function(target,i){
-          const f=F[i];
-          const q=pr[target.target],fa=q[3];
-          if(fa<.05)return;
+        targets.forEach(function(target){
           const cardR=target.rect;
-          // 只把流的起点同步到正式信号卡片右侧；沿用素材库原版曲线控制方式。
           const startX=cardR.right-appRect.left;
           const startY=cardR.top+cardR.height/2-appRect.top;
-          const endX=q[0],endY=q[1];
-          const y0=startY,c1x=(W*.66)*.5;
-          const col='hsl('+SH[f.s]+',100%,62%)';
-          x.strokeStyle=col;x.globalAlpha=.26*fa;
-          x.beginPath();x.moveTo(startX,y0);x.quadraticCurveTo(c1x,y0,endX,endY);x.stroke();
-          const u=(t*f.v+f.o)%1,v=1-u;
-          const px=v*v*startX+2*v*u*c1x+u*u*endX;
-          const py=v*v*y0+2*v*u*y0+u*u*endY;
-          x.globalAlpha=.95*fa;x.fillStyle=col;x.shadowColor=col;x.shadowBlur=8;
-          x.beginPath();x.arc(px,py,1.6,0,Math.PI*2);x.fill();x.shadowBlur=0;
+          const y0=startY;
+          const c1x=(W*.66)*.5;
+          F.forEach(function(f){
+            const q=pr[f.t],fa=q[3];
+            if(fa<.05)return;
+            const endX=q[0],endY=q[1];
+            const col='hsl('+SH[f.s]+',100%,62%)';
+            x.strokeStyle=col;x.globalAlpha=.26*fa;
+            x.beginPath();x.moveTo(startX,y0);x.quadraticCurveTo(c1x,y0,endX,endY);x.stroke();
+            const u=(t*f.v+f.o)%1,v=1-u;
+            const px=v*v*startX+2*v*u*c1x+u*u*endX;
+            const py=v*v*y0+2*v*u*y0+u*u*endY;
+            x.globalAlpha=.95*fa;x.fillStyle=col;x.shadowColor=col;x.shadowBlur=8;
+            x.beginPath();x.arc(px,py,1.6,0,Math.PI*2);x.fill();x.shadowBlur=0;
+          });
         });
       }
       x.globalAlpha=1;x.globalCompositeOperation='source-over';
