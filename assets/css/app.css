@@ -1,0 +1,66 @@
+/* Vegas 章鱼 · AETHER 3D 数据宇宙
+   统一样式入口：背景、最新事件、发光球、品种卡片。第五层样式由其独立模块按需注入。 */
+:root{color-scheme:dark;--text:#e8f5ff;--cyan:#31d9ff}
+*{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:#02040a;color:var(--text);font:13px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+body{position:fixed;inset:0;background:#02040a}
+/* 第一层：全页面统一深邃黑暗背景；后续模块不得另建底色层。 */
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:#02040a}
+/* 页面容器透明，所有内容叠加在第一层背景之上。 */
+.app{position:relative;z-index:1;width:100%;height:100dvh;min-height:0;padding:0;background:transparent;overflow:hidden;overscroll-behavior:none;}
+/* 第二层：最新事件悬浮模块。 */
+.topbar{position:absolute;z-index:3;top:clamp(12px,2.2vh,28px);right:clamp(12px,2.2vw,32px);width:clamp(150px,22vw,320px);min-width:0;max-height:calc(100dvh - 24px);overflow:hidden;pointer-events:none}
+.event-top-card{width:100%;min-width:0;min-height:0;max-height:100%;padding:0;display:flex;flex-direction:column;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;pointer-events:auto}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 0 7px}
+.panel-title{display:flex;align-items:center;gap:7px;font-size:clamp(11px,.8vw,15px);font-weight:750;letter-spacing:.03em}
+.panel-title .icon{display:inline-grid;place-items:center;width:clamp(20px,1.45vw,27px);height:clamp(20px,1.45vw,27px);border-radius:7px;background:rgba(35,200,255,.12);border:1px solid rgba(51,206,255,.3);color:var(--cyan)}
+
+.v9-notification{display:flex;flex-direction:column;gap:clamp(8px,1.4vh,20px);flex:1;min-width:0;min-height:0;max-height:calc(100dvh - 76px);overflow:auto;overscroll-behavior:contain}
+.v9-group{min-width:0;border-left:1px solid rgba(85,155,214,.18);padding-left:9px}
+.v9-group-title{font-size:clamp(9px,.65vw,11px);font-weight:750;color:#a9d9ff;white-space:nowrap;margin-bottom:5px}
+.v9-symbols{display:flex;flex-wrap:wrap;align-content:flex-start;gap:4px 7px;min-width:0}
+.v9-symbol{font-size:clamp(8px,.62vw,10px);color:#8fe9ff;white-space:nowrap;text-shadow:0 0 8px rgba(49,217,255,.14)}
+.v9-nochange{font-size:clamp(8px,.62vw,10px);color:#8ba4be;white-space:nowrap}
+/* 第二层：发光球模块；背景透明，不覆盖第一层。 */
+.main-grid{position:absolute;z-index:2;inset:0;min-width:0;min-height:0;display:grid;grid-template-columns:minmax(0,1fr);overflow:hidden;background:transparent;pointer-events:none}
+.center-stage{position:relative;isolation:isolate;min-width:0;min-height:0;width:100%;height:100%;overflow:hidden;border-radius:0;background:transparent;pointer-events:none}
+#orb-core-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:1;pointer-events:auto;touch-action:pan-y;cursor:grab}
+#orb-core-canvas:active{cursor:grabbing}
+@media(max-width:600px){.topbar{top:12px;right:12px;width:clamp(132px,42vw,250px);max-height:calc(100dvh - 24px)}.v9-notification{gap:10px;max-height:calc(100dvh - 64px)}.v9-group{padding-left:6px}.panel-head{padding-bottom:5px}.v9-symbols{gap:4px 5px}}
+
+/* 第三层：小卡片行情模块，独立叠加，不改动第一、二层。 */
+#market-cards-layer{--up:#2ee6a6;--dn:#ff5c7c;--mute:#7f8db0;--ink:#e8f0ff;position:absolute;z-index:2;inset:0;min-width:0;min-height:0;pointer-events:none;overflow:hidden}
+#market-cards-layer .mc-columns{position:absolute;top:clamp(66px,10vh,110px);right:auto;bottom:clamp(8px,2vh,28px);left:0;width:clamp(150px,36vw,460px);height:auto;max-height:none;min-width:0;min-height:0;box-sizing:border-box;overflow:visible;pointer-events:auto;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+
+#market-cards-layer .mc-side{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:clamp(8px,1.2vh,16px);min-width:0;min-height:0;width:100%;height:100%;max-height:100%;box-sizing:border-box;overflow-x:hidden;overflow-y:auto;overscroll-behavior:none;touch-action:pan-y; padding-block:clamp(8px,2vh,28px);scrollbar-width:none;-ms-overflow-style:none;pointer-events:auto;cursor:default;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}#market-cards-layer .mc-side::-webkit-scrollbar{display:none;width:0;height:0}
+#market-cards-layer .mc-slot{position:relative;flex:0 0 auto;perspective:900px;width:min(100%,clamp(126px,18vw,238px));min-width:0;max-width:100%;box-sizing:border-box;padding:5px 4px 16px;pointer-events:auto;opacity:var(--mc-page-opacity,1);filter:none;transition:transform .12s linear,opacity .28s ease;transform:translateZ(0) scale(var(--mc-focus-scale,1));transform-origin:center center;backface-visibility:hidden;}
+#market-cards-layer .mc-float{transform-style:preserve-3d;animation:mc-bob 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
+@keyframes mc-bob{0%{transform:translateY(0) rotateY(-5deg) rotateX(2deg)}100%{transform:translateY(-7px) rotateY(5deg) rotateX(-2deg)}}
+#market-cards-layer .mc-gshadow{position:absolute;left:14%;right:14%;bottom:0;height:14px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.65),transparent);filter:blur(5px);animation:mc-sh 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
+@keyframes mc-sh{0%{transform:scale(1);opacity:.9}100%{transform:scale(.82);opacity:.5}}
+#market-cards-layer .mc-card{--mc-c:var(--up);position:relative;transform-style:preserve-3d;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .14s ease-out;border-radius:22px;padding:clamp(10px,1.1vw,15px);min-height:clamp(122px,17vh,172px);touch-action:pan-y;cursor:default}
+#market-cards-layer .mc-card.up{--mc-c:var(--up)}
+#market-cards-layer .mc-card.dn{--mc-c:var(--dn)}
+#market-cards-layer .mc-bg{position:absolute;inset:0;border-radius:inherit;background:rgba(8,14,32,.88);border:1.5px solid var(--mc-c);box-shadow:0 0 26px -6px var(--mc-c),inset 0 0 26px -14px var(--mc-c);transition:border-color .4s,box-shadow .4s}
+#market-cards-layer .mc-g1,#market-cards-layer .mc-g2{position:absolute;inset:0;border-radius:inherit;border:1.5px solid var(--mc-c);pointer-events:none;transition:border-color .4s}
+#market-cards-layer .mc-g1{transform:translateZ(-18px);opacity:.55}
+#market-cards-layer .mc-g2{transform:translateZ(-36px);opacity:.25}
+#market-cards-layer .mc-gl{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transform:translateZ(52px);background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.28),transparent 55%);transition:opacity .18s ease}
+#market-cards-layer .mc-card.hot .mc-gl{opacity:1}
+#market-cards-layer .mc-l1,#market-cards-layer .mc-l2,#market-cards-layer .mc-l3,#market-cards-layer .mc-l4{position:relative}
+#market-cards-layer .mc-l1{transform:translateZ(14px)}
+#market-cards-layer .mc-l2{transform:translateZ(30px)}
+#market-cards-layer .mc-l3{transform:translateZ(39px)}
+#market-cards-layer .mc-l4{transform:translateZ(50px)}
+#market-cards-layer .mc-row{display:flex;align-items:center;gap:8px;min-width:0}
+#market-cards-layer .mc-coin{flex:0 0 27px;width:27px;height:27px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;color:#07101f;background:var(--mc-c);box-shadow:0 0 16px -2px var(--mc-c);transition:background .4s}
+#market-cards-layer .mc-sym{font-size:clamp(12px,1vw,15px);font-weight:700;white-space:nowrap}
+#market-cards-layer .mc-sym small{font-size:10px;color:var(--mute);font-weight:500;margin-left:4px}
+#market-cards-layer .mc-price{font-size:clamp(19px,1.8vw,27px);font-weight:700;margin:9px 0 4px;font-variant-numeric:tabular-nums;transition:color .3s;white-space:nowrap}
+#market-cards-layer .mc-price.flash{color:var(--mc-c)}
+#market-cards-layer .mc-pct{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;color:#07101f;background:var(--mc-c);transition:background .4s}
+#market-cards-layer .mc-kline{display:block;width:100%;height:34px;margin-top:7px}
+#market-cards-layer .mc-hl{margin-top:5px;font-size:10px;color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
+#market-cards-layer .mc-hl span{color:var(--ink);margin:0 5px 0 2px}
+@media(max-width:700px){#market-cards-layer .mc-columns{top:clamp(56px,12vh,112px);bottom:clamp(8px,1.5vh,20px);width:48vw}#market-cards-layer .mc-side{gap:clamp(8px,1.5vh,10px)}#market-cards-layer .mc-slot{width:min(100%,clamp(126px,43vw,190px));padding:3px 2px 12px}#market-cards-layer .mc-card{padding:9px;border-radius:16px;min-height:clamp(112px,15vh,145px)}#market-cards-layer .mc-sym small{font-size:9px}#market-cards-layer .mc-price{font-size:clamp(17px,4.4vw,23px)}#market-cards-layer .mc-hl{font-size:9px}}
+@media(prefers-reduced-motion:reduce){#market-cards-layer .mc-float,#market-cards-layer .mc-gshadow{animation:none}}
