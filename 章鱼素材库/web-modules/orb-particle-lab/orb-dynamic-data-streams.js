@@ -7,6 +7,7 @@
   'use strict';
   const COLORS=Object.freeze([0,28,52,150,190,245,320]);
   const PARTICLES_PER_STREAM=220;
+  const FLOW_STRENGTH=3;
   function start(){
     const stage=document.querySelector('.center-stage');
     const grid=document.getElementById('octopusMarketCardGrid');
@@ -51,12 +52,12 @@
         const cx=(ax+ox)/2-dy*stream.bend,cy=(ay+oy)/2+dx*stream.bend;
         const fade=Math.max(.2,Math.min(1,volatility(card)/5));
         const color='hsl('+stream.hue+',100%,62%)';
-        ctx.save();ctx.lineWidth=.8;ctx.strokeStyle=color;ctx.globalAlpha=.26*fade;
+        ctx.save();ctx.lineWidth=.8;ctx.strokeStyle=color;ctx.globalAlpha=Math.min(1,.26*fade*FLOW_STRENGTH);
         ctx.beginPath();ctx.moveTo(ax,ay);ctx.quadraticCurveTo(cx,cy,ox,oy);ctx.stroke();
         stream.particles.forEach(p=>{
           const u=(time*p.speed+p.offset+stream.phase)%1,v=1-u;
           const px=v*v*ax+2*v*u*cx+u*u*ox,py=v*v*ay+2*v*u*cy+u*u*oy;
-          ctx.globalAlpha=.95*fade;ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=8;
+          ctx.globalAlpha=Math.min(1,.95*fade*FLOW_STRENGTH);ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=8*FLOW_STRENGTH;
           ctx.beginPath();ctx.arc(px,py,p.size,0,Math.PI*2);ctx.fill();
         });
         ctx.restore();
