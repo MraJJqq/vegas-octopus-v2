@@ -1300,6 +1300,82 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 
 <script id="octopus-dynamic-data-streams-script" src="https://raw.githubusercontent.com/MraJJqq/vegas-octopus-v2/main/%E7%AB%A0%E9%B1%BC%E7%B4%A0%E6%9D%90%E5%BA%93/web-modules/orb-particle-lab/orb-dynamic-data-streams.js"></script>
+
+<script id="octopus-market-data-rescue">
+/* 独立行情兜底：即使卡片视觉层已恢复、主初始化链路中断，也直接更新已显示卡片。 */
+(function(){
+  if(window.__octopusMarketDataRescueStarted)return;
+  window.__octopusMarketDataRescueStarted=true;
+  const API='https://api.bitget.com';
+  const core=new Map([['BTC','BTCUSDT'],['HYPE','HYPEUSDT'],['XAUUSD','XAUUSDT'],['USOIL','CLUSDT']]);
+  const stocks=new Set(['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','QCOM','AMD','TSM','AVGO','ORCL','ARM','MU','ASML','SNDK','SKHYNIX','MRVL','GLW','HOOD','CBRS','SPCX']);
+  const $=(el,sel)=>el.querySelector(sel);
+  async function get(path){
+    const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),9000);
+    try{
+      const res=await fetch(API+path,{cache:'no-store',signal:ctl.signal});
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      const json=await res.json();
+      if(json.code!=='00000'||!Array.isArray(json.data))throw new Error(json.msg||'行情响应格式无效');
+      return json.data;
+    }finally{clearTimeout(timer)}
+  }
+  function setUnavailable(card,msg){
+    const price=$(card,'.price'),pct=$(card,'.pct');
+    if(price&&(!price.textContent||price.textContent==='行情加载中'||price.textContent==='--'))price.textContent=msg;
+    if(pct)pct.textContent='--';
+  }
+  function format(n){return n>=1000?n.toLocaleString('en-US',{maximumFractionDigits:2}):n>=100?n.toFixed(2):n>=1?n.toFixed(3):n>=.01?n.toFixed(4):n.toFixed(6)}
+  function apply(card,last,open){
+    if(!(Number.isFinite(last)&&last>0&&Number.isFinite(open)&&open>0)){setUnavailable(card,'行情数据无效');return}
+    const price=$(card,'.price'),pct=$(card,'.pct'),sym=$(card,'.sym');
+    if(!price||!pct)return;
+    const up=last>=open;
+    card.classList.toggle('up',up);card.classList.toggle('dn',!up);
+    price.textContent=format(last);pct.textContent=(up?'+':'')+((last/open-1)*100).toFixed(2)+'%';
+  }
+  async function refresh(){
+    const grid=document.getElementById('octopusMarketCardGrid');
+    if(!grid)return;
+    const cards=[...grid.querySelectorAll('.pos')];
+    if(!cards.length)return;
+    const results=await Promise.allSettled([
+      get('/api/v3/market/tickers?category=USDT-FUTURES'),
+      get('/api/v3/market/tickers?category=SPOT'),
+      get('/api/v3/reality/market/stock-info')
+    ]);
+    const futures=results[0].status==='fulfilled'?new Map(results[0].value.map(x=>[String(x.symbol).toUpperCase(),x])):null;
+    const spot=results[1].status==='fulfilled'?new Map(results[1].value.map(x=>[String(x.symbol).toUpperCase(),x])):null;
+    const stockRows=results[2].status==='fulfilled'?results[2].value:[];
+    const stockMap=new Map(stockRows.filter(x=>x&&x.code&&x.symbol).map(x=>[String(x.code).toUpperCase(),String(x.symbol).toUpperCase()]));
+    const sk=stockRows.find(x=>x&&(/SK\s*HYNIX/i.test(String(x.name||''))||String(x.code||'').toUpperCase()==='SKHY'));
+    if(sk&&sk.symbol)stockMap.set('SKHYNIX',String(sk.symbol).toUpperCase());
+    let updated=0;
+    for(const card of cards){
+      const symEl=$(card,'.sym');
+      const raw=(symEl&&symEl.childNodes[0]&&symEl.childNodes[0].textContent||'').trim().toUpperCase();
+      const name=raw||'';
+      let ticker=null;
+      if(stocks.has(name)){
+        const symbol=stockMap.get(name);
+        ticker=spot&&symbol?spot.get(symbol):null;
+      }else{
+        const symbol=core.get(name);
+        ticker=futures&&symbol?futures.get(symbol):null;
+      }
+      if(ticker){
+        const last=Number(ticker.lastPrice),open=Number(ticker.openPrice24h);
+        if(Number.isFinite(last)&&last>0&&Number.isFinite(open)&&open>0){apply(card,last,open);updated++;continue}
+      }
+      const failed=(stocks.has(name)?(!stockMap.has(name)?!spot:!spot):!futures);
+      setUnavailable(card,failed?'行情接口连接失败':'暂无该品种实时行情');
+    }
+    if(!updated)console.warn('[Vegas Octopus] rescue feed received no usable ticker data; endpoint statuses:',results.map(x=>x.status));
+  }
+  function start(){refresh().catch(e=>console.warn('[Vegas Octopus] independent market feed failed:',e));setInterval(()=>refresh().catch(e=>console.warn('[Vegas Octopus] independent market feed failed:',e)),15000)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
+</script>
 </body>
 </html>
 
