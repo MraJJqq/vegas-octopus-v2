@@ -463,14 +463,25 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
   };
 
   function candlePath(symbol, stock, endTime) {
+    if (stock) {
+      const query = new URLSearchParams({
+        category: 'SPOT',
+        symbol,
+        interval: '4H',
+        limit: '1000',
+        ...(Number.isFinite(endTime) ? {endTime:String(endTime)} : {})
+      });
+      return '/api/v3/market/candles?' + query;
+    }
+    const futureSymbol = /USDT$/i.test(symbol) ? symbol : symbol + 'USDT';
     const query = new URLSearchParams({
-      category: stock ? 'SPOT' : 'USDT-FUTURES',
-      symbol,
-      interval: '4H',
+      productType: 'USDT-FUTURES',
+      symbol: futureSymbol,
+      granularity: '4H',
       limit: '1000',
       ...(Number.isFinite(endTime) ? {endTime:String(endTime)} : {})
     });
-    return '/api/v3/market/candles?' + query;
+    return '/api/v2/mix/market/candles?' + query;
   }
   async function getJson(url) {
     const response = await fetch('https://api.bitget.com' + url, {cache:'no-store'});
@@ -693,7 +704,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
         if(generation!==state.generation || overlay.hidden) return;
         const oldest=state.candles[0]?.t;
         if(!Number.isFinite(oldest) || oldest<=0) break;
-        const older=normalize(await getJson(candlePath(apiSymbol,state.stock,oldest-1)));
+        const older=normalize(await getJson(candlePath(apiSymbol, state.stock, oldest-1)));
         if(generation!==state.generation || overlay.hidden) return;
         if(!older.length) break;
         const before=state.candles.length;
@@ -717,6 +728,9 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     if(!card || !card.dataset) return;
     const symbol=String(card.dataset.symbol||'').trim().toUpperCase();
     if(!symbol) return;
+    // Invalidate any pending candle/history requests from the previously opened card.
+    state.generation++;
+    state.dataRequest++;
     state.symbol=symbol;
     state.stock=STOCKS.has(symbol);
     state.apiSymbol='';
