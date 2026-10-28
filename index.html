@@ -37,8 +37,8 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 
 /* 第三层：小卡片行情模块，独立叠加，不改动第一、二层。 */
 #market-cards-layer{--up:#2ee6a6;--dn:#ff5c7c;--mute:#7f8db0;--ink:#e8f0ff;position:absolute;z-index:2;inset:0;min-width:0;min-height:0;pointer-events:none;overflow:hidden}
-#market-cards-layer .mc-columns{position:absolute;inset:clamp(66px,10vh,110px) clamp(10px,1.5vw,24px) clamp(12px,2vh,28px);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(8px,1.4vw,22px);align-items:center}
-#market-cards-layer .mc-side{display:flex;flex-direction:column;justify-content:flex-start;align-items:flex-start;gap:clamp(8px,1.2vh,16px);min-width:0;height:calc(2 * (max(172px,clamp(122px,17vh,172px)) + 21px) + clamp(8px,1.2vh,16px));overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+#market-cards-layer .mc-columns{position:absolute;top:clamp(66px,10vh,110px);bottom:clamp(12px,2vh,28px);left:clamp(10px,1.5vw,24px);width:calc((100% - clamp(20px,3vw,48px) - clamp(8px,1.4vw,22px))/2);overflow:hidden}
+#market-cards-layer .mc-side{display:flex;flex-direction:column;justify-content:flex-start;align-items:flex-start;gap:clamp(8px,1.2vh,16px);min-width:0;width:100%;height:100%;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
 #market-cards-layer .mc-side.right{align-items:flex-end}
 #market-cards-layer .mc-slot{position:relative;perspective:900px;width:clamp(145px,18vw,238px);max-width:100%;padding:5px 4px 16px;pointer-events:auto}
 #market-cards-layer .mc-float{transform-style:preserve-3d;animation:mc-bob 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
@@ -68,7 +68,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 #market-cards-layer .mc-spark .mc-ar{fill:var(--mc-c);opacity:.14}
 #market-cards-layer .mc-hl{margin-top:5px;font-size:10px;color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
 #market-cards-layer .mc-hl span{color:var(--ink);margin:0 5px 0 2px}
-@media(max-width:700px){#market-cards-layer .mc-columns{inset:clamp(76px,12vh,112px) 5px 8px;gap:4px}#market-cards-layer .mc-side{height:calc(2 * (max(158px,clamp(112px,15vh,145px)) + 15px) + 10px);gap:10px}#market-cards-layer .mc-slot{width:clamp(126px,43vw,190px);padding:3px 2px 12px}#market-cards-layer .mc-card{padding:9px;border-radius:14px;min-height:clamp(112px,15vh,145px)}#market-cards-layer .mc-sym small{font-size:9px}#market-cards-layer .mc-price{font-size:clamp(17px,4.4vw,23px)}#market-cards-layer .mc-hl{font-size:9px}}
+@media(max-width:700px){#market-cards-layer .mc-columns{top:clamp(76px,12vh,112px);bottom:8px;left:5px;width:calc((100% - 14px)/2)}#market-cards-layer .mc-side{height:100%;gap:10px}#market-cards-layer .mc-slot{width:clamp(126px,43vw,190px);padding:3px 2px 12px}#market-cards-layer .mc-card{padding:9px;border-radius:14px;min-height:clamp(112px,15vh,145px)}#market-cards-layer .mc-sym small{font-size:9px}#market-cards-layer .mc-price{font-size:clamp(17px,4.4vw,23px)}#market-cards-layer .mc-hl{font-size:9px}}
 @media(prefers-reduced-motion:reduce){#market-cards-layer .mc-float,#market-cards-layer .mc-gshadow{animation:none}}
 
 </style>
@@ -85,8 +85,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 <main class="main-grid"><section class="center-stage" aria-label="中央发光球核心区域"><canvas id="orb-core-canvas" aria-label="动态发光粒子球"></canvas></section></main>
 <section id="market-cards-layer" aria-label="27个品种实时行情卡片">
   <div class="mc-columns">
-    <div class="mc-side left" id="mc-left" aria-label="左侧行情卡片"></div>
-    <div class="mc-side right" id="mc-right" aria-label="右侧行情卡片"></div>
+    <div class="mc-side left" id="mc-left" aria-label="全部27个行情卡片，纵向滚动"></div>
   </div>
 </section>
 </div>
@@ -228,9 +227,9 @@ const P=[
 const REALITY_STOCKS=new Set(P.slice(0,23).map(x=>x[0]));
 const fmt=p=>p>=1000?p.toLocaleString('en-US',{maximumFractionDigits:1}):p>=100?p.toFixed(2):p>=1?p.toFixed(3):p>=.01?p.toFixed(4):p.toFixed(6);
 const S=P.map(([s,api],i)=>({s,api,i,p:0,o:0,h:[],ready:false}));
-const left=document.getElementById('mc-left'),right=document.getElementById('mc-right');
+const left=document.getElementById('mc-left');
 S.forEach(d=>{
- const host=d.i%2===0?left:right;
+ const host=left;
  host.insertAdjacentHTML('beforeend',`<div class="mc-slot"><div class="mc-float" style="--d:${-d.i*.9}s"><div class="mc-card" id="mc-c${d.i}"><div class="mc-bg"></div><i class="mc-gl"></i><div class="mc-row mc-l2"><span class="mc-coin">${d.s[0]}</span><b class="mc-sym">${d.s}<small>/USDT 永续</small></b></div><div class="mc-price mc-l4">加载中</div><div class="mc-l3"><span class="mc-pct">--</span></div><svg class="mc-spark mc-l1" viewBox="0 0 200 35" preserveAspectRatio="none"><path class="mc-ar"/><path class="mc-ln"/></svg><div class="mc-hl mc-l2">高<span class="mc-hi">--</span>低<span class="mc-lo">--</span></div></div></div><div class="mc-gshadow" style="--d:${-d.i*.9}s"></div></div>`);
 });
 function paint(d){
