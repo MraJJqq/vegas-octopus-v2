@@ -590,7 +590,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=e
     const {start,end}=visibleIndices(), rows=data.slice(start,end);
     if(!rows.length) return;
     const pad={left:8,right:8,top:38,bottom:12};
-    const plotW=Math.max(1,W-pad.left-pad.right), plotH=Math.max(1,H-pad.top-pad.bottom);
+    const plotW=Math.max(1,(W-pad.left-pad.right)*0.86), plotH=Math.max(1,H-pad.top-pad.bottom); // 默认右侧保留约14%空白，避免最新K线贴边
     const step=plotW/rows.length, bodyW=Math.max(1,Math.min(8,step*.62));
     let min=Infinity,max=-Infinity;
     rows.forEach(c=>{min=Math.min(min,c.l);max=Math.max(max,c.h);});
