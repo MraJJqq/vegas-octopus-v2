@@ -8,7 +8,7 @@
   const particles = Array.from({ length: 300 }, (_, i) => ({
     color: i % COLORS.length,
     point: Math.floor(Math.random() * 900),
-    speed: 0.30 + Math.random() * 0.12
+    speed: 0.18 + Math.random() * 0.25
   }));
 
   function start() {
