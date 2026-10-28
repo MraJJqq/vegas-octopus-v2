@@ -1130,7 +1130,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         if(source.mode==="json")return await response.json();
         const file=await response.json();
         if(!file||typeof file.content!=="string")throw new Error("GitHub API 返回格式无效");
-        const bytes=Uint8Array.from(atob(file.content.replace(/\\s/g,"")),c=>c.charCodeAt(0));
+        const bytes=Uint8Array.from(atob(file.content.replace(/\s/g,"")),c=>c.charCodeAt(0));
         return JSON.parse(new TextDecoder("utf-8").decode(bytes));
       }catch(error){lastError=error;console.warn("V9 state source failed:",source.mode,error);}
     }
