@@ -8,12 +8,12 @@
 <style>
 :root{color-scheme:dark;--text:#e8f5ff;--cyan:#31d9ff}
 *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
-html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;overscroll-behavior-y:none;background:#02040a;color:var(--text);font:13px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:#02040a;color:var(--text);font:13px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
 body{position:fixed;inset:0;background:#02040a}
 /* 第一层：全页面统一深邃黑暗背景；后续模块不得另建底色层。 */
 body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:#02040a}
 /* 页面容器透明，所有内容叠加在第一层背景之上。 */
-.app{position:relative;z-index:1;width:100%;height:100dvh;min-height:0;padding:0;background:transparent;overflow:hidden;overscroll-behavior:none;overscroll-behavior-y:none}
+.app{position:relative;z-index:1;width:100%;height:100dvh;min-height:0;padding:0;background:transparent;overflow:hidden;overscroll-behavior:none;}
 /* 第二层：最新事件悬浮模块。 */
 .topbar{position:absolute;z-index:3;top:clamp(12px,2.2vh,28px);right:clamp(12px,2.2vw,32px);width:clamp(150px,22vw,320px);min-width:0;max-height:calc(100dvh - 24px);overflow:hidden;pointer-events:none}
 .event-top-card{width:100%;min-width:0;min-height:0;max-height:100%;padding:0;display:flex;flex-direction:column;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;pointer-events:auto}
@@ -38,7 +38,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 #market-cards-layer{--up:#2ee6a6;--dn:#ff5c7c;--mute:#7f8db0;--ink:#e8f0ff;position:absolute;z-index:2;inset:0;min-width:0;min-height:0;pointer-events:none;overflow:hidden}
 #market-cards-layer .mc-columns{position:absolute;top:clamp(66px,10vh,110px);right:auto;bottom:clamp(8px,2vh,28px);left:0;width:clamp(150px,36vw,460px);height:auto;max-height:none;min-width:0;min-height:0;box-sizing:border-box;overflow:visible;pointer-events:auto;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 
-#market-cards-layer .mc-side{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:clamp(8px,1.2vh,16px);min-width:0;min-height:0;width:100%;height:100%;max-height:100%;box-sizing:border-box;overflow-x:hidden;overflow-y:auto;overscroll-behavior:none;overscroll-behavior-y:none;touch-action:pan-y; padding-block:clamp(8px,2vh,28px);scrollbar-width:none;-ms-overflow-style:none;pointer-events:auto;cursor:default;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}#market-cards-layer .mc-side::-webkit-scrollbar{display:none;width:0;height:0}
+#market-cards-layer .mc-side{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:clamp(8px,1.2vh,16px);min-width:0;min-height:0;width:100%;height:100%;max-height:100%;box-sizing:border-box;overflow-x:hidden;overflow-y:auto;overscroll-behavior:none;touch-action:pan-y; padding-block:clamp(8px,2vh,28px);scrollbar-width:none;-ms-overflow-style:none;pointer-events:auto;cursor:default;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}#market-cards-layer .mc-side::-webkit-scrollbar{display:none;width:0;height:0}
 #market-cards-layer .mc-slot{position:relative;flex:0 0 auto;perspective:900px;width:min(100%,clamp(126px,18vw,238px));min-width:0;max-width:100%;box-sizing:border-box;padding:5px 4px 16px;pointer-events:auto;opacity:var(--mc-page-opacity,1);filter:none;transition:transform .12s linear,opacity .28s ease;transform:translateZ(0) scale(var(--mc-focus-scale,1));transform-origin:center center;backface-visibility:hidden;}
 #market-cards-layer .mc-float{transform-style:preserve-3d;animation:mc-bob 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
 @keyframes mc-bob{0%{transform:translateY(0) rotateY(-5deg) rotateX(2deg)}100%{transform:translateY(-7px) rotateY(5deg) rotateX(-2deg)}}
