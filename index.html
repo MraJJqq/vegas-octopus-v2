@@ -1615,7 +1615,7 @@ document.body.appendChild(fourHourLayer);
 const fourHourCloseButton=fourHourLayer.querySelector('#octopusFourHourClose');
 let activeFourHourCard=null,fourHourRefreshTimer=null;
 fourHourCloseButton.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();hideFourHour()});
-let fourHourViewCount=180,fourHourViewStart=null,fourHourUserNavigated=false,fourHourDrag=null;
+let fourHourViewCount=180,fourHourViewStart=null,fourHourUserNavigated=false,fourHourViewInitialized=false,fourHourViewAnchorTime=null,fourHourDrag=null;
 const fourHourCache=new WeakMap();
 const setFourHourStatus=()=>{};
 function stopFourHourRefresh(){
@@ -1677,9 +1677,19 @@ function drawFourHour(candles){
   });
   const maxCount=Math.min(500,allRows.length);
   fourHourViewCount=Math.min(maxCount,Math.max(20,fourHourViewCount));
-  if(!fourHourUserNavigated)fourHourViewStart=Math.max(0,allRows.length-fourHourViewCount);
+  if(!fourHourViewInitialized){
+    fourHourViewStart=Math.max(0,allRows.length-fourHourViewCount);
+    fourHourViewInitialized=true;
+  }else if(fourHourViewAnchorTime!==null){
+    let lo=0,hi=allRows.length-1;
+    while(lo<hi){const mid=(lo+hi)>>1;if(allRows[mid].t<fourHourViewAnchorTime)lo=mid+1;else hi=mid;}
+    const idx=lo>0&&Math.abs(allRows[lo-1].t-fourHourViewAnchorTime)<=Math.abs(allRows[lo].t-fourHourViewAnchorTime)?lo-1:lo;
+    fourHourViewStart=idx;
+  }
   const offset=Math.max(0,Math.min(allRows.length-fourHourViewCount,fourHourViewStart??Math.max(0,allRows.length-fourHourViewCount)));
   const rows=allRows.slice(offset,offset+fourHourViewCount);
+  if(rows.length)fourHourViewAnchorTime=rows[0].t;
+  fourHourViewStart=offset;
   if(rows.length<2)return;
   const visibleEmas=periods.flatMap(p=>emaSeries[p].slice(offset,offset+rows.length).filter(Number.isFinite));
   const scaleValues=[...rows.flatMap(c=>[c.l,c.h]),...visibleEmas];
@@ -1804,7 +1814,7 @@ async function loadFourHourHistory(o){
 function showFourHour(o){
   if(activeFourHourCard!==o){
     fourHourLayer.querySelector('.o4-candles').replaceChildren();
-    fourHourViewCount=180;fourHourViewStart=null;fourHourUserNavigated=false;fourHourDrag=null;
+    fourHourViewCount=180;fourHourViewStart=null;fourHourUserNavigated=false;fourHourViewInitialized=false;fourHourViewAnchorTime=null;fourHourDrag=null;
   }
   activeFourHourCard=o;
   fourHourLayer.classList.add('is-visible');
@@ -1815,7 +1825,12 @@ function showFourHour(o){
 function redrawActiveFourHour(){
   if(!activeFourHourCard)return;
   const cache=fourHourCache.get(activeFourHourCard);
-  if(cache?.values?.length)drawFourHour(cache.values);
+  if(cache?.values?.length){
+    const rows=cache.values;
+    const start=Math.max(0,Math.min(rows.length-Math.min(rows.length,fourHourViewCount),fourHourViewStart??Math.max(0,rows.length-fourHourViewCount)));
+    fourHourViewAnchorTime=rows[start]?.t??fourHourViewAnchorTime;
+    drawFourHour(rows);
+  }
 }
 fourHourLayer.addEventListener('wheel',e=>{
   if(!activeFourHourCard||!fourHourLayer.classList.contains('is-visible'))return;
@@ -1823,7 +1838,8 @@ fourHourLayer.addEventListener('wheel',e=>{
   const cache=fourHourCache.get(activeFourHourCard),allRows=cache?.values||[];
   if(allRows.length<2)return;
   const svg=fourHourLayer.querySelector('.o4-chart'),rect=svg.getBoundingClientRect();
-  const ratio=Math.max(0,Math.min(1,(e.clientX-rect.left)/Math.max(1,rect.width)));
+  // Wheel zoom is anchored near the newest candles on the right, independent of pointer position.
+  const ratio=.98;
   const oldCount=Math.min(allRows.length,fourHourViewCount);
   const oldStart=Math.max(0,Math.min(allRows.length-oldCount,fourHourViewStart??(allRows.length-oldCount)));
   const anchor=oldStart+ratio*oldCount;
