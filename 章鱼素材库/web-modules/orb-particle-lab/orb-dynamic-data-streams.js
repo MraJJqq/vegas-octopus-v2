@@ -95,7 +95,7 @@
               for(let k=0;k<pr.length;k++){
                 const candidate=pr[k];
                 if(!candidate || candidate.length<4 || candidate[3]<.08) continue;
-                const score=Math.abs(candidate[0]-cardCenterX-appRect.left)+Math.abs(candidate[1]-cardCenterY-appRect.top);
+                const score=Math.abs(candidate[0]-cardCenterX)+Math.abs(candidate[1]-cardCenterY);
                 if(score<bestScore){best=candidate;bestScore=score;}
               }
               if(best) q=best;
