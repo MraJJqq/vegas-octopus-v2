@@ -8,7 +8,6 @@
   const particles = Array.from({ length: 300 }, (_, i) => ({
     color: i % COLORS.length,
     point: Math.floor(Math.random() * 900),
-    phase: Math.random(),
     speed: 0.18 + Math.random() * 0.25
   }));
 
@@ -55,6 +54,8 @@
       const points = window.VegasOrbProjectedPoints;
       if (Array.isArray(points) && points.length) {
         const appRect = app.getBoundingClientRect();
+        const orbRect = orbCanvas.getBoundingClientRect();
+        const orbCenterX = orbRect.left + orbRect.width / 2 - appRect.left;
         const cards = document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]');
         const targets = [];
 
@@ -70,16 +71,28 @@
           const slotOpacity = slot ? Number.parseFloat(getComputedStyle(slot).opacity) : 1;
           let state = states.get(card);
           if (!state) {
-            state = { opacity: 0 };
+            state = { opacity: 0, visibleSince: null, connected: false, endpoints: [] };
             states.set(card, state);
             groups.set(card, nextGroup++);
           }
 
-          const target = visibleRatio * (Number.isFinite(slotOpacity) ? Math.max(0, Math.min(1, slotOpacity)) : 1);
-          // 指数缓动不依赖帧率，滚动进入/离开时更自然。
-          state.opacity += (target - state.opacity) * (1 - Math.exp(-dt / FADE_SECONDS));
-          if (state.opacity > 0.003 && rect.width > 0 && rect.height > 0) {
-            targets.push({ rect, opacity: state.opacity, group: groups.get(card) });
+          const slotVisibility = Number.isFinite(slotOpacity) ? Math.max(0, Math.min(1, slotOpacity)) : 1;
+          const target = visibleRatio * slotVisibility;
+          // 只有卡片进入滚动容器的可视区域后才启动一轮数据流；离开可视区域立即重置进度。
+          const eligible = visibleRatio >= 0.18 && slotVisibility >= 0.08;
+          if (!eligible) {
+            state.visibleSince = null;
+            state.connected = false;
+            state.opacity = 0;
+          } else if (state.visibleSince === null) {
+            state.visibleSince = time;
+            state.connected = false;
+          }
+          if (eligible) {
+            state.opacity += (target - state.opacity) * (1 - Math.exp(-dt / FADE_SECONDS));
+          }
+          if (eligible && state.opacity > 0.003 && rect.width > 0 && rect.height > 0) {
+            targets.push({ rect, opacity: state.opacity, group: groups.get(card), state });
           }
         });
 
@@ -88,7 +101,7 @@
         ctx.lineJoin = 'round';
         ctx.lineWidth = 0.8;
 
-        targets.forEach(({ rect, opacity, group }) => {
+        targets.forEach(({ rect, opacity, group, state }) => {
           const centerX = rect.left + rect.width / 2 - appRect.left;
           const centerY = rect.top + rect.height / 2 - appRect.top;
           const leftX = rect.left - appRect.left;
@@ -100,12 +113,15 @@
             let point = points[p.point % points.length];
             if (!point || point.length < 4) continue;
 
+            const endpoint = state.endpoints[j];
             if (point[3] < 0.08) {
               let nearest = null, nearestDistance = Infinity;
+              const referenceX = endpoint ? endpoint.x : point[0];
+              const referenceY = endpoint ? endpoint.y : point[1];
               for (let k = 0; k < points.length; k++) {
                 const candidate = points[k];
                 if (!candidate || candidate.length < 4 || candidate[3] < 0.08) continue;
-                const distance = Math.abs(candidate[0] - centerX) + Math.abs(candidate[1] - centerY);
+                const distance = Math.hypot(candidate[0] - referenceX, candidate[1] - referenceY);
                 if (distance < nearestDistance) {
                   nearest = candidate;
                   nearestDistance = distance;
@@ -115,24 +131,40 @@
             }
 
             const visibility = Math.max(0.22, Math.min(1, point[3] || 0));
-            const endX = point[0], endY = point[1];
-            const startX = endX >= centerX ? rightX : leftX;
+            const targetX = point[0], targetY = point[1];
+            const smoothEndpoint = endpoint || (state.endpoints[j] = { x: targetX, y: targetY });
+            // 使用更缓和的指数跟随，并以发光球相对卡片的位置固定数据流出发侧，避免旋转时左右端点突变。
+            const follow = 1 - Math.exp(-dt / 0.22);
+            smoothEndpoint.x += (targetX - smoothEndpoint.x) * follow;
+            smoothEndpoint.y += (targetY - smoothEndpoint.y) * follow;
+            const endX = smoothEndpoint.x, endY = smoothEndpoint.y;
+            const startX = orbCenterX >= centerX ? rightX : leftX;
             const startY = centerY + (j - (STREAMS_PER_CARD - 1) / 2) * 3.5;
             const controlX = (startX + endX) / 2;
             const color = 'hsl(' + COLORS[p.color] + ',100%,62%)';
 
+            const elapsed = Math.max(0, time - state.visibleSince);
+            const travel = elapsed * p.speed;
+            if (travel >= 1) state.connected = true;
+            const phase = travel % 1;
+            const inverse = 1 - phase;
+            const particleX = inverse * inverse * startX + 2 * inverse * phase * controlX + phase * phase * endX;
+            const particleY = inverse * inverse * startY + 2 * inverse * phase * startY + phase * phase * endY;
             ctx.beginPath();
             ctx.moveTo(startX, startY);
-            ctx.quadraticCurveTo(controlX, startY, endX, endY);
+            if (state.connected) {
+              // 首次抵达发光球后保留完整连接线，粒子继续沿线循环运动。
+              ctx.quadraticCurveTo(controlX, startY, endX, endY);
+            } else {
+              const partialControlX = startX + phase * (controlX - startX);
+              ctx.quadraticCurveTo(partialControlX, startY, particleX, particleY);
+            }
             ctx.strokeStyle = color;
             ctx.globalAlpha = Math.min(1, 0.26 * visibility * opacity);
             ctx.shadowBlur = 0;
             ctx.stroke();
 
-            const phase = (time * p.speed + p.phase) % 1;
-            const inverse = 1 - phase;
-            const particleX = inverse * inverse * startX + 2 * inverse * phase * controlX + phase * phase * endX;
-            const particleY = inverse * inverse * startY + 2 * inverse * phase * startY + phase * phase * endY;
+            // 恢复原版粒子的透明度与辉光样式；连接状态和运动进度逻辑保持不变。
             ctx.globalAlpha = Math.min(1, 1.35 * visibility * opacity);
             ctx.fillStyle = color;
             ctx.shadowColor = color;
