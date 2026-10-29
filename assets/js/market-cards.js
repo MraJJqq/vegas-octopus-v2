@@ -58,7 +58,7 @@ function updateFocusScale(){
  });
 }
 function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(updateFocusScale)}
-let wheelTarget=left.scrollTop,wheelFrame=0,wheelVelocity=0,wheelLastTime=0,wheelLastInputAt=0,loopDirection=1,autoEngage=1;
+let wheelTarget=left.scrollTop,wheelFrame=0,wheelVelocity=0,wheelLastTime=0,loopDirection=1,autoEngage=1;
 function cardStep(){
  const first=left.firstElementChild;
  const style=getComputedStyle(left);
@@ -103,15 +103,15 @@ function smoothWheelStep(now){
  else wheelVelocity=0;
  queueFocusScale();
  if(Math.abs(wheelVelocity)<.025){
-  wheelTarget=left.scrollTop;wheelVelocity=0;wheelFrame=0;wheelLastTime=0;wheelLastInputAt=0;
+  wheelTarget=left.scrollTop;wheelVelocity=0;wheelFrame=0;wheelLastTime=0;
   autoResumeAt=Math.min(autoResumeAt,now+60);
   return;
  }
  wheelFrame=requestAnimationFrame(smoothWheelStep);
 }
 left.addEventListener('wheel',e=>{
- wheelLastInputAt=performance.now();
- autoResumeAt=wheelLastInputAt+180;
+ const wheelNow=performance.now();
+ autoResumeAt=wheelNow+180;
  autoEngage=0;
  if(Math.abs(e.deltaY)<.1)return;
  e.preventDefault();
@@ -133,7 +133,7 @@ left.addEventListener('scroll',()=>{
  if(!wheelFrame){wheelTarget=left.scrollTop;wheelVelocity=0}
  queueFocusScale();
 },{passive:true});
-let touchStartY=0,autoResumeAt=0,autoLastTime=0,autoFrame=0;
+let touchStartY=0,autoResumeAt=0,autoLastTime=0;
 left.addEventListener('touchstart',e=>{wheelVelocity=0;wheelTarget=left.scrollTop;touchStartY=e.touches[0]?.clientY??0;autoResumeAt=performance.now()+1800;autoEngage=0},{passive:true});
 left.addEventListener('touchmove',e=>{
  const touch=e.touches[0];if(!touch)return;
@@ -176,11 +176,11 @@ function autoWaveScroll(now){
    }
   }
  }
- autoFrame=requestAnimationFrame(autoWaveScroll);
+ requestAnimationFrame(autoWaveScroll);
 }
 autoWaveScroll.speed=Math.max(1,cardStep()*focusSlots.length/120);
 autoWaveScroll.targetSpeed=autoWaveScroll.speed;
-autoFrame=requestAnimationFrame(autoWaveScroll);
+requestAnimationFrame(autoWaveScroll);
 
 window.addEventListener('resize',queueFocusScale,{passive:true});
 left.style.scrollBehavior='auto';
