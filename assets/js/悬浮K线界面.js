@@ -9,7 +9,7 @@
   let panel=null,canvas=null,ctx=null,activeSymbol='',state=null,stopLive=null,resizeObserver=null;
   const BASE_VISIBLE_BARS=120,MIN_VISIBLE_BARS=20,MAX_VISIBLE_BARS=5000;
   let openRequestId=0,drawFrame=0;
-  const view={scale:1,offset:0,minScale:1,maxScale:BASE_VISIBLE_BARS/MIN_VISIBLE_BARS,drag:null,chartPan:null,pointers:new Map(),pinch:null,baseWidth:0,baseHeight:0,gestureMoved:false,suppressChartClickUntil:0};
+  const view={scale:1,offset:0,drag:null,chartPan:null,pointers:new Map(),pinch:null,baseWidth:0,baseHeight:0,gestureMoved:false,suppressChartClickUntil:0};
   const $=(root,sel)=>root.querySelector(sel);
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const isReality=s=>!!(getLogic()&&getLogic().isRealitySymbol(s));
@@ -21,7 +21,6 @@
       #vegas-floating-kline.vfk-open{display:flex}
       #vegas-floating-kline .vfk-head{position:absolute;z-index:6;left:0;right:0;top:0;height:32px;min-height:32px;display:flex;align-items:flex-start;gap:12px;padding:0;border:0;background:transparent;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none}
       #vegas-floating-kline .vfk-symbol-label{position:absolute;z-index:5;left:8px;top:8px;display:block;margin:0;padding:0;background:transparent;border:0;box-shadow:none;color:#e8f5ff;font:600 14px/1.2 system-ui,-apple-system,"PingFang SC",sans-serif;text-shadow:0 1px 3px rgba(0,0,0,.7);pointer-events:none;user-select:none;-webkit-user-select:none}
-      #vegas-floating-kline .vfk-title,#vegas-floating-kline .vfk-hint,#vegas-floating-kline button,#vegas-floating-kline .vfk-status{display:none!important}
       #vegas-floating-kline .vfk-chart-wrap{position:relative;flex:1;min-height:0;margin-top:32px;overflow:hidden;touch-action:none;background:transparent}
       #vegas-floating-kline canvas{position:absolute;inset:0;display:block;width:100%;height:100%;touch-action:none}
     `;
@@ -29,14 +28,9 @@
     panel=document.createElement('section');
     panel.id='vegas-floating-kline';
     panel.setAttribute('aria-label','悬浮K线图');
-    panel.innerHTML='<span class="vfk-symbol-label" aria-live="polite"></span><header class="vfk-head"><span class="vfk-title">K线图</span><span class="vfk-hint">拖动标题栏移动窗口 · 图表双指缩放/单指平移</span><button type="button" data-act="reset">复位</button><button type="button" data-act="close" aria-label="关闭">关闭</button></header><div class="vfk-chart-wrap"><canvas aria-label="4小时K线与EMA指标"></canvas></div><div class="vfk-status">等待行情数据…</div>';
+    panel.innerHTML='<span class="vfk-symbol-label" aria-live="polite"></span><header class="vfk-head"></header><div class="vfk-chart-wrap"><canvas aria-label="4小时K线与EMA指标"></canvas></div>';
     document.body.appendChild(panel);
     canvas=$(panel,'canvas');ctx=canvas.getContext('2d');
-    panel.addEventListener('click',e=>{
-      const act=e.target.closest('button')?.dataset.act;
-      if(act==='close')closePanel();
-      if(act==='reset'){view.scale=1;view.offset=0;draw();}
-    });
     const head=$(panel,'.vfk-head');
     head.addEventListener('pointerdown',startWindowDrag);
     head.addEventListener('pointermove',moveWindowDrag);
@@ -54,7 +48,6 @@
     window.visualViewport?.addEventListener('resize',fitPanelToViewport,{passive:true});
     document.addEventListener('keydown',e=>{if(e.key==='Escape')closePanel();});
   }
-  function setStatus(text){if(panel)$(panel,'.vfk-status').textContent=text;}
   function fitPanelToViewport(){
     if(!panel||!panel.classList.contains('vfk-open'))return;
     const viewport=window.visualViewport;
@@ -244,20 +237,19 @@
     });
     setStatus('');
   }
-  function formatPrice(v){return v>=1000?v.toLocaleString('en-US',{maximumFractionDigits:2}):v>=1?v.toFixed(3):v.toPrecision(4);}
   async function openPanel(symbol){
     const logic=getLogic();if(!logic){console.error('[悬浮K线] 数据逻辑未加载');return;}
     ensurePanel();closeLiveOnly();
     const requestId=++openRequestId;
-    activeSymbol=String(symbol||'').toUpperCase();state=null;view.scale=1;view.offset=0;view.minScale=1;view.maxScale=BASE_VISIBLE_BARS/MIN_VISIBLE_BARS;view.drag=null;view.chartPan=null;view.pointers.clear();view.pinch=null;
+    activeSymbol=String(symbol||'').toUpperCase();state=null;view.scale=1;view.offset=0;view.drag=null;view.chartPan=null;view.pointers.clear();view.pinch=null;
     panel.classList.add('vfk-open');panel.style.left='50%';panel.style.top='50%';panel.style.transform='translate(-50%,-50%)';
     $(panel,'.vfk-symbol-label').textContent=activeSymbol;
     $(panel,'.vfk-title').textContent=activeSymbol+' · 4H';
-    setStatus('正在加载历史行情…');ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.clearRect(0,0,canvas.width,canvas.height);
     const requestedSymbol=activeSymbol;
     // 同步读取本地快速缓存，立即绘制；网络更新在后台进行。
     try{state=logic.getInstantHistory?.(requestedSymbol)||null;}catch(_){state=null;}
-    if(state){draw();setStatus('');}
+    if(state)draw();
     try{
       const fastState=await logic.loadHistory(requestedSymbol,{isReality:isReality(requestedSymbol),fast:true});
       if(requestId!==openRequestId||activeSymbol!==requestedSymbol||!panel.classList.contains('vfk-open'))return;
@@ -266,7 +258,6 @@
       state.series=logic.buildEmaSeries(state.candles);
       if(activeSymbol!==requestedSymbol||!panel.classList.contains('vfk-open'))return;
       draw();
-      setStatus('');
       stopLive=logic.subscribeLive(state.apiSymbol,{isReality:state.isReality,onCandle:c=>{
         if(requestId!==openRequestId||!state||activeSymbol!==requestedSymbol||!panel.classList.contains('vfk-open'))return;
         const prior=state.candles,next=logic.mergeCandles(prior,[c]).slice(-logic.constants.maxCandles);
@@ -279,7 +270,7 @@
         const prior=state?.candles||[];fullState.candles=logic.mergeCandles(fullState.candles,prior).slice(-logic.constants.maxCandles);
         preserveRightEdge(prior,fullState.candles);fullState.series=logic.buildEmaSeries(fullState.candles);state=fullState;scheduleDraw();
       }).catch(err=>console.warn('[悬浮K线] 后台补齐历史失败，继续显示已有行情：',err));
-    }catch(err){if(requestId===openRequestId&&activeSymbol===requestedSymbol&&panel.classList.contains('vfk-open'))setStatus('行情加载失败：'+(err?.message||String(err)));console.error('[悬浮K线]',err);}
+    }catch(err){console.error('[悬浮K线]',err);}
   }
   function closeLiveOnly(){if(stopLive){try{stopLive()}catch(_){}stopLive=null;}}
   function closePanel(){
