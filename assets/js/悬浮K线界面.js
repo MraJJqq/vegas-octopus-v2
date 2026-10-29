@@ -116,7 +116,8 @@
       // 双指操作优先用于缩放；停止窗口拖动，避免与缩放冲突。
       view.drag=null;
       const p=[...view.pointers.values()];
-      view.pinch={distance:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),scale:view.scale,midX:(p[0].x+p[1].x)/2};
+      const rect=canvas.getBoundingClientRect(),midX=(p[0].x+p[1].x)/2;
+      view.pinch={distance:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),scale:view.scale,midX,anchor:clamp((midX-rect.left)/Math.max(1,rect.width),0,1),offset:view.offset,visible:visibleCount()};
     }
   }
   function chartPointerMove(e){
@@ -129,9 +130,10 @@
       const p=[...view.pointers.values()];
       const distance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);
       const next=clamp(view.pinch.scale*(distance/Math.max(1,view.pinch.distance)),view.minScale,view.maxScale);
-      const rect=canvas.getBoundingClientRect(),anchor=(view.pinch.midX-rect.left)/Math.max(1,rect.width);
-      const oldVisible=visibleCount(),newVisible=Math.max(8,Math.floor((state?.candles.length||0)/next));
-      view.offset=clamp(view.offset+(newVisible-oldVisible)*anchor,0,Math.max(0,(state?.candles.length||1)-newVisible));
+      const total=state?.candles.length||1;
+      const newVisible=Math.max(1,Math.min(total,Math.floor(total/next)));
+      // 双指缩放以手势开始时的中心位置为锚点，保持该位置对应的K线不漂移。
+      view.offset=clamp(view.pinch.offset+(view.pinch.visible-newVisible)*(1-view.pinch.anchor),0,Math.max(0,total-newVisible));
       view.scale=next;draw();
     }else if(view.drag&&view.drag.id===e.pointerId){
       const w=panel.offsetWidth,h=panel.offsetHeight;
@@ -163,10 +165,14 @@
   }
   function chartWheel(e){
     e.preventDefault();
+    if(!state?.candles?.length)return;
     const old=visibleCount(),factor=e.deltaY<0?1.15:.87;
+    const rect=canvas.getBoundingClientRect(),anchor=clamp((e.clientX-rect.left)/Math.max(1,rect.width),0,1);
     view.scale=clamp(view.scale*factor,view.minScale,view.maxScale);
-    const next=visibleCount(),r=canvas.getBoundingClientRect(),anchor=clamp((e.clientX-r.left)/Math.max(1,r.width),0,1);
-    view.offset=clamp(view.offset+(next-old)*anchor,0,Math.max(0,(state?.candles.length||1)-next));draw();
+    const next=visibleCount(),total=state.candles.length;
+    // 以鼠标所在横向位置为缩放锚点，避免缩放时K线整体向一侧跳动。
+    view.offset=clamp(view.offset+(old-next)*(1-anchor),0,Math.max(0,total-next));
+    draw();
   }
   function visibleCount(){return Math.max(1,Math.min(state?.candles.length||1,Math.floor((state?.candles.length||1)/view.scale)));}
   function draw(){
