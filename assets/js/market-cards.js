@@ -223,6 +223,32 @@ document.addEventListener('visibilitychange',()=>{
 autoWaveScroll.speed=Math.max(.1,cardStep()*focusSlots.length/120);
 requestAnimationFrame(autoWaveScroll);
 
+/* 自动滚动看门狗：若动画帧运行但滚动位置连续停滞，使用独立定时器恢复位移。 */
+let autoWatchPosition=left.scrollTop,autoWatchChangedAt=performance.now();
+window.setInterval(()=>{
+ try{
+  const now=performance.now(),position=left.scrollTop;
+  if(Math.abs(position-autoWatchPosition)>.05){
+   autoWatchPosition=position;
+   autoWatchChangedAt=now;
+   return;
+  }
+  if(document.hidden||wheelFrame||now<autoResumeAt)return;
+  if(now-autoWatchChangedAt<1600)return;
+  const step=cardStep();
+  if(focusSlots.length<2||step<1)return;
+  loopDirection=1;
+  left.scrollTop=position+1;
+  normalizeLoopPosition();
+  wheelTarget=left.scrollTop;
+  queueFocusScale();
+  autoWatchPosition=left.scrollTop;
+  autoWatchChangedAt=now;
+ }catch(error){
+  console.warn('[Vegas Octopus] auto-scroll watchdog recovered:',error);
+ }
+},80);
+
 window.addEventListener('resize',queueFocusScale,{passive:true});
 left.style.scrollBehavior='auto';
 queueFocusScale();
