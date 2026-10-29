@@ -221,28 +221,46 @@
     const index=newCandles.findIndex(c=>c.t===anchor.t);
     if(index>=0)view.offset=clamp(newCandles.length-1-index,0,Math.max(0,newCandles.length-visibleCountForScale(view.scale,newCandles.length)));
   }
-  function updateEmaForLive(logic,oldCandles,newCandles,oldSeries){
-    if(!oldCandles?.length||!newCandles?.length||!Array.isArray(oldSeries)||!oldSeries.length)return logic.buildEmaSeries(newCandles);
-    const oldLast=oldCandles[oldCandles.length-1],newLast=newCandles[newCandles.length-1],sameLength=oldCandles.length===newCandles.length;
-    // 只有最新一根K线被更新时才可增量更新EMA；若收到旧K线修正/乱序数据，必须完整重算。
-    let prefixUnchanged=true;
-    for(let i=0;i<oldCandles.length-1;i++){
-      const a=oldCandles[i],b=newCandles[i];
-      if(!b||a.t!==b.t||a.o!==b.o||a.h!==b.h||a.l!==b.l||a.c!==b.c){prefixUnchanged=false;break;}
+  function upsertLiveCandle(rows,candle,limit){
+    if(!Array.isArray(rows)||!rows.length)return {candles:[candle],mode:'append'};
+    let lo=0,hi=rows.length-1;
+    while(lo<=hi){
+      const mid=(lo+hi)>>1,t=rows[mid].t;
+      if(t===candle.t){
+        if(mid===rows.length-1){const next=rows.slice();next[mid]=candle;return {candles:next,mode:'replace-last'};}
+        const next=rows.slice();next[mid]=candle;return {candles:next,mode:'historical'};
+      }
+      if(t<candle.t)lo=mid+1;else hi=mid-1;
     }
-    const replaced=sameLength&&oldLast.t===newLast.t&&prefixUnchanged;
-    const appended=newLast.t>oldLast.t&&(newCandles.length===oldCandles.length+1||(sameLength&&newCandles[0].t>oldCandles[0].t));
-    if(!replaced&&!appended)return logic.buildEmaSeries(newCandles);
-    const dropped=sameLength&&appended&&newCandles[0].t>oldCandles[0].t;
-    // 达到历史上限并移除最老K线时，EMA预热起点改变，完整重算以保证指标精确。
-    if(dropped)return logic.buildEmaSeries(newCandles);
-    const closes=newCandles.map(c=>c.c),index=newCandles.length-1,output=[];
-    for(const series of oldSeries){const period=series.period,values=series.values.slice(),k=2/(period+1);
-      if(index<period-1)values[index]=null;
-      else if(index===period-1){let sum=0;for(let i=0;i<period;i++)sum+=closes[i];values[index]=sum/period;}
-      else{const previous=values[index-1];if(Number.isFinite(previous))values[index]=closes[index]*k+previous*(1-k);else return logic.buildEmaSeries(newCandles);}
-      output.push({period,values});}
-    return output;
+    if(candle.t>rows[rows.length-1].t){
+      const next=rows.concat(candle);
+      return next.length>limit?{candles:next.slice(-limit),mode:'trimmed'}:{candles:next,mode:'append'};
+    }
+    const next=rows.slice();next.splice(lo,0,candle);
+    return {candles:next.slice(-limit),mode:'historical'};
+  }
+  function updateEmaForLive(logic,oldCandles,newCandles,oldSeries,mode){
+    if(!oldCandles?.length||!newCandles?.length||!Array.isArray(oldSeries)||!oldSeries.length)return logic.buildEmaSeries(newCandles);
+    // 只有明确的最新K线更新/追加才增量更新；历史修正、乱序和移除最旧K线一律完整重算。
+    if(mode!=='replace-last'&&mode!=='append')return logic.buildEmaSeries(newCandles);
+    const index=newCandles.length-1;
+    if(mode==='replace-last'&&(oldCandles.length!==newCandles.length||oldCandles[index].t!==newCandles[index].t))return logic.buildEmaSeries(newCandles);
+    if(mode==='append'&&(newCandles.length!==oldCandles.length+1||newCandles[0].t!==oldCandles[0].t))return logic.buildEmaSeries(newCandles);
+    const close=newCandles[index].c;
+    for(const series of oldSeries){
+      const period=series.period,values=series.values,k=2/(period+1);
+      if(mode==='append'&&values.length!==index)return logic.buildEmaSeries(newCandles);
+      if(mode==='replace-last'&&values.length!==newCandles.length)return logic.buildEmaSeries(newCandles);
+      let value=null;
+      if(index<period-1)value=null;
+      else if(index===period-1||!Number.isFinite(values[index-1])){
+        let sum=0,valid=true;
+        for(let i=index-period+1;i<=index;i++){const v=newCandles[i]?.c;if(!Number.isFinite(v)){valid=false;break;}sum+=v;}
+        if(valid)value=sum/period;
+      }else value=close*k+values[index-1]*(1-k);
+      if(mode==='append')values.push(value);else values[index]=value;
+    }
+    return oldSeries;
   }
   function draw(){
     if(!canvas||!ctx||!state)return;
@@ -294,9 +312,9 @@ ctx.clearRect(0,0,canvas.width,canvas.height);
       draw();
       stopLive=logic.subscribeLive(state.apiSymbol,{isReality:state.isReality,onCandle:c=>{
         if(requestId!==openRequestId||!state||activeSymbol!==requestedSymbol||!panel.classList.contains('vfk-open'))return;
-        const prior=state.candles,next=logic.mergeCandles(prior,[c]).slice(-logic.constants.maxCandles);
+        const prior=state.candles,updated=upsertLiveCandle(prior,c,logic.constants.maxCandles),next=updated.candles;
         if(view.offset>0)preserveRightEdge(prior,next);
-        state.candles=next;state.series=updateEmaForLive(logic,prior,next,state.series);scheduleDraw();
+        state.candles=next;state.series=updateEmaForLive(logic,prior,next,state.series,updated.mode);scheduleDraw();
       }});
       // 完整历史与长周期 EMA 在后台补齐，不阻塞首次显示。
       logic.loadHistory(requestedSymbol,{isReality:state.isReality,apiSymbol:state.apiSymbol}).then(fullState=>{
