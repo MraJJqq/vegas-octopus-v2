@@ -235,7 +235,6 @@
       series.values.slice(start,end).forEach((v,i)=>{if(!Number.isFinite(v)){begun=false;return}const x=left+(i+.5)*step,yy=y(v);if(!begun){ctx.moveTo(x,yy);begun=true}else ctx.lineTo(x,yy)});
       ctx.stroke();
     });
-    setStatus('');
   }
   async function openPanel(symbol){
     const logic=getLogic();if(!logic){console.error('[悬浮K线] 数据逻辑未加载');return;}
@@ -244,7 +243,6 @@
     activeSymbol=String(symbol||'').toUpperCase();state=null;view.scale=1;view.offset=0;view.drag=null;view.chartPan=null;view.pointers.clear();view.pinch=null;
     panel.classList.add('vfk-open');panel.style.left='50%';panel.style.top='50%';panel.style.transform='translate(-50%,-50%)';
     $(panel,'.vfk-symbol-label').textContent=activeSymbol;
-    $(panel,'.vfk-title').textContent=activeSymbol+' · 4H';
 ctx.clearRect(0,0,canvas.width,canvas.height);
     const requestedSymbol=activeSymbol;
     // 同步读取本地快速缓存，立即绘制；网络更新在后台进行。
