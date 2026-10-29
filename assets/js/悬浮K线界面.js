@@ -7,7 +7,9 @@
   if(window.VegasFloatingKlineUI) return;
   const getLogic=()=>window.VegasFloatingKlineLogic;
   let panel=null,canvas=null,ctx=null,activeSymbol='',state=null,stopLive=null,resizeObserver=null;
-  const view={scale:1,offset:0,minScale:1,maxScale:Number.MAX_SAFE_INTEGER,drag:null,pointers:new Map(),pinch:null,baseWidth:0,baseHeight:0,gestureMoved:false,suppressChartClickUntil:0};
+  const BASE_VISIBLE_BARS=120,MIN_VISIBLE_BARS=20,MAX_VISIBLE_BARS=5000;
+  let openRequestId=0,drawFrame=0;
+  const view={scale:1,offset:0,minScale:1,maxScale:BASE_VISIBLE_BARS/MIN_VISIBLE_BARS,drag:null,chartPan:null,pointers:new Map(),pinch:null,baseWidth:0,baseHeight:0,gestureMoved:false,suppressChartClickUntil:0};
   const $=(root,sel)=>root.querySelector(sel);
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const isReality=s=>!!(getLogic()&&getLogic().isRealitySymbol(s));
@@ -17,10 +19,10 @@
     style.textContent=`
       #vegas-floating-kline{position:fixed;z-index:2147483647;left:50%;top:50%;transform:translate(-50%,-50%);width:min(900px,calc(100vw - 16px));height:min(620px,calc(100dvh - 16px));max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);display:none;flex-direction:column;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;color:#e8f5ff;overflow:visible;touch-action:none}
       #vegas-floating-kline.vfk-open{display:flex}
-      #vegas-floating-kline .vfk-head{position:absolute;z-index:3;left:0;right:0;top:0;height:48px;min-height:48px;display:flex;align-items:flex-start;gap:12px;padding:0;border:0;background:transparent;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none}
+      #vegas-floating-kline .vfk-head{position:absolute;z-index:6;left:0;right:0;top:0;height:32px;min-height:32px;display:flex;align-items:flex-start;gap:12px;padding:0;border:0;background:transparent;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none}
       #vegas-floating-kline .vfk-symbol-label{position:absolute;z-index:5;left:8px;top:8px;display:block;margin:0;padding:0;background:transparent;border:0;box-shadow:none;color:#e8f5ff;font:600 14px/1.2 system-ui,-apple-system,"PingFang SC",sans-serif;text-shadow:0 1px 3px rgba(0,0,0,.7);pointer-events:none;user-select:none;-webkit-user-select:none}
       #vegas-floating-kline .vfk-title,#vegas-floating-kline .vfk-hint,#vegas-floating-kline button,#vegas-floating-kline .vfk-status{display:none!important}
-      #vegas-floating-kline .vfk-chart-wrap{position:relative;flex:1;min-height:0;overflow:hidden;touch-action:none;background:transparent}
+      #vegas-floating-kline .vfk-chart-wrap{position:relative;flex:1;min-height:0;margin-top:32px;overflow:hidden;touch-action:none;background:transparent}
       #vegas-floating-kline canvas{position:absolute;inset:0;display:block;width:100%;height:100%;touch-action:none}
     `;
     document.head.appendChild(style);
@@ -72,7 +74,7 @@
     try{e.currentTarget.setPointerCapture(e.pointerId)}catch(_){}
     const r=panel.getBoundingClientRect();
     // 先记录窗口实际坐标，再解除居中变换，避免拖动起点跳位。
-    view.drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top};
+    view.drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top,moved:false};
     panel.style.left=r.left+'px';
     panel.style.top=r.top+'px';
     panel.style.transform='translate3d(0,0,0)';
@@ -80,6 +82,7 @@
   function moveWindowDrag(e){
     const d=view.drag;if(!d||d.id!==e.pointerId)return;
     e.preventDefault();
+    if(Math.hypot(e.clientX-d.x,e.clientY-d.y)>5)d.moved=true;
     const w=panel.offsetWidth,h=panel.offsetHeight;
     const viewport=window.visualViewport;
     const vw=Math.max(1,Math.floor(viewport?.width||document.documentElement.clientWidth||innerWidth));
@@ -97,6 +100,7 @@
       const top=clamp(d.top+e.clientY-d.y,0,Math.max(0,vh-panel.offsetHeight));
       panel.style.left=left+'px';panel.style.top=top+'px';panel.style.transform='none';
       view.drag=null;
+      if(d.moved)view.suppressChartClickUntil=Date.now()+800;
       try{if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId)}catch(_){}
     }
   }
@@ -127,17 +131,17 @@
     if(view.pointers.size>=2&&view.pinch){
       const p=[...view.pointers.values()];
       const distance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);
-      const next=clamp(view.pinch.scale*(distance/Math.max(1,view.pinch.distance)),view.minScale,view.maxScale);
-      const total=state?.candles.length||1;
-      const newVisible=Math.max(1,Math.min(total,Math.floor(total/next)));
-      // 双指缩放以手势开始时的中心位置为锚点，保持该位置对应的K线不漂移。
-      view.offset=clamp(Math.round(view.pinch.offset+(view.pinch.visible-newVisible)*(1-view.pinch.anchor)),0,Math.max(0,total-newVisible));
+      const total=state?.candles.length||1,limits=getScaleLimits(total);
+      const next=clamp(view.pinch.scale*(distance/Math.max(1,view.pinch.distance)),limits.min,limits.max);
+      const newVisible=visibleCountForScale(next,total);
+      // 以手势起点中心对应的K线为锚点，保留小数偏移减少连续缩放误差。
+      view.offset=clamp(view.pinch.offset+(view.pinch.visible-newVisible)*(1-view.pinch.anchor),0,Math.max(0,total-newVisible));
       view.scale=next;draw();
     }else if(view.chartPan&&view.chartPan.id===e.pointerId&&state?.candles?.length){
       const rect=canvas.getBoundingClientRect(),step=Math.max(1,rect.width/view.chartPan.visible);
       const total=state.candles.length;
-      view.offset=clamp(view.chartPan.startOffset+Math.round((e.clientX-view.chartPan.startX)/step),0,Math.max(0,total-visibleCount()));
-      draw();
+      view.offset=clamp(view.chartPan.startOffset+((e.clientX-view.chartPan.startX)/step),0,Math.max(0,total-visibleCount()));
+      scheduleDraw();
     }
   }
   function chartPointerEnd(e){
@@ -159,18 +163,38 @@
       view.chartPan={id,startX:p.x,startOffset:Math.floor(view.offset),visible:visibleCount()};
     }else view.chartPan=null;
   }
+  function getScaleLimits(total){const bars=Math.max(1,Math.min(MAX_VISIBLE_BARS,total||1));return {min:Math.min(1,BASE_VISIBLE_BARS/bars),max:BASE_VISIBLE_BARS/MIN_VISIBLE_BARS};}
+  function visibleCountForScale(scale,total=state?.candles?.length||1){const n=Math.max(1,Math.min(MAX_VISIBLE_BARS,total||1));return Math.max(1,Math.min(n,Math.round(BASE_VISIBLE_BARS/Math.max(.0001,scale))));}
+  function visibleCount(){return visibleCountForScale(view.scale,state?.candles?.length||1);}
   function chartWheel(e){
-    e.preventDefault();
-    if(!state?.candles?.length)return;
-    const old=visibleCount(),oldOffset=Math.floor(view.offset),factor=e.deltaY<0?1.15:.87;
-    const rect=canvas.getBoundingClientRect(),anchor=clamp((e.clientX-rect.left)/Math.max(1,rect.width),0,1);
-    view.scale=clamp(view.scale*factor,view.minScale,view.maxScale);
-    const next=visibleCount(),total=state.candles.length;
-    // 用整数K线偏移计算锚点，避免连续缩放时因小数偏移累计造成K线跳失。
-    view.offset=clamp(Math.round(oldOffset+(old-next)*(1-anchor)),0,Math.max(0,total-next));
-    draw();
+    e.preventDefault();if(!state?.candles?.length)return;
+    const total=state.candles.length,old=visibleCount(),oldOffset=view.offset,factor=e.deltaY<0?1.15:.87;
+    const rect=canvas.getBoundingClientRect(),anchor=clamp((e.clientX-rect.left)/Math.max(1,rect.width),0,1),limits=getScaleLimits(total);
+    view.scale=clamp(view.scale*factor,limits.min,limits.max);
+    const next=visibleCount(),maxOffset=Math.max(0,total-next);
+    view.offset=clamp(oldOffset+(old-next)*(1-anchor),0,maxOffset);
+    scheduleDraw();
   }
-  function visibleCount(){return Math.max(1,Math.min(state?.candles.length||1,Math.floor((state?.candles.length||1)/view.scale)));}
+  function scheduleDraw(){if(drawFrame)return;drawFrame=requestAnimationFrame(()=>{drawFrame=0;draw();});}
+  function preserveRightEdge(oldCandles,newCandles){
+    if(!Array.isArray(oldCandles)||!oldCandles.length||!Array.isArray(newCandles)||!newCandles.length)return;
+    const oldEnd=oldCandles.length-Math.floor(view.offset),anchor=oldCandles[Math.max(0,Math.min(oldCandles.length-1,oldEnd-1))];if(!anchor)return;
+    const index=newCandles.findIndex(c=>c.t===anchor.t);
+    if(index>=0)view.offset=clamp(newCandles.length-1-index,0,Math.max(0,newCandles.length-visibleCountForScale(view.scale,newCandles.length)));
+  }
+  function updateEmaForLive(logic,oldCandles,newCandles,oldSeries){
+    if(!oldCandles?.length||!newCandles?.length||!Array.isArray(oldSeries)||!oldSeries.length)return logic.buildEmaSeries(newCandles);
+    const oldLast=oldCandles[oldCandles.length-1],newLast=newCandles[newCandles.length-1],sameLength=oldCandles.length===newCandles.length;
+    const replaced=sameLength&&oldLast.t===newLast.t,appended=newLast.t>oldLast.t&&(newCandles.length===oldCandles.length+1||(sameLength&&newCandles[0].t>oldCandles[0].t));
+    if(!replaced&&!appended)return logic.buildEmaSeries(newCandles);
+    const dropped=sameLength&&appended&&newCandles[0].t>oldCandles[0].t,closes=newCandles.map(c=>c.c),index=newCandles.length-1,output=[];
+    for(const series of oldSeries){const period=series.period,values=dropped?series.values.slice(1):series.values.slice(),k=2/(period+1);
+      if(index<period-1)values[index]=null;
+      else if(index===period-1){let sum=0;for(let i=0;i<period;i++)sum+=closes[i];values[index]=sum/period;}
+      else{const previous=values[index-1];if(Number.isFinite(previous))values[index]=closes[index]*k+previous*(1-k);else return logic.buildEmaSeries(newCandles);}
+      output.push({period,values});}
+    return output;
+  }
   function draw(){
     if(!canvas||!ctx||!state)return;
     const rect=canvas.getBoundingClientRect(),ratio=window.devicePixelRatio||1,w=Math.max(1,rect.width),h=Math.max(1,rect.height);
@@ -183,7 +207,7 @@
     const ema=state.series||[],values=[];
     rows.forEach(c=>values.push(c.h,c.l));
     ema.forEach(s=>s.values.slice(start,end).forEach(v=>{if(Number.isFinite(v))values.push(v)}));
-    const min=Math.min(...values),max=Math.max(...values),pad=(max-min)*.08||Math.abs(max)*.005||1,lo=min-pad,hi=max+pad;
+    let min=Infinity,max=-Infinity;for(const value of values){if(value<min)min=value;if(value>max)max=value;}if(!Number.isFinite(min)||!Number.isFinite(max))return;const pad=(max-min)*.08||Math.abs(max)*.005||1,lo=min-pad,hi=max+pad;
     const left=2,right=2,top=2,bottom=2,pw=Math.max(1,w-left-right),ph=Math.max(1,h-top-bottom),y=v=>top+(hi-v)/(hi-lo)*ph,step=pw/rows.length,bw=Math.max(1,step*.62);
     ctx.lineWidth=1;
     rows.forEach((c,i)=>{
@@ -203,7 +227,8 @@
   async function openPanel(symbol){
     const logic=getLogic();if(!logic){console.error('[悬浮K线] 数据逻辑未加载');return;}
     ensurePanel();closeLiveOnly();
-    activeSymbol=String(symbol||'').toUpperCase();state=null;view.scale=1;view.offset=0;view.drag=null;view.pointers.clear();view.pinch=null;
+    const requestId=++openRequestId;
+    activeSymbol=String(symbol||'').toUpperCase();state=null;view.scale=1;view.offset=0;view.minScale=1;view.maxScale=BASE_VISIBLE_BARS/MIN_VISIBLE_BARS;view.drag=null;view.chartPan=null;view.pointers.clear();view.pinch=null;
     panel.classList.add('vfk-open');panel.style.left='50%';panel.style.top='50%';panel.style.transform='translate(-50%,-50%)';
     $(panel,'.vfk-symbol-label').textContent=activeSymbol;
     $(panel,'.vfk-title').textContent=activeSymbol+' · 4H';
@@ -214,30 +239,29 @@
     if(state){draw();setStatus('');}
     try{
       const fastState=await logic.loadHistory(requestedSymbol,{isReality:isReality(requestedSymbol),fast:true});
-      if(state&&state.candles?.length)fastState.candles=logic.mergeCandles(fastState.candles,state.candles).slice(-logic.constants.maxCandles);
+      if(requestId!==openRequestId||activeSymbol!==requestedSymbol||!panel.classList.contains('vfk-open'))return;
+      if(state&&state.candles?.length){const prior=state.candles;fastState.candles=logic.mergeCandles(fastState.candles,prior).slice(-logic.constants.maxCandles);preserveRightEdge(prior,fastState.candles);}
       state=fastState;
       state.series=logic.buildEmaSeries(state.candles);
       if(activeSymbol!==requestedSymbol||!panel.classList.contains('vfk-open'))return;
       draw();
       setStatus('');
       stopLive=logic.subscribeLive(state.apiSymbol,{isReality:state.isReality,onCandle:c=>{
-        if(!state||activeSymbol!==requestedSymbol)return;
-        state.candles=logic.mergeCandles(state.candles,[c]).slice(-logic.constants.maxCandles);
-        state.series=logic.buildEmaSeries(state.candles);
-        draw();
+        if(requestId!==openRequestId||!state||activeSymbol!==requestedSymbol||!panel.classList.contains('vfk-open'))return;
+        const prior=state.candles,next=logic.mergeCandles(prior,[c]).slice(-logic.constants.maxCandles);
+        if(view.offset>0)preserveRightEdge(prior,next);
+        state.candles=next;state.series=updateEmaForLive(logic,prior,next,state.series);scheduleDraw();
       }});
       // 完整历史与长周期 EMA 在后台补齐，不阻塞首次显示。
       logic.loadHistory(requestedSymbol,{isReality:state.isReality,apiSymbol:state.apiSymbol}).then(fullState=>{
-        if(activeSymbol!==requestedSymbol||!panel.classList.contains('vfk-open'))return;
-        fullState.candles=logic.mergeCandles(fullState.candles,state?.candles||[]).slice(-logic.constants.maxCandles);
-        fullState.series=logic.buildEmaSeries(fullState.candles);
-        state=fullState;
-        draw();
+        if(requestId!==openRequestId||activeSymbol!==requestedSymbol||!panel.classList.contains('vfk-open'))return;
+        const prior=state?.candles||[];fullState.candles=logic.mergeCandles(fullState.candles,prior).slice(-logic.constants.maxCandles);
+        preserveRightEdge(prior,fullState.candles);fullState.series=logic.buildEmaSeries(fullState.candles);state=fullState;scheduleDraw();
       }).catch(err=>console.warn('[悬浮K线] 后台补齐历史失败，继续显示已有行情：',err));
-    }catch(err){if(activeSymbol===requestedSymbol)setStatus('行情加载失败：'+(err?.message||String(err)));console.error('[悬浮K线]',err);}
+    }catch(err){if(requestId===openRequestId&&activeSymbol===requestedSymbol&&panel.classList.contains('vfk-open'))setStatus('行情加载失败：'+(err?.message||String(err)));console.error('[悬浮K线]',err);}
   }
   function closeLiveOnly(){if(stopLive){try{stopLive()}catch(_){}stopLive=null;}}
-  function closePanel(){closeLiveOnly();if(panel)panel.classList.remove('vfk-open');}
+  function closePanel(){openRequestId++;closeLiveOnly();if(panel)panel.classList.remove('vfk-open');if(drawFrame){cancelAnimationFrame(drawFrame);drawFrame=0;}}
   document.addEventListener('click',e=>{
     const card=e.target.closest('#market-cards-layer .mc-card[data-symbol]');
     if(!card||e.target.closest('button'))return;
@@ -287,6 +311,8 @@
     // 指针捕获可能使合成 click 的目标落在图表容器而非 canvas；
     // 拖动/缩放结束后的短暂窗口内，屏蔽悬浮窗口内部的合成点击。
     if(Date.now()<view.suppressChartClickUntil&&e.target.closest('#vegas-floating-kline'))return;
+    if(e.target.closest('#vegas-floating-kline .vfk-head'))return;
+    if(e.target.closest('#vegas-floating-kline')&&!e.target.closest('.vfk-chart-wrap'))return;
     if(clickedOnKline(e))return;
     closePanel();
   },true);
