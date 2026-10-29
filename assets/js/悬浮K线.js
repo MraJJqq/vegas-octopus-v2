@@ -145,13 +145,19 @@
     const isReality=options.isReality===undefined?REALITY_STOCKS.has(name):!!options.isReality;
     if(options.fast){const instant=readFastCache(name,isReality);if(instant)return instant;}
     let mappedApiSymbol=null;try{mappedApiSymbol=localStorage.getItem(apiSymbolKey(name,isReality));}catch(_){}
-    const apiSymbol=options.apiSymbol||mappedApiSymbol||(isReality?await resolveRealitySymbol(name):await resolveContract(name));
-    writeFastCache(name,apiSymbol,isReality,readFastCache(name,isReality)?.candles||[]);
+    // 常规合约直接请求标准交易对，跳过首屏前的合约目录查询；失败时再走完整校验与别名解析。
+    let apiSymbol=options.apiSymbol||mappedApiSymbol||(isReality?await resolveRealitySymbol(name):(CONTRACT_ALIASES[name]?.[0]||(name.endsWith('USDT')?name:name+'USDT')));
     const stored=await readPersistentCandles(apiSymbol,isReality);
     if(options.fast&&stored&&stored.length>=2){const cached=stored.slice(-MAX_CANDLE_BARS);writeFastCache(name,apiSymbol,isReality,cached);return {symbol:name,apiSymbol,isReality,candles:cached,series:buildEmaSeries(cached),source:'cache',pagesLoaded:0};}
     let latest=[];
     try{latest=normalize(await getJson(candlePath(apiSymbol,undefined,isReality)));}
-    catch(error){if(stored&&stored.length>=2){const cached=stored.slice(-MAX_CANDLE_BARS);writeFastCache(name,apiSymbol,isReality,cached);return {symbol:name,apiSymbol,isReality,candles:cached,series:buildEmaSeries(cached),source:'cache'};}throw error;}
+    catch(error){
+      if(!isReality&&!options.apiSymbol&&!mappedApiSymbol){
+        try{const resolved=await resolveContract(name);if(resolved!==apiSymbol){apiSymbol=resolved;latest=normalize(await getJson(candlePath(apiSymbol,undefined,isReality)));}}
+        catch(_){}
+      }
+      if(!latest.length){if(stored&&stored.length>=2){const cached=stored.slice(-MAX_CANDLE_BARS);writeFastCache(name,apiSymbol,isReality,cached);return {symbol:name,apiSymbol,isReality,candles:cached,series:buildEmaSeries(cached),source:'cache'};}throw error;}
+    }
     let combined=mergeCandles(stored||[],latest),pages=0,cursor=combined.length?combined[0].t-1:Date.now();
     const target=MAX_CANDLE_BARS,maxPages=Math.ceil(target/100)+2;
     while(!options.fast&&combined.length<target&&pages<maxPages&&cursor>0){
