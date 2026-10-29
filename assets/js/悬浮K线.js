@@ -13,6 +13,7 @@
   const EMA_PERIODS=[12,36,43,144,169,576,676];
   const MAX_CANDLE_BARS=5000, EMA_WARMUP_BARS=3000;
   const CANDLE_DB_NAME='vegas-octopus-market-cache', CANDLE_DB_VERSION=1, CANDLE_STORE_NAME='candles';
+  const FAST_CACHE_PREFIX='vegas-octopus-fast-kline:', FAST_CACHE_BARS=1000;
   let candleDbPromise=null, contractInfoPromise=null, legacyContractInfoPromise=null, realityInfoPromise=null;
   const sockets=new Map();
 
@@ -63,6 +64,29 @@
       tx.objectStore(CANDLE_STORE_NAME).put({key:candleCacheKey(symbol,isReality),symbol:String(symbol||'').toUpperCase(),market:isReality?'SPOT':'USDT-FUTURES',interval:'4H',rows:rows.slice(-MAX_CANDLE_BARS),count:Math.min(rows.length,MAX_CANDLE_BARS),oldestTime:rows[0].t,newestTime:rows[rows.length-1].t,updatedAt:Date.now()});
       tx.oncomplete=()=>resolve(true);tx.onerror=tx.onabort=()=>resolve(false);
     }catch(_){resolve(false);}});
+  }
+  function fastCacheKey(symbol,isReality){return FAST_CACHE_PREFIX+(isReality?'SPOT:':'FUTURES:')+String(symbol||'').toUpperCase();}
+  function apiSymbolKey(symbol,isReality){return FAST_CACHE_PREFIX+'api:'+ (isReality?'SPOT:':'FUTURES:')+String(symbol||'').toUpperCase();}
+  function readFastCache(symbol,isReality){
+    try{
+      const raw=localStorage.getItem(fastCacheKey(symbol,isReality));if(!raw)return null;
+      const saved=JSON.parse(raw);if(!saved||!saved.apiSymbol||!Array.isArray(saved.rows)||saved.rows.length<2)return null;
+      const candles=normalize(saved.rows);
+      if(candles.length<2)return null;
+      return {symbol:String(symbol||'').toUpperCase(),apiSymbol:saved.apiSymbol,isReality,candles,series:buildEmaSeries(candles),source:'local-cache',pagesLoaded:0};
+    }catch(_){return null;}
+  }
+  function writeFastCache(symbol,apiSymbol,isReality,rows){
+    if(!Array.isArray(rows)||rows.length<2)return;
+    try{
+      localStorage.setItem(apiSymbolKey(symbol,isReality),apiSymbol);
+      const compact=rows.slice(-FAST_CACHE_BARS).map(c=>[c.t,c.o,c.h,c.l,c.c]);
+      localStorage.setItem(fastCacheKey(symbol,isReality),JSON.stringify({apiSymbol,updatedAt:Date.now(),rows:compact}));
+    }catch(_){}
+  }
+  function getInstantHistory(symbol){
+    const name=String(symbol||'').trim().toUpperCase();if(!name)return null;
+    return readFastCache(name,REALITY_STOCKS.has(name));
   }
   async function getJson(url){
     const response=await fetch(API+url,{cache:'no-store'});
@@ -119,12 +143,15 @@
   async function loadHistory(symbol,options={}){
     const name=String(symbol||'').trim().toUpperCase();if(!name)throw new Error('缺少品种代码');
     const isReality=options.isReality===undefined?REALITY_STOCKS.has(name):!!options.isReality;
-    const apiSymbol=options.apiSymbol||(isReality?await resolveRealitySymbol(name):await resolveContract(name));
+    if(options.fast){const instant=readFastCache(name,isReality);if(instant)return instant;}
+    let mappedApiSymbol=null;try{mappedApiSymbol=localStorage.getItem(apiSymbolKey(name,isReality));}catch(_){}
+    const apiSymbol=options.apiSymbol||mappedApiSymbol||(isReality?await resolveRealitySymbol(name):await resolveContract(name));
+    writeFastCache(name,apiSymbol,isReality,readFastCache(name,isReality)?.candles||[]);
     const stored=await readPersistentCandles(apiSymbol,isReality);
-    if(options.fast&&stored&&stored.length>=2){const cached=stored.slice(-MAX_CANDLE_BARS);return {symbol:name,apiSymbol,isReality,candles:cached,series:buildEmaSeries(cached),source:'cache',pagesLoaded:0};}
+    if(options.fast&&stored&&stored.length>=2){const cached=stored.slice(-MAX_CANDLE_BARS);writeFastCache(name,apiSymbol,isReality,cached);return {symbol:name,apiSymbol,isReality,candles:cached,series:buildEmaSeries(cached),source:'cache',pagesLoaded:0};}
     let latest=[];
     try{latest=normalize(await getJson(candlePath(apiSymbol,undefined,isReality)));}
-    catch(error){if(stored&&stored.length>=2)return {symbol:name,apiSymbol,isReality,candles:stored.slice(-MAX_CANDLE_BARS),series:buildEmaSeries(stored.slice(-MAX_CANDLE_BARS)),source:'cache'};throw error;}
+    catch(error){if(stored&&stored.length>=2){const cached=stored.slice(-MAX_CANDLE_BARS);writeFastCache(name,apiSymbol,isReality,cached);return {symbol:name,apiSymbol,isReality,candles:cached,series:buildEmaSeries(cached),source:'cache'};}throw error;}
     let combined=mergeCandles(stored||[],latest),pages=0,cursor=combined.length?combined[0].t-1:Date.now();
     const target=MAX_CANDLE_BARS,maxPages=Math.ceil(target/100)+2;
     while(!options.fast&&combined.length<target&&pages<maxPages&&cursor>0){
@@ -135,7 +162,7 @@
       combined=next;cursor=combined[0].t-1;if(page.length<100)break;await delay(120);
     }
     if(combined.length<2)throw new Error('Bitget 未返回足够的有效 4H K 线：'+name);
-    combined=combined.slice(-MAX_CANDLE_BARS);await writePersistentCandles(apiSymbol,isReality,combined);
+    combined=combined.slice(-MAX_CANDLE_BARS);writeFastCache(name,apiSymbol,isReality,combined);await writePersistentCandles(apiSymbol,isReality,combined);
     return {symbol:name,apiSymbol,isReality,candles:combined,series:buildEmaSeries(combined),source:'bitget',pagesLoaded:pages};
   }
   function subscribeLive(apiSymbol,options={}){
@@ -165,6 +192,7 @@
   }
   window.VegasFloatingKlineLogic=Object.freeze({
     isRealitySymbol:symbol=>REALITY_STOCKS.has(String(symbol||'').toUpperCase()),
+    getInstantHistory,
     loadHistory,resolveRealitySymbol,resolveContract,readPersistentCandles,writePersistentCandles,
     normalize,mergeCandles,calcEma,buildEmaSeries,subscribeLive,unsubscribeLive,
     constants:Object.freeze({interval:'4H',emaPeriods:EMA_PERIODS.slice(),maxCandles:MAX_CANDLE_BARS,emaWarmupBars:EMA_WARMUP_BARS})
