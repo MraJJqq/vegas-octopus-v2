@@ -198,56 +198,98 @@
   }
   function subscribeLive(apiSymbol,options={}){
     const isReality=!!options.isReality,onCandle=typeof options.onCandle==='function'?options.onCandle:()=>{};
+    const onStatus=typeof options.onStatus==='function'?options.onStatus:()=>{};
     const key=(isReality?'SPOT:':'USDT-FUTURES:')+apiSymbol;
     unsubscribeLive(key);
-    let stopped=false,socket=null,reconnectTimer=0,heartbeat=0;
+    let stopped=false,socket=null,reconnectTimer=0,heartbeat=0,subscribeTimer=0,pongTimer=0;
+    const ACK_TIMEOUT_MS=12000,PONG_TIMEOUT_MS=12000,HEARTBEAT_INTERVAL_MS=25000;
+    function status(value,detail){try{onStatus({status:value,detail:detail||null,symbol:apiSymbol});}catch(_){}}
+    function clearConnectionTimers(){
+      clearInterval(heartbeat);heartbeat=0;
+      clearTimeout(subscribeTimer);subscribeTimer=0;
+      clearTimeout(pongTimer);pongTimer=0;
+    }
     function scheduleReconnect(){
       if(stopped||reconnectTimer)return;
+      status('reconnecting');
       reconnectTimer=setTimeout(()=>{reconnectTimer=0;connect();},3000);
     }
     const entry={stop:()=>{
       stopped=true;
       clearTimeout(reconnectTimer);reconnectTimer=0;
-      clearInterval(heartbeat);heartbeat=0;
+      clearConnectionTimers();
       const current=socket;socket=null;
       if(current){current.onclose=null;current.onopen=null;current.onmessage=null;current.onerror=null;try{current.close();}catch(_){}}
+      status('closed');
       if(sockets.get(key)===entry)sockets.delete(key);
     }};
-    // 先登记订阅生命周期；即使 WebSocket 构造失败，也能通过 unsubscribe 清掉重连定时器。
+    // 先登记订阅生命周期；即使 WebSocket 构造失败，也能通过 unsubscribe 清掉全部定时器。
     sockets.set(key,entry);
     function connect(){
-      if(stopped||!('WebSocket'in window))return;
+      if(stopped)return;
+      if(!('WebSocket'in window)){status('error','当前环境不支持 WebSocket');scheduleReconnect();return;}
+      status('connecting');
       try{socket=new WebSocket('wss://ws.bitget.com/v2/ws/public');}
-      catch(_){scheduleReconnect();return;}
+      catch(error){status('error',String(error&&error.message||error));scheduleReconnect();return;}
       const current=socket;
       current.onopen=()=>{
         if(stopped||socket!==current){try{current.close();}catch(_){}return;}
         try{
           current.send(JSON.stringify({op:'subscribe',args:[{instType:isReality?'SPOT':'USDT-FUTURES',channel:'candle4H',instId:apiSymbol}]}));
-        }catch(_){try{current.close();}catch(__){}return;}
+        }catch(error){status('error','订阅请求发送失败');try{current.close();}catch(_){}return;}
+        status('connected');
+        clearTimeout(subscribeTimer);
+        subscribeTimer=setTimeout(()=>{
+          if(!stopped&&socket===current){status('error','12秒内未收到订阅确认');try{current.close();}catch(_){}}
+        },ACK_TIMEOUT_MS);
         clearInterval(heartbeat);
         heartbeat=setInterval(()=>{
           if(stopped||socket!==current)return;
-          if(current.readyState===WebSocket.OPEN){try{current.send('ping');}catch(_){try{current.close();}catch(__){}}}
-        },25000);
+          if(current.readyState===WebSocket.OPEN){
+            clearTimeout(pongTimer);
+            try{
+              current.send('ping');
+              pongTimer=setTimeout(()=>{
+                if(!stopped&&socket===current){status('stale','心跳超时，正在重连');try{current.close();}catch(_){}}
+              },PONG_TIMEOUT_MS);
+            }catch(_){try{current.close();}catch(__){}}
+          }
+        },HEARTBEAT_INTERVAL_MS);
       };
       current.onmessage=event=>{
-        if(stopped||socket!==current||event.data==='pong')return;
+        if(stopped||socket!==current)return;
+        if(event.data==='pong'){
+          clearTimeout(pongTimer);pongTimer=0;
+          return;
+        }
         let msg;try{msg=JSON.parse(event.data);}catch(_){return;}
-        // 订阅失败或交易所返回错误时，关闭当前连接并走统一重连流程，不把错误响应当作行情。
         if(msg.event==='error'||(msg.code&&msg.code!=='00000')){
           console.error('[悬浮K线] Bitget WebSocket 返回错误：',msg.code||'',msg.msg||'');
+          status('error',msg.msg||msg.code||'Bitget WebSocket 错误');
           try{current.close();}catch(_){}
           return;
         }
         const expectedInstType=isReality?'SPOT':'USDT-FUTURES';
-        if(msg.arg&&msg.arg.instType===expectedInstType&&msg.arg.instId===apiSymbol&&msg.arg.channel==='candle4H'&&Array.isArray(msg.data)){
+        const expectedArg=arg=>arg&&arg.instType===expectedInstType&&arg.instId===apiSymbol&&arg.channel==='candle4H';
+        if(msg.event==='subscribe'&&expectedArg(msg.arg)){
+          clearTimeout(subscribeTimer);subscribeTimer=0;
+          status('subscribed');
+          return;
+        }
+        if(msg.event==='unsubscribe'&&expectedArg(msg.arg)){
+          status('unsubscribed');
+          return;
+        }
+        if(expectedArg(msg.arg)&&Array.isArray(msg.data)){
+          // 有效行情也能确认订阅已生效，兼容确认包缺失但行情正常的服务端情况。
+          clearTimeout(subscribeTimer);subscribeTimer=0;
+          status('subscribed');
           for(const row of msg.data){const candle=normalize([row])[0];if(candle&&!stopped&&socket===current)onCandle(candle);}
         }
       };
-      current.onerror=()=>{try{current.close();}catch(_){}};
+      current.onerror=()=>{status('error','WebSocket 网络错误');try{current.close();}catch(_){}};
       current.onclose=()=>{
-        clearInterval(heartbeat);heartbeat=0;
+        clearConnectionTimers();
         if(socket===current)socket=null;
         scheduleReconnect();
       };
