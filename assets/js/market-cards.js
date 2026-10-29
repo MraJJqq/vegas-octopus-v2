@@ -9,6 +9,8 @@ const S=P.map(([s,api],i)=>({s,api,i,p:0,o:0,candles:[],candleUpdatedAt:0,candle
 const left=document.getElementById('mc-left');
 S.forEach(d=>{
  left.insertAdjacentHTML('beforeend',`<div class="mc-slot"><div class="mc-float" style="--d:${-d.i*.9}s"><div class="mc-card" id="mc-c${d.i}" data-symbol="${d.s}"><div class="mc-bg"></div><i class="mc-g1"></i><i class="mc-g2"></i><i class="mc-gl"></i><div class="mc-row mc-l2"><span class="mc-coin">${d.s[0]}</span><b class="mc-sym">${d.s}</b></div><div class="mc-price mc-l4">加载中</div><div class="mc-l3"><span class="mc-pct">--</span></div><canvas class="mc-kline mc-l1" aria-label="${d.s} K线图"></canvas><div class="mc-hl mc-l2">高<span class="mc-hi">--</span>低<span class="mc-lo">--</span></div></div></div><div class="mc-gshadow" style="--d:${-d.i*.9}s"></div></div>`);
+ d.dom={card:left.querySelector('#mc-c'+d.i),price:left.querySelector('#mc-c'+d.i+' .mc-price'),pct:left.querySelector('#mc-c'+d.i+' .mc-pct'),high:left.querySelector('#mc-c'+d.i+' .mc-hi'),low:left.querySelector('#mc-c'+d.i+' .mc-lo'),symbol:left.querySelector('#mc-c'+d.i+' .mc-sym'),canvas:left.querySelector('#mc-c'+d.i+' .mc-kline')};
+ d.high=0;d.low=0;
 });
 function drawKline(d,canvas){
  const rect=canvas.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),ratio=Math.min(1.5,Math.max(1,window.devicePixelRatio||1));
@@ -36,14 +38,19 @@ function drawKline(d,canvas){
  ctx.shadowBlur=0;
 }
 function paint(d){
- const c=document.getElementById('mc-c'+d.i),q=s=>c.querySelector(s),priceEl=q('.mc-price');
- const symbolLabel=q('.mc-sym');if(symbolLabel&&symbolLabel.firstChild)symbolLabel.firstChild.textContent=d.s;
- if(!d.ready||!Number.isFinite(d.p)||d.p<=0){q('.mc-price').textContent='加载中';q('.mc-pct').textContent='--';q('.mc-hi').textContent='--';q('.mc-lo').textContent='--';drawKline(d,q('.mc-kline'));return}
- const up=d.p>=d.o;c.classList.toggle('up',up);c.classList.toggle('dn',!up);
- const nextPrice=fmt(d.p);if(priceEl.textContent!==nextPrice&&priceEl.textContent!=='加载中'){priceEl.classList.add('flash');if(d.flashTimer)window.clearTimeout(d.flashTimer);d.flashTimer=window.setTimeout(()=>{priceEl.classList.remove('flash');d.flashTimer=0},250)}priceEl.textContent=nextPrice;q('.mc-pct').textContent=(up?'+':'')+((d.p/d.o-1)*100).toFixed(2)+'%';
- let mn=Infinity,mx=-Infinity,valueCount=0;for(const candle of d.candles){const hi=candle.high,lo=candle.low;if(Number.isFinite(hi)&&hi>0){if(hi<mn)mn=hi;if(hi>mx)mx=hi;valueCount++}if(Number.isFinite(lo)&&lo>0){if(lo<mn)mn=lo;if(lo>mx)mx=lo;valueCount++}}
- if(valueCount>1){q('.mc-hi').textContent=fmt(mx);q('.mc-lo').textContent=fmt(mn)}
- drawKline(d,q('.mc-kline'));
+ const el=d.dom,priceEl=el.price;
+ if(!d.ready||!Number.isFinite(d.p)||d.p<=0){if(priceEl.textContent!=='加载中')priceEl.textContent='加载中';if(el.pct.textContent!=='--')el.pct.textContent='--';if(el.high.textContent!=='--')el.high.textContent='--';if(el.low.textContent!=='--')el.low.textContent='--';drawKline(d,el.canvas);return}
+ const up=d.p>=d.o;
+ el.card.classList.toggle('up',up);el.card.classList.toggle('dn',!up);
+ const nextPrice=fmt(d.p);
+ if(priceEl.textContent!==nextPrice){
+  if(priceEl.textContent!=='加载中'){priceEl.classList.add('flash');if(d.flashTimer)window.clearTimeout(d.flashTimer);d.flashTimer=window.setTimeout(()=>{priceEl.classList.remove('flash');d.flashTimer=0},250)}
+  priceEl.textContent=nextPrice;
+ }
+ const nextPct=(up?'+':'')+((d.p/d.o-1)*100).toFixed(2)+'%';
+ if(el.pct.textContent!==nextPct)el.pct.textContent=nextPct;
+ if(d.high>0&&d.low>0){const hi=fmt(d.high),lo=fmt(d.low);if(el.high.textContent!==hi)el.high.textContent=hi;if(el.low.textContent!==lo)el.low.textContent=lo}
+ drawKline(d,el.canvas);
 }
 window.addEventListener('resize',()=>{
  cachedCardStep=0;
@@ -333,6 +340,9 @@ async function loadSparkline(d,symbol,isStock){
   const path=isStock?'/api/v3/market/candles':'/api/v2/mix/market/candles';
   const rows=await bitgetJson(path+'?'+params);
   d.candles=rows.filter(r=>Array.isArray(r)&&Number(r[1])>0&&Number(r[2])>0&&Number(r[3])>0&&Number(r[4])>0).sort((a,b)=>Number(a[0])-Number(b[0])).slice(-30).map(r=>({open:Number(r[1]),high:Number(r[2]),low:Number(r[3]),close:Number(r[4])}));
+  let high=0,low=Infinity;
+  for(const candle of d.candles){if(candle.high>high)high=candle.high;if(candle.low>0&&candle.low<low)low=candle.low}
+  d.high=high;d.low=Number.isFinite(low)?low:0;
   d.candleUpdatedAt=Date.now();
  }catch(error){d.candleUpdatedAt=Date.now()-CANDLE_REFRESH_MS+60000;console.warn('[Vegas Octopus] 1H candles failed for '+d.s+':',error)}
  finally{d.candleLoading=false}
