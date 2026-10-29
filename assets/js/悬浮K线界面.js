@@ -72,23 +72,29 @@
     const r=panel.getBoundingClientRect();
     // 先记录窗口实际坐标，再解除居中变换，避免拖动起点跳位。
     view.drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top};
-    panel.style.transform='none';
     panel.style.left=r.left+'px';
     panel.style.top=r.top+'px';
+    panel.style.transform='translate3d(0,0,0)';
   }
   function moveWindowDrag(e){
     const d=view.drag;if(!d||d.id!==e.pointerId)return;
     e.preventDefault();
-    const r=panel.getBoundingClientRect(),w=r.width,h=r.height;
+    const w=panel.offsetWidth,h=panel.offsetHeight;
     const viewport=window.visualViewport;
     const vw=Math.max(1,Math.floor(viewport?.width||document.documentElement.clientWidth||innerWidth));
     const vh=Math.max(1,Math.floor(viewport?.height||document.documentElement.clientHeight||innerHeight));
     const left=clamp(d.left+e.clientX-d.x,0,Math.max(0,vw-w));
     const top=clamp(d.top+e.clientY-d.y,0,Math.max(0,vh-h));
-    panel.style.left=left+'px';panel.style.top=top+'px';
+    panel.style.transform='translate3d('+(left-d.left)+'px,'+(top-d.top)+'px,0)';
   }
   function endWindowDrag(e){
     if(view.drag&&view.drag.id===e.pointerId){
+      const d=view.drag,viewport=window.visualViewport;
+      const vw=Math.max(1,Math.floor(viewport?.width||document.documentElement.clientWidth||innerWidth));
+      const vh=Math.max(1,Math.floor(viewport?.height||document.documentElement.clientHeight||innerHeight));
+      const left=clamp(d.left+e.clientX-d.x,0,Math.max(0,vw-panel.offsetWidth));
+      const top=clamp(d.top+e.clientY-d.y,0,Math.max(0,vh-panel.offsetHeight));
+      panel.style.left=left+'px';panel.style.top=top+'px';panel.style.transform='none';
       view.drag=null;
       try{if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId)}catch(_){}
     }
@@ -99,8 +105,8 @@
     view.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(view.pointers.size===1){
       const r=panel.getBoundingClientRect();
-      // K线区域任意位置单指拖动，移动整个悬浮窗口。
-      panel.style.transform='none';panel.style.left=r.left+'px';panel.style.top=r.top+'px';
+      // 使用合成层位移，避免每次触控都触发布局重算。
+      panel.style.left=r.left+'px';panel.style.top=r.top+'px';panel.style.transform='translate3d(0,0,0)';
       view.drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top};
       view.pinch=null;
     }else if(view.pointers.size===2){
@@ -122,17 +128,25 @@
       view.offset=clamp(view.offset+(newVisible-oldVisible)*anchor,0,Math.max(0,(state?.candles.length||1)-newVisible));
       view.scale=next;draw();
     }else if(view.drag&&view.drag.id===e.pointerId){
-      const r=panel.getBoundingClientRect(),w=r.width,h=r.height;
+      const w=panel.offsetWidth,h=panel.offsetHeight;
       const viewport=window.visualViewport;
       const vw=Math.max(1,Math.floor(viewport?.width||document.documentElement.clientWidth||innerWidth));
       const vh=Math.max(1,Math.floor(viewport?.height||document.documentElement.clientHeight||innerHeight));
-      panel.style.left=clamp(view.drag.left+e.clientX-view.drag.x,0,Math.max(0,vw-w))+'px';
-      panel.style.top=clamp(view.drag.top+e.clientY-view.drag.y,0,Math.max(0,vh-h))+'px';
+      const left=clamp(view.drag.left+e.clientX-view.drag.x,0,Math.max(0,vw-w));
+      const top=clamp(view.drag.top+e.clientY-view.drag.y,0,Math.max(0,vh-h));
+      panel.style.transform='translate3d('+(left-view.drag.left)+'px,'+(top-view.drag.top)+'px,0)';
     }
   }
   function chartPointerEnd(e){
     view.pointers.delete(e.pointerId);
-    if(view.drag&&view.drag.id===e.pointerId)view.drag=null;
+    if(view.drag&&view.drag.id===e.pointerId){
+      const d=view.drag,viewport=window.visualViewport;
+      const vw=Math.max(1,Math.floor(viewport?.width||document.documentElement.clientWidth||innerWidth));
+      const vh=Math.max(1,Math.floor(viewport?.height||document.documentElement.clientHeight||innerHeight));
+      panel.style.left=clamp(d.left+e.clientX-d.x,0,Math.max(0,vw-panel.offsetWidth))+'px';
+      panel.style.top=clamp(d.top+e.clientY-d.y,0,Math.max(0,vh-panel.offsetHeight))+'px';
+      panel.style.transform='none';view.drag=null;
+    }
     if(view.pointers.size<2)view.pinch=null;
     // 双指结束后剩余单指重新开始窗口拖动，避免位置跳跃。
     if(view.pointers.size===1){
