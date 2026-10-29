@@ -7,7 +7,7 @@
   if(window.VegasFloatingKlineUI) return;
   const getLogic=()=>window.VegasFloatingKlineLogic;
   let panel=null,canvas=null,ctx=null,activeSymbol='',state=null,stopLive=null,resizeObserver=null;
-  const view={scale:1,offset:0,minScale:1,maxScale:12,drag:null,pointers:new Map(),pinch:null,baseWidth:0,baseHeight:0};
+  const view={scale:1,offset:0,minScale:1,maxScale:Number.MAX_SAFE_INTEGER,drag:null,pointers:new Map(),pinch:null,baseWidth:0,baseHeight:0};
   const $=(root,sel)=>root.querySelector(sel);
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const isReality=s=>!!(getLogic()&&getLogic().isRealitySymbol(s));
@@ -161,7 +161,7 @@
     const next=visibleCount(),r=canvas.getBoundingClientRect(),anchor=clamp((e.clientX-r.left)/Math.max(1,r.width),0,1);
     view.offset=clamp(view.offset+(next-old)*anchor,0,Math.max(0,(state?.candles.length||1)-next));draw();
   }
-  function visibleCount(){return Math.max(8,Math.min(state?.candles.length||8,Math.floor((state?.candles.length||8)/view.scale)));}
+  function visibleCount(){return Math.max(1,Math.min(state?.candles.length||1,Math.floor((state?.candles.length||1)/view.scale)));}
   function draw(){
     if(!canvas||!ctx||!state)return;
     const rect=canvas.getBoundingClientRect(),ratio=window.devicePixelRatio||1,w=Math.max(1,rect.width),h=Math.max(1,rect.height);
