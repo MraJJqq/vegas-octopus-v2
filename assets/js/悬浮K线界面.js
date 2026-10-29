@@ -198,7 +198,14 @@
   function updateEmaForLive(logic,oldCandles,newCandles,oldSeries){
     if(!oldCandles?.length||!newCandles?.length||!Array.isArray(oldSeries)||!oldSeries.length)return logic.buildEmaSeries(newCandles);
     const oldLast=oldCandles[oldCandles.length-1],newLast=newCandles[newCandles.length-1],sameLength=oldCandles.length===newCandles.length;
-    const replaced=sameLength&&oldLast.t===newLast.t,appended=newLast.t>oldLast.t&&(newCandles.length===oldCandles.length+1||(sameLength&&newCandles[0].t>oldCandles[0].t));
+    // 只有最新一根K线被更新时才可增量更新EMA；若收到旧K线修正/乱序数据，必须完整重算。
+    let prefixUnchanged=true;
+    for(let i=0;i<oldCandles.length-1;i++){
+      const a=oldCandles[i],b=newCandles[i];
+      if(!b||a.t!==b.t||a.o!==b.o||a.h!==b.h||a.l!==b.l||a.c!==b.c){prefixUnchanged=false;break;}
+    }
+    const replaced=sameLength&&oldLast.t===newLast.t&&prefixUnchanged;
+    const appended=newLast.t>oldLast.t&&(newCandles.length===oldCandles.length+1||(sameLength&&newCandles[0].t>oldCandles[0].t));
     if(!replaced&&!appended)return logic.buildEmaSeries(newCandles);
     const dropped=sameLength&&appended&&newCandles[0].t>oldCandles[0].t;
     // 达到历史上限并移除最老K线时，EMA预热起点改变，完整重算以保证指标精确。
