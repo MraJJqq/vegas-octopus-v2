@@ -11,7 +11,8 @@
   const cardStartByElement = new Map();
   const SYMBOL_HUES = new Map(Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-symbol]')).map((card, index) => [String(card.dataset.symbol || '').toUpperCase(), (190 + index * 137.508) % 360]));
   let canvas, ctx, width = 1, height = 1, dpr = 1;
-  let rotA = 0, lastT = 0, frameId = 0, resizeObserver = null;
+  let rotA = 0, lastT = 0, frameId = 0, frameTimer = 0, lastFrameAt = 0, resizeObserver = null;
+  const FRAME_INTERVAL = 1000 / 30;
 
   /* 透明叠加层：不创建背景，不接管鼠标/触摸事件。 */
   const app = document.querySelector('.app') || document.body;
@@ -294,23 +295,34 @@
     return true;
   }
 
+  function scheduleFrame() {
+    if (document.hidden || frameId || frameTimer) return;
+    const wait = Math.max(0, FRAME_INTERVAL - (performance.now() - lastFrameAt));
+    frameTimer = window.setTimeout(() => {
+      frameTimer = 0;
+      if (!document.hidden) frameId = requestAnimationFrame(frame);
+    }, wait);
+  }
   function frame(ms) {
     frameId = 0;
     if (document.hidden) return;
-    if (flowDraw(ms / 1000)) frameId = requestAnimationFrame(frame);
+    lastFrameAt = performance.now();
+    if (flowDraw(ms / 1000)) scheduleFrame();
   }
   function start() {
-    if (!frameId && !document.hidden) {
+    if (!frameId && !frameTimer && !document.hidden) {
       lastT = 0;
-      frameId = requestAnimationFrame(frame);
+      scheduleFrame();
     }
   }
-  /* 无可见正式信号时停止逐帧绘制；滚动、窗口尺寸或信号变化时按需恢复。 */
+  /* 无可见正式信号时停止绘制；滚动、窗口尺寸或信号变化时按需恢复。 */
   const motionScroller = $('mc-left');
   if (motionScroller) motionScroller.addEventListener('scroll', start, { passive: true });
   function stop() {
     if (frameId) cancelAnimationFrame(frameId);
+    if (frameTimer) clearTimeout(frameTimer);
     frameId = 0;
+    frameTimer = 0;
   }
 
   resize();
