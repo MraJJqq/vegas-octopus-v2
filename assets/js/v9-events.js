@@ -59,7 +59,7 @@
     }
   }
   async function refreshV9State(){
-    if(refreshInProgress)return;
+    if(document.hidden||refreshInProgress)return;
     refreshInProgress=true;
     try{
       const state=await fetchStateJson();
@@ -93,5 +93,8 @@
     }
   }
   refreshV9State();
+  document.addEventListener("visibilitychange",()=>{
+    if(!document.hidden)refreshV9State();
+  },{passive:true});
   window.setInterval(refreshV9State,30*1000);
 })();
