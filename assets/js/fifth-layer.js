@@ -438,13 +438,9 @@
     const xAt=i=>plotLeft+(i-start+.5)*step;
     const yAt=v=>plotTop+(max-v)/(max-min)*plotH;
 
-    // Clip every candle and EMA stroke to the actual plot rectangle. Without this,
-    // off-frame strokes can spill across previously dragged chart regions and look
-    // like parts of the chart are being covered or overwritten.
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(plotLeft,plotTop,plotW,plotH);
-    ctx.clip();
+    // Candle extrema and the EMA values are included in the price range above,
+    // so series stay within the plot naturally. Avoid a moving canvas clip path:
+    // repeated chart drags can otherwise leave the visible series looking cut off.
     rows.forEach((c,j)=>{
       const i=start+j,x=xAt(i),up=c.c>=c.o,color=up?'#2ee6a6':'#ff5c7c';
       ctx.strokeStyle=color;ctx.lineWidth=Math.max(1,Math.min(1.5,step*.18));
@@ -473,7 +469,6 @@
       }
       ctx.stroke();ctx.globalAlpha=1;
     });
-    ctx.restore();
   }
   async function loadData(isRefresh) {
     const generation=state.generation;
