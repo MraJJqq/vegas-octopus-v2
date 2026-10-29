@@ -97,3 +97,23 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 /* 最新事件板块固定在右下角；保留原有信号内容与交互逻辑。 */
 .topbar{top:auto!important;right:clamp(12px,2.2vw,32px)!important;bottom:clamp(12px,2.2vh,28px)!important;left:auto!important}
 @media(max-width:700px){.topbar{top:auto!important;right:10px!important;bottom:12px!important;left:auto!important}}
+
+/* 最新事件：移除所有分组框、信号标签框与分隔线，仅保留文字。 */
+.topbar,.event-top-card,.panel-head,.v9-notification,.v9-group,.v9-symbol,.v9-nochange{
+  background:transparent!important;
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  border-radius:0!important;
+}
+.panel-head{border-bottom:0!important;margin-bottom:8px}
+.v9-group{padding:0!important;border-left:0!important}
+.v9-symbols{display:flex!important;flex-wrap:wrap;gap:5px 10px!important}
+.v9-symbol,.v9-nochange{
+  display:inline!important;
+  min-height:0!important;
+  padding:0!important;
+  text-align:left!important;
+  white-space:nowrap;
+}
+.v9-nochange{display:block!important}
