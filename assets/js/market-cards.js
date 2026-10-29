@@ -124,10 +124,15 @@ left.addEventListener('wheel',e=>{
   wheelTarget=left.scrollTop;
   wheelVelocity=0;
  }
- const sameDirection=wheelVelocity===0||Math.sign(wheelVelocity)===Math.sign(delta);
- const boost=sameDirection?1.32:1.08;
- wheelTarget+=delta*boost;
- wheelVelocity=Math.max(-1.2,Math.min(1.2,wheelVelocity+delta*(sameDirection?.022:.012)));
+ const reversing=wheelVelocity!==0&&Math.sign(wheelVelocity)!==Math.sign(delta);
+ if(reversing){
+  /* 反向滚轮时立即消除旧方向的惯性目标，避免先刹车、再等待、最后才反向的明显停顿。 */
+  wheelTarget=left.scrollTop+delta*1.16;
+  wheelVelocity=delta*.018;
+ }else{
+  wheelTarget+=delta*1.32;
+  wheelVelocity=Math.max(-1.2,Math.min(1.2,wheelVelocity+delta*.022));
+ }
  if(!wheelFrame)wheelFrame=requestAnimationFrame(smoothWheelStep);
 },{passive:false});
 left.addEventListener('scroll',()=>{
