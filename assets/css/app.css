@@ -62,10 +62,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 #market-cards-layer .mc-price{font-size:clamp(14px,1.25vw,20px);font-weight:700;margin:2px 0 1px;font-variant-numeric:tabular-nums;transition:color .3s;white-space:nowrap}
 #market-cards-layer .mc-price.flash{color:var(--mc-c)}
 #market-cards-layer .mc-pct{display:inline-block;padding:1px 6px;border-radius:99px;font-size:10px;font-weight:700;color:#07101f;background:var(--mc-c);transition:background .4s}
-#market-cards-layer .mc-kline{display:block;width:100%;height:22px;margin-top:2px}
-#market-cards-layer .mc-hl{margin-top:3px;font-size:9px;color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
-#market-cards-layer .mc-hl span{color:var(--ink);margin:0 5px 0 2px}
-@media(max-width:700px){#market-cards-layer .mc-columns{width:48vw}#market-cards-layer .mc-side{gap:clamp(2px,.35vh,4px)}#market-cards-layer .mc-slot{width:min(100%,clamp(126px,43vw,190px));padding:1px 2px 3px}#market-cards-layer .mc-card{height:clamp(82px,calc((100dvh - 70px)/7),104px);padding:6px;border-radius:16px;min-height:0}#market-cards-layer .mc-coin{flex-basis:20px;width:20px;height:20px;font-size:9px}#market-cards-layer .mc-sym{font-size:10px}#market-cards-layer .mc-sym small{font-size:7px}#market-cards-layer .mc-price{font-size:clamp(13px,3.4vw,17px);margin:1px 0}#market-cards-layer .mc-pct{padding:1px 5px;font-size:9px}#market-cards-layer .mc-kline{height:18px;margin-top:1px}#market-cards-layer .mc-hl{font-size:7px;margin-top:2px}}
+@media(max-width:700px){#market-cards-layer .mc-columns{width:48vw}#market-cards-layer .mc-side{gap:clamp(2px,.35vh,4px)}#market-cards-layer .mc-slot{width:min(100%,clamp(126px,43vw,190px));padding:1px 2px 3px}#market-cards-layer .mc-card{height:clamp(82px,calc((100dvh - 70px)/7),104px);padding:6px;border-radius:16px;min-height:0}#market-cards-layer .mc-coin{flex-basis:20px;width:20px;height:20px;font-size:9px}#market-cards-layer .mc-sym{font-size:10px}#market-cards-layer .mc-sym small{font-size:7px}#market-cards-layer .mc-price{font-size:clamp(13px,3.4vw,17px);margin:1px 0}#market-cards-layer .mc-pct{padding:1px 5px;font-size:9px}}
 @media(prefers-reduced-motion:reduce){#market-cards-layer .mc-float,#market-cards-layer .mc-gshadow{animation:none}}
 
 /* 最新事件模块：统一布局规则，保留透明背景、紧凑两列和内部滚动。 */
@@ -178,7 +175,6 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 #market-cards-layer .mc-card{min-width:0;overflow:hidden}
 #market-cards-layer .mc-row{max-width:100%;overflow:hidden}
 #market-cards-layer .mc-sym{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-#market-cards-layer .mc-hl{max-width:100%;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:360px){
   #market-cards-layer .mc-columns{width:46vw}
   #market-cards-layer .mc-slot{width:min(100%,clamp(116px,43vw,156px))}
@@ -188,8 +184,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
   #market-cards-layer .mc-sym{font-size:9px}
   #market-cards-layer .mc-sym small{margin-left:2px;font-size:7px}
   #market-cards-layer .mc-price{font-size:clamp(12px,3.6vw,14px)}
-  #market-cards-layer .mc-hl span{margin-right:3px;margin-left:1px}
-}
+  }
 @media(max-height:500px) and (orientation:landscape){
   #market-cards-layer .mc-side{gap:2px}
   #market-cards-layer .mc-slot{padding-top:1px;padding-bottom:2px}
@@ -197,9 +192,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
   #market-cards-layer .mc-coin{flex-basis:18px;width:18px;height:18px;font-size:8px}
   #market-cards-layer .mc-sym{font-size:10px}
   #market-cards-layer .mc-price{font-size:clamp(12px,1.8vw,15px);margin:0}
-  #market-cards-layer .mc-kline{height:14px;margin-top:0}
-  #market-cards-layer .mc-hl{font-size:7px;margin-top:0}
-  .topbar{max-height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important}
+      .topbar{max-height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important}
   .v9-notification{max-height:calc(100dvh - 58px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important}
 }
 
