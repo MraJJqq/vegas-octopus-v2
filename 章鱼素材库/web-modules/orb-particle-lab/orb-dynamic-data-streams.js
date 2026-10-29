@@ -93,8 +93,26 @@
     };
   }
 
+  /* 直接使用 V9 正式信号名单驱动第四层；卡片属性仅作为未收到同步数据时的兼容回退。 */
+  let directSignalSymbols = new Set(
+    (Array.isArray(window.VegasFormalSignalSymbols) ? window.VegasFormalSignalSymbols : [])
+      .map(symbol => String(symbol || '').toUpperCase())
+  );
+  let hasDirectSignalSync = Array.isArray(window.VegasFormalSignalSymbols);
+
   function refreshFormalCards() {
-    formalCards = Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]'));
+    const cards = Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-symbol]'));
+    formalCards = hasDirectSignalSync
+      ? cards.filter(card => directSignalSymbols.has(String(card.dataset.symbol || '').toUpperCase()))
+      : cards.filter(card => card.matches('[data-formal-signal="true"]'));
+  }
+
+  function setFormalSignals(symbols) {
+    directSignalSymbols = new Set(
+      (Array.isArray(symbols) ? symbols : []).map(symbol => String(symbol || '').toUpperCase())
+    );
+    hasDirectSignalSync = true;
+    refreshFormalCards();
   }
 
   function getFormalSignalCardStarts() {
@@ -294,6 +312,7 @@
   window.VegasDataStreamLayer = {
     resize,
     syncCardLines,
+    setFormalSignals,
     getState: () => ({
       layer: 4,
       ready: true,
@@ -308,6 +327,7 @@
       canvasHeight: height
     })
   };
+  refreshFormalCards();
   start();
-  console.info('[Vegas Fourth Layer] data stream linked to small cards');
+  console.info('[Vegas Fourth Layer] data stream directly synced with V9 formal signals');
 })();
