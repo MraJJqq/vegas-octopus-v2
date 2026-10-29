@@ -163,7 +163,18 @@ function visibleFormalSymbol(){
  });
  return formal.has(best)?best:'';
 }
-function scheduleFollow(){if(!state.open)return;if(state.followTimer)clearTimeout(state.followTimer);state.followTimer=setTimeout(()=>{if(!state.open)return;const next=visibleFormalSymbol();if(next&&next!==state.symbol)openSymbol(next);else if(!next){win.classList.add('is-faded')}else win.classList.remove('is-faded')},220)}
+function scheduleFollow(){
+ if(!state.open||state.followTimer)return;
+ /* 滚动是连续事件，不能使用每次都重置计时器的防抖；采用节流式跟随，确保无限循环滚动期间也持续切换。 */
+ state.followTimer=setTimeout(()=>{
+  state.followTimer=0;
+  if(!state.open)return;
+  const next=visibleFormalSymbol();
+  if(next&&next!==state.symbol)openSymbol(next);
+  else if(!next)win.classList.add('is-faded');
+  else win.classList.remove('is-faded');
+ },80);
+}
 const scroller=document.getElementById('mc-left');
 if(scroller)scroller.addEventListener('scroll',scheduleFollow,{passive:true});
 document.addEventListener('click',e=>{
