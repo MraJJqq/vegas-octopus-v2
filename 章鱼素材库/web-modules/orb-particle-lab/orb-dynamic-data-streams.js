@@ -5,8 +5,6 @@
 
   const $ = id => document.getElementById(id);
   const R = Math.random, PI = Math.PI;
-  const COL = '#3fc8ff';
-  const ORB = {};
   const P = [], F = [];
   let canvas, ctx, width = 1, height = 1, dpr = 1;
   let rotA = 0, lastT = 0, frameId = 0, resizeObserver = null;
@@ -66,28 +64,29 @@
     if (orbCanvas && Array.isArray(projected) && projected.length) {
       const r = orbCanvas.getBoundingClientRect();
       const appRect = app.getBoundingClientRect();
-      const sx = r.width / Math.max(1, orbCanvas.clientWidth);
-      const sy = r.height / Math.max(1, orbCanvas.clientHeight);
-      return projected.map(q => {
-        const x = r.left + q[0] * sx - appRect.left;
-        const y = r.top + q[1] * sy - appRect.top;
-        return [x, y, q[2], q[3], q[4]];
-      });
+      return {
+        points: projected,
+        sx: r.width / Math.max(1, orbCanvas.clientWidth),
+        sy: r.height / Math.max(1, orbCanvas.clientHeight),
+        ox: r.left - appRect.left,
+        oy: r.top - appRect.top
+      };
     }
-
-    /* 球体投影尚未就绪时，使用原版虚拟球面作为回退。 */
-    const cx = ORB.cx ?? width * .66;
-    const cy = ORB.cy ?? height * .5;
-    const rr = ORB.R ?? Math.min(width * .36, height * .4);
+    /* 发光球投影尚未就绪时才使用回退球面。 */
+    const cx = width * .66, cy = height * .5;
+    const rr = Math.min(width * .36, height * .4);
     const pit = .32 + .1 * Math.sin(t * .17);
     const cp = Math.cos(pit), sp = Math.sin(pit);
-    return P.map(p => {
-      const yw = rotA * (.8 + .4 * p.k);
-      const q = pj([p.x, p.y, p.z], Math.cos(yw), Math.sin(yw), cp, sp, cx, cy, rr);
-      const u = (q[0] - (cx - rr)) / (2 * rr);
-      q.push(Math.max(0, Math.min(1, (.6 - u) / .22)), (q[2] + 1) / 2);
-      return q;
-    });
+    return {
+      points: P.map(p => {
+        const yw = rotA * (.8 + .4 * p.k);
+        const q = pj([p.x, p.y, p.z], Math.cos(yw), Math.sin(yw), cp, sp, cx, cy, rr);
+        const u = (q[0] - (cx - rr)) / (2 * rr);
+        q.push(Math.max(0, Math.min(1, (.6 - u) / .22)), (q[2] + 1) / 2);
+        return q;
+      }),
+      sx: 1, sy: 1, ox: 0, oy: 0
+    };
   }
 
   function getFormalSignalCardStarts() {
@@ -180,8 +179,10 @@
   }
 
   /* 每个可见卡片组分配唯一色相；黄金角间隔让相邻组颜色尽量易于区分。 */
-  function getGroupColor(groupIndex) {
-    const hue = (190 + groupIndex * 137.508) % 360;
+  function getGroupColor(symbol) {
+    let hash = 0;
+    for (let i = 0; i < symbol.length; i++) hash = (hash * 31 + symbol.charCodeAt(i)) >>> 0;
+    const hue = (190 + (hash % 360)) % 360;
     return 'hsl(' + hue.toFixed(2) + ',100%,68%)';
   }
 
@@ -190,7 +191,8 @@
     lastT = t;
     rotA += dt * .2;
     ctx.clearRect(0, 0, width, height);
-    const pr = getOrbPoints(t);
+    const projection = getOrbPoints(t);
+    const pr = projection.points;
     const starts = getFormalSignalCardStarts();
     if (!starts.length) {
       ctx.globalAlpha = 1;
@@ -202,24 +204,26 @@
     ctx.lineWidth = .8;
     starts.forEach((start, groupIndex) => {
       /* 同一组只连接当前卡片；每组独立配色，当前可见组之间不重复。 */
-      const groupColor = getGroupColor(groupIndex);
+      const groupColor = getGroupColor(start.symbol);
       F.forEach(f => {
         const q = pr[f.t];
         if (!q) return;
         const fa = q[3] == null ? 1 : q[3];
         if (fa < .05) return;
-        const c1x = start.x + (q[0] - start.x) * .42;
+        const qx = projection.ox + q[0] * projection.sx;
+        const qy = projection.oy + q[1] * projection.sy;
+        const c1x = start.x + (qx - start.x) * .42;
         const c1y = start.y;
         ctx.strokeStyle = groupColor;
         ctx.globalAlpha = .22 * fa * start.visibleRatio;
         ctx.beginPath();
         ctx.moveTo(start.x, start.y);
-        ctx.quadraticCurveTo(c1x, c1y, q[0], q[1]);
+        ctx.quadraticCurveTo(c1x, c1y, qx, qy);
         ctx.stroke();
 
         const u = (t * f.v + f.o + groupIndex * .13) % 1, v = 1 - u;
-        const px = v * v * start.x + 2 * v * u * c1x + u * u * q[0];
-        const py = v * v * start.y + 2 * v * u * c1y + u * u * q[1];
+        const px = v * v * start.x + 2 * v * u * c1x + u * u * qx;
+        const py = v * v * start.y + 2 * v * u * c1y + u * u * qy;
         ctx.globalAlpha = .95 * fa * start.visibleRatio;
         ctx.fillStyle = groupColor;
         ctx.shadowColor = groupColor;
