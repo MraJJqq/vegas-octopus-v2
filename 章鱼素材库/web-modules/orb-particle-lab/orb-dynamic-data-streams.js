@@ -108,6 +108,7 @@
   let hasDirectSignalSync = Array.isArray(window.VegasFormalSignalSymbols);
 
   function refreshFormalCards() {
+    geometryStartsDirty = true;
     const cards = Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-symbol]'));
     formalCards = hasDirectSignalSync
       ? cards.filter(card => directSignalSymbols.has(String(card.dataset.symbol || '').toUpperCase()))
@@ -139,7 +140,7 @@
     const view = scroller ? scroller.getBoundingClientRect() : appRect;
     const clipTop = Math.max(view.top, appRect.top, 0);
     const clipBottom = Math.min(view.bottom, appRect.bottom, window.innerHeight);
-    if (clipBottom <= clipTop) return [];
+    if (clipBottom <= clipTop) { geometryStartsDirty = false; return cardStarts; }
     for (const card of formalCards) {
       const r = card.getBoundingClientRect();
       const visibleTop = Math.max(r.top, clipTop);
