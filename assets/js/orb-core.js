@@ -22,9 +22,11 @@ cv.addEventListener("pointerdown",function(e){dn=true;lx=e.clientX;ly=e.clientY;
 window.addEventListener("pointerup",function(){dn=false});
 cv.addEventListener("pointermove",function(e){if(!dn)return;rot+=(e.clientX-lx)*.008;pitB=Math.max(-1.2,Math.min(1.2,pitB+(e.clientY-ly)*.006));lx=e.clientX;ly=e.clientY});
 var projectedPoints=Array.from({length:N},function(){return[0,0,0,0,0]});
-var last=0,lastDrawMs=0,orbFrame=0;
+var last=0,orbFrame=0,frameTimer=0;
 var FRAME_INTERVAL=1000/30;
-function frame(ms){if(ms-lastDrawMs<FRAME_INTERVAL){orbFrame=requestAnimationFrame(frame);return}lastDrawMs=ms;var t=ms/1000,dt=Math.max(0,Math.min(.05,t-last));last=t;if(!dn)rot+=dt*V.spd;
+/* 按目标帧率调度 RAF，避免每个显示器刷新周期都执行无效回调。 */
+function scheduleOrbFrame(){if(document.hidden||orbFrame||frameTimer)return;frameTimer=window.setTimeout(function(){frameTimer=0;if(!document.hidden)orbFrame=requestAnimationFrame(frame)},FRAME_INTERVAL)}
+function frame(ms){orbFrame=0;if(document.hidden)return;var t=ms/1000,dt=Math.max(0,Math.min(.05,t-last));last=t;if(!dn)rot+=dt*V.spd;
 var cx=W*.66,cy=H*.5,roomX=Math.min(cx-8,W-cx-8),roomY=Math.max(1,H*.46),Rr=Math.max(1,Math.min(roomX,roomY)*V.zm),pit=pitB+.1*Math.sin(t*.17),cp=Math.cos(pit),spp=Math.sin(pit);
 x.clearRect(0,0,W,H);
 var pr=projectedPoints;
@@ -43,9 +45,9 @@ if(k>.45)blit(m>.3?PAL[p.c]:(gw>.5?40:215),q[0],q[1],(4+k*7)*V.ps,.22*(.5+.5*q[4
 if(n%11==0&&gw>.4){x.globalAlpha=1;x.strokeStyle="rgba(255,200,80,"+(.6*gw)+")";x.lineWidth=.8;x.beginPath();x.arc(q[0],q[1],(4+k*3)*V.ps,0,PI*2);x.stroke()}
 });
 x.globalAlpha=1;x.globalCompositeOperation="source-over";
-orbFrame=requestAnimationFrame(frame)}
-orbFrame=requestAnimationFrame(frame);
+ scheduleOrbFrame()}
+scheduleOrbFrame();
 document.addEventListener("visibilitychange",function(){
-if(document.hidden){if(orbFrame){cancelAnimationFrame(orbFrame);orbFrame=0}}
-else if(!orbFrame){last=0;lastDrawMs=0;orbFrame=requestAnimationFrame(frame)}
+if(document.hidden){if(orbFrame){cancelAnimationFrame(orbFrame);orbFrame=0}if(frameTimer){clearTimeout(frameTimer);frameTimer=0}}
+else{last=0;scheduleOrbFrame()}
 });
