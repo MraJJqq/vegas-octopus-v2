@@ -16,7 +16,7 @@ const EMA_LINES=[
  {n:576,color:'#ff4e5e',width:1.8},
  {n:676,color:'#ff4e5e',width:1.8}
 ];
-const state={open:false,symbol:'',period:'2H',candles:[],loading:false,frame:0,raf:0,fetchAt:0,scrollTimer:0,followTimer:0,pointers:new Map(),drag:null,resize:null,view:{count:120,end:0},saved:{}};
+const state={open:false,symbol:'',period:'2H',candles:[],loading:false,frame:0,raf:0,fetchAt:0,rotateTimer:0,pointers:new Map(),drag:null,resize:null,view:{count:120,end:0},saved:{}};
 const readSaved=()=>{try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}catch{return {}}};
 state.saved=readSaved();
 function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({geometry:state.geometry||savedGeometry||null,perSymbol:state.saved}))}catch{}}
@@ -24,7 +24,7 @@ const oldSave=state.saved;state.saved=oldSave.perSymbol||oldSave;
 const savedGeometry=oldSave.geometry||null;
 const root=document.createElement('div');root.id='vegas-layer5-root';
 root.innerHTML=`<section id="vegas-layer5-window" aria-label="Vegas K线悬浮图">
-<header id="vegas-layer5-head"><span id="vegas-layer5-title">VEGAS · KLINE</span><span id="vegas-layer5-status" aria-live="polite"></span><select id="vegas-layer5-period" aria-label="K线周期"></select><button id="vegas-layer5-close" type="button" aria-label="关闭K线">×</button></header>
+<header id="vegas-layer5-head"><span id="vegas-layer5-title">VEGAS · KLINE</span><button id="vegas-layer5-prev" class="vegas-l5-nav" type="button" aria-label="上一个正式信号">‹</button><button id="vegas-layer5-next" class="vegas-l5-nav" type="button" aria-label="下一个正式信号">›</button><span id="vegas-layer5-status" aria-live="polite"></span><select id="vegas-layer5-period" aria-label="K线周期"></select><button id="vegas-layer5-close" type="button" aria-label="关闭K线">×</button></header>
 <div id="vegas-layer5-chart-wrap"><canvas id="vegas-layer5-canvas" aria-label="K线与Vegas均线图"></canvas><div id="vegas-layer5-message">等待行情</div></div>
 <div id="vegas-layer5-resize" aria-label="调整窗口大小"></div><i class="vegas-l5-edge" data-edge="n"></i><i class="vegas-l5-edge" data-edge="s"></i><i class="vegas-l5-edge" data-edge="e"></i><i class="vegas-l5-edge" data-edge="w"></i><i class="vegas-l5-edge" data-edge="ne"></i><i class="vegas-l5-edge" data-edge="nw"></i><i class="vegas-l5-edge" data-edge="se"></i><i class="vegas-l5-edge" data-edge="sw"></i>
 </section>`;
@@ -138,6 +138,8 @@ function applyGeometry(){
 function persistGeometry(){const r=win.getBoundingClientRect();state.geometry={left:r.left,top:r.top,width:r.width,height:r.height};save()}
 function openSymbol(symbol){
  if(!symbol)return;
+ if(state.rotateTimer)clearTimeout(state.rotateTimer);
+ state.rotateTimer=0;
  state.open=true;state.symbol=symbol;
  const saved=state.saved[symbol]||{};
  state.period=saved.period||(STOCKS.has(symbol)?'1H':'2H');
@@ -145,38 +147,44 @@ function openSymbol(symbol){
  state.candles=[];state.fetchAt=0;state.loading=false;requestVersion++;
  if(STOCKS.has(symbol)&&!STOCK_PERIODS.includes(state.period))state.period='1H';
  periodSelect.replaceChildren(...(STOCKS.has(symbol)?STOCK_PERIODS:PERIODS).map(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;return o}));
- periodSelect.value=state.period;win.classList.add('is-open');win.classList.remove('is-faded');applyGeometry();
+ periodSelect.value=state.period;win.classList.add('is-open');applyGeometry();
  message.hidden=false;message.textContent='读取历史行情…';
  loadCandles(true);
+ scheduleAutoRotate();
 }
-function close(){state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];win.classList.remove('is-open');if(state.followTimer)clearTimeout(state.followTimer);state.followTimer=0}
+function formalSymbols(){
+ const fromGlobal=Array.isArray(window.VegasFormalSignalSymbols)?window.VegasFormalSignalSymbols:[];
+ const fromCards=[...document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"][data-symbol]')].map(card=>card.dataset.symbol);
+ return [...new Set([...fromGlobal,...fromCards].map(s=>String(s||'').toUpperCase().replace(/USDT$/i,'')).filter(Boolean))];
+}
+function scheduleAutoRotate(){
+ if(state.rotateTimer)clearTimeout(state.rotateTimer);
+ state.rotateTimer=0;
+ if(!state.open)return;
+ state.rotateTimer=setTimeout(()=>{
+  state.rotateTimer=0;
+  if(!state.open)return;
+  const symbols=formalSymbols();
+  if(symbols.length>1){
+   const current=symbols.indexOf(state.symbol);
+   const next=symbols[(current+1+symbols.length)%symbols.length];
+   if(next&&next!==state.symbol){openSymbol(next);return}
+  }
+  scheduleAutoRotate();
+ },6000);
+}
+function stepFormalSymbol(direction){
+ const symbols=formalSymbols();
+ if(!symbols.length){status.textContent='暂无正式信号';return}
+ const current=symbols.indexOf(state.symbol);
+ const index=current<0?(direction>0?0:symbols.length-1):(current+direction+symbols.length)%symbols.length;
+ openSymbol(symbols[index]);
+}
+root.querySelector('#vegas-layer5-prev').addEventListener('click',()=>stepFormalSymbol(-1));
+root.querySelector('#vegas-layer5-next').addEventListener('click',()=>stepFormalSymbol(1));
+function close(){state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];if(state.rotateTimer)clearTimeout(state.rotateTimer);state.rotateTimer=0;win.classList.remove('is-open');}
 root.querySelector('#vegas-layer5-close').addEventListener('click',close);
 periodSelect.addEventListener('change',()=>{if(!state.symbol)return;state.period=periodSelect.value;state.view.end=0;state.fetchAt=0;state.candles=[];saveView();loadCandles(true)});
-function visibleFormalSymbol(){
- const formal=new Set((window.VegasFormalSignalSymbols||[]).map(s=>String(s).replace(/USDT$/i,'').toUpperCase()));
- const scroller=document.getElementById('mc-left');if(!scroller)return '';
- const r=scroller.getBoundingClientRect(),center=r.top+r.height/2;
- let best='',bestDist=Infinity;
- scroller.querySelectorAll('.mc-card[data-symbol][data-formal-signal="true"]').forEach(card=>{
-  const b=card.getBoundingClientRect(),visible=Math.min(b.bottom,r.bottom)-Math.max(b.top,r.top);if(visible<=0)return;
-  const dist=Math.abs((b.top+b.bottom)/2-center);if(dist<bestDist){bestDist=dist;best=String(card.dataset.symbol||'').toUpperCase()}
- });
- return formal.has(best)?best:'';
-}
-function scheduleFollow(){
- if(!state.open||state.followTimer)return;
- /* 滚动是连续事件，不能使用每次都重置计时器的防抖；采用节流式跟随，确保无限循环滚动期间也持续切换。 */
- state.followTimer=setTimeout(()=>{
-  state.followTimer=0;
-  if(!state.open)return;
-  const next=visibleFormalSymbol();
-  if(next&&next!==state.symbol)openSymbol(next);
-  else if(!next)win.classList.add('is-faded');
-  else win.classList.remove('is-faded');
- },80);
-}
-const scroller=document.getElementById('mc-left');
-if(scroller)scroller.addEventListener('scroll',scheduleFollow,{passive:true});
 document.addEventListener('click',e=>{
  const card=e.target.closest&&e.target.closest('#market-cards-layer .mc-card[data-symbol]');
  if(!card||card.getAttribute('data-formal-signal')!=='true')return;
