@@ -9,10 +9,10 @@ var V={spd:.13,zm:.83,ln:2.5,ps:1.6,fl:3};
 /* 发光粒子纹理 */
 var SG=[];
 for(i=0;i<36;i++){(function(h){var c=document.createElement("canvas");c.width=c.height=64;var g=c.getContext("2d"),q=g.createRadialGradient(32,32,0,32,32,32);q.addColorStop(0,"hsla("+h+",100%,85%,1)");q.addColorStop(.25,"hsla("+h+",100%,62%,.5)");q.addColorStop(1,"hsla("+h+",100%,50%,0)");g.fillStyle=q;g.fillRect(0,0,64,64);SG.push(c)})(i*10)}
-function blit(h,px,py,s,al){x.globalAlpha=Math.max(0,Math.min(1,al));x.drawImage(SG[((Math.round(h/10)%36)+36)%36],px-s,py-s,s*2,s*2)}
+function blit(idx,px,py,s,al){x.globalAlpha=Math.max(0,Math.min(1,al));x.drawImage(SG[idx],px-s,py-s,s*2,s*2)}
 function hrgb(h){h/=360;var q=.62+1-.62,p2=2*.62-q;function f(t){t=((t%1)+1)%1;return t<1/6?p2+(q-p2)*6*t:t<.5?q:t<2/3?p2+(q-p2)*(2/3-t)*6:p2}return[f(h+1/3)*255,f(h)*255,f(h-1/3)*255]}
 /* 发光球粒子与颜色模型 */
-var PAL=[0,28,52,150,190,245,320,280,170],PR=PAL.map(hrgb),N=900,P=[];
+var PAL=[0,28,52,150,190,245,320,280,170],PAL_SG=PAL.map(function(h){return((Math.round(h/10)%36)+36)%36}),PR=PAL.map(hrgb),N=900,P=[];
 for(i=0;i<N;i++){var y=1-2*(i+.5)/N,r=Math.sqrt(1-y*y),th=i*2.399963,k=R(),c=Math.floor(R()*PAL.length);P.push({x:r*Math.cos(th),y:y,z:r*Math.sin(th),k:k,rotFactor:.8+.4*k,c:c,pc:PR[c],m:R()<.2?0:.5+R()*.4})}
 var TRIG_N=16384,TRIG_MASK=TRIG_N-1,TRIG_SCALE=TRIG_N/(PI*2),TRIG_SIN=new Float32Array(TRIG_N),TRIG_COS=new Float32Array(TRIG_N);for(i=0;i<TRIG_N;i++){var ta=i*PI*2/TRIG_N;TRIG_SIN[i]=Math.sin(ta);TRIG_COS[i]=Math.cos(ta)}
 var trigOut=[0,0];function trigPair(a,out){var u=((a%(PI*2))+(PI*2))%(PI*2)*TRIG_SCALE,j=u|0,f=u-j,j1=(j+1)&TRIG_MASK;out[0]=TRIG_COS[j]+(TRIG_COS[j1]-TRIG_COS[j])*f;out[1]=TRIG_SIN[j]+(TRIG_SIN[j1]-TRIG_SIN[j])*f;return out}
@@ -43,7 +43,7 @@ for(var k=0;k<N;k++){var q=pr[k],gw=q[3],tw0=trigPair(t*1.1+k*13.7,trigOut)[1]*.
 x.globalAlpha=1;
 for(var n=0;n<N;n++){var q=pr[n],p=P[n],gw=q[3],k=p.k,a=(.25+.5*gw)*(.5+.5*q[4]),b0=140+115*gw,b1=185+5*gw+k*50*gw,b2=255-185*gw,pc=p.pc,m=p.m;
 x.globalAlpha=1;x.fillStyle="rgba("+(b0+(pc[0]-b0)*m|0)+","+(b1+(pc[1]-b1)*m|0)+","+(b2+(pc[2]-b2)*m|0)+","+a+")";x.beginPath();x.arc(q[0],q[1],(.8+k*2*gw+.5*q[4])*V.ps,0,PI*2);x.fill();
-if(k>.45)blit(m>.3?PAL[p.c]:(gw>.5?40:215),q[0],q[1],(4+k*7)*V.ps,.22*(.5+.5*q[4]));
+if(k>.45)blit(m>.3?PAL_SG[p.c]:(gw>.5?4:22),q[0],q[1],(4+k*7)*V.ps,.22*(.5+.5*q[4]));
 if(n%11==0&&gw>.4){x.globalAlpha=1;x.strokeStyle="rgba(255,200,80,"+(.6*gw)+")";x.lineWidth=.8;x.beginPath();x.arc(q[0],q[1],(4+k*3)*V.ps,0,PI*2);x.stroke()}
 }
 x.globalAlpha=1;x.globalCompositeOperation="source-over";
