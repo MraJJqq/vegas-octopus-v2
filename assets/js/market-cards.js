@@ -181,31 +181,63 @@ left.addEventListener('scroll',()=>{
  lastObservedScrollTop=left.scrollTop;
  queueFocusScale();
 },{passive:true});
-let touchStartY=0,touchLastY=0,touchStartScrollTop=0,touchActive=false,touchDragging=false,autoResumeAt=0,autoLastTime=0;
+let touchStartY=0,touchLastY=0,touchStartScrollTop=0,touchActive=false,touchDragging=false,touchLastTime=0,touchVelocity=0,autoResumeAt=0,autoLastTime=0;
+function smoothTouchStep(now){
+ try{
+  if(!touchActive||Math.abs(touchVelocity)<.025){touchVelocity=0;touchLastTime=0;return}
+  if(!touchLastTime)touchLastTime=now;
+  const dt=Math.min(32,Math.max(1,now-touchLastTime));touchLastTime=now;
+  /* 与鼠标共用 smoothWheelStep 的追随时间常数和惯性衰减参数。 */
+  const current=left.scrollTop,diff=wheelTarget-current,ease=1-Math.exp(-dt/72);
+  left.scrollTop=current+diff*ease;
+  normalizeLoopPosition();
+  touchVelocity*=Math.exp(-dt/180);
+  if(Math.abs(touchVelocity)>.008)wheelTarget+=touchVelocity*dt;
+  else touchVelocity=0;
+  queueFocusScale();
+  if(Math.abs(touchVelocity)<.025){
+   wheelTarget=left.scrollTop;touchVelocity=0;touchLastTime=0;wheelFrame=0;
+   autoResumeAt=performance.now()+140;
+   return;
+  }
+  wheelFrame=requestAnimationFrame(smoothTouchStep);
+ }catch(error){
+  wheelTarget=left.scrollTop;touchVelocity=0;touchLastTime=0;wheelFrame=0;
+  autoResumeAt=performance.now()+120;
+  console.warn('[Vegas Octopus] touch-scroll frame recovered:',error);
+  queueFocusScale();
+ }
+}
 left.addEventListener('touchstart',e=>{
  const touch=e.touches[0];if(!touch)return;
- wheelVelocity=0;wheelFrame&&cancelAnimationFrame(wheelFrame);wheelFrame=0;
+ wheelVelocity=0;touchVelocity=0;
+ if(wheelFrame)cancelAnimationFrame(wheelFrame);
+ wheelFrame=0;wheelLastTime=0;touchLastTime=0;
  touchStartY=touchLastY=touch.clientY;touchStartScrollTop=left.scrollTop;
  touchActive=true;touchDragging=false;wheelTarget=left.scrollTop;
  autoResumeAt=performance.now()+1800;autoEngage=0;
 },{passive:true});
 left.addEventListener('touchmove',e=>{
  const touch=e.touches[0];if(!touch||!touchActive)return;
- const y=touch.clientY,dy=y-touchStartY,stepDelta=touchLastY-y;
+ const y=touch.clientY,dy=y-touchLastY;
  autoResumeAt=performance.now()+1800;
- if(!touchDragging&&Math.abs(dy)<3)return;
+ if(!touchDragging&&Math.abs(y-touchStartY)<3)return;
  touchDragging=true;
- /* 接管竖向手指拖动，避免浏览器原生滚动与无限循环重排互相抢控制权。 */
  e.preventDefault();
- if(Math.abs(stepDelta)>.1)loopDirection=stepDelta>0?-1:1;
- left.scrollTop=touchStartScrollTop-dy;
- normalizeLoopPosition();
- wheelTarget=left.scrollTop;wheelVelocity=0;touchLastY=y;
- queueFocusScale();
+ if(Math.abs(dy)>.1){
+  loopDirection=dy>0?-1:1;
+  /* 手指位移先换算为与滚轮一致的目标距离，再交给同一缓动参数追随。 */
+  const delta=-dy*1.32;
+  wheelTarget+=delta;
+  touchVelocity=Math.max(-1.2,Math.min(1.2,touchVelocity+delta*.022));
+  touchLastY=y;
+ }
+ if(!wheelFrame)wheelFrame=requestAnimationFrame(smoothTouchStep);
 },{passive:false});
 const finishTouch=()=>{
  touchActive=false;touchDragging=false;touchStartY=touchLastY=0;
- wheelTarget=left.scrollTop;wheelVelocity=0;autoResumeAt=performance.now()+1400;
+ if(Math.abs(touchVelocity)<.025){wheelTarget=left.scrollTop;touchVelocity=0;wheelFrame=0;touchLastTime=0}
+ autoResumeAt=performance.now()+1400;
 };
 left.addEventListener('touchend',finishTouch,{passive:true});
 left.addEventListener('touchcancel',finishTouch,{passive:true});
