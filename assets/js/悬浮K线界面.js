@@ -6,7 +6,7 @@
   'use strict';
   if(window.VegasFloatingKlineUI) return;
   const getLogic=()=>window.VegasFloatingKlineLogic;
-  let panel=null,canvas=null,ctx=null,activeSymbol='',state=null,stopLive=null,resizeObserver=null;
+  let panel=null,canvas=null,ctx=null,activeSymbol='',state=null,stopLive=null,resizeObserver=null,dismissedByOutsideClick=false;
   const view={scale:1,offset:0,minScale:1,maxScale:12,drag:null,pointers:new Map(),pinch:null,baseWidth:0,baseHeight:0};
   const $=(root,sel)=>root.querySelector(sel);
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
@@ -171,11 +171,17 @@
   function closeLiveOnly(){if(stopLive){try{stopLive()}catch(_){}stopLive=null;}}
   function closePanel(){closeLiveOnly();if(panel)panel.classList.remove('vfk-open');}
   document.addEventListener('click',e=>{
+    if(dismissedByOutsideClick){dismissedByOutsideClick=false;return;}
     const card=e.target.closest('#market-cards-layer .mc-card[data-symbol]');
     if(!card||e.target.closest('button'))return;
     if(e.detail===0)return;
     openPanel(card.dataset.symbol);
   });
+  document.addEventListener('click',e=>{
+    if(!panel||!panel.classList.contains('vfk-open')||panel.contains(e.target))return;
+    dismissedByOutsideClick=true;
+    closePanel();
+  },true);
   window.VegasFloatingKlineUI=Object.freeze({open:openPanel,close:closePanel});
   console.info('[悬浮K线界面] 独立显示与触控交互模块已加载。');
 })();
