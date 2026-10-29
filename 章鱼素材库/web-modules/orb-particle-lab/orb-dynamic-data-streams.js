@@ -8,6 +8,7 @@
   const P = [], F = [];
   let formalCards = Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]'));
   const cardStarts = [];
+  const cardStartByElement = new Map();
   const SYMBOL_HUES = new Map(Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-symbol]')).map((card, index) => [String(card.dataset.symbol || '').toUpperCase(), (190 + index * 137.508) % 360]));
   let canvas, ctx, width = 1, height = 1, dpr = 1;
   let rotA = 0, lastT = 0, frameId = 0, resizeObserver = null;
@@ -105,6 +106,11 @@
     formalCards = hasDirectSignalSync
       ? cards.filter(card => directSignalSymbols.has(String(card.dataset.symbol || '').toUpperCase()))
       : cards.filter(card => card.matches('[data-formal-signal="true"]'));
+    /* 丢弃已退出正式信号名单的卡片，避免缓存持有失效 DOM。 */
+    const activeCards = new Set(formalCards);
+    for (const card of cardStartByElement.keys()) {
+      if (!activeCards.has(card)) cardStartByElement.delete(card);
+    }
     start();
   }
 
@@ -133,13 +139,16 @@
       const visibleHeight = Math.max(0, visibleBottom - visibleTop);
       const visibleRatio = Math.min(1, visibleHeight / Math.max(1, r.height)) * Math.min(1, visibleWidth / Math.max(1, r.width));
       if (visibleRatio <= 0 || visibleWidth <= 0) continue;
-      cardStarts.push({
-        card,
-        symbol: String(card.dataset.symbol || '').toUpperCase(),
-        x: Math.min(r.right, view.right, appRect.right, window.innerWidth) - appRect.left,
-        y: (visibleTop + visibleBottom) * .5 - appRect.top,
-        visibleRatio
-      });
+      let start = cardStartByElement.get(card);
+      if (!start) {
+        start = { card, symbol: '', x: 0, y: 0, visibleRatio: 0 };
+        cardStartByElement.set(card, start);
+      }
+      start.symbol = String(card.dataset.symbol || '').toUpperCase();
+      start.x = Math.min(r.right, view.right, appRect.right, window.innerWidth) - appRect.left;
+      start.y = (visibleTop + visibleBottom) * .5 - appRect.top;
+      start.visibleRatio = visibleRatio;
+      cardStarts.push(start);
     }
     return cardStarts;
   }
