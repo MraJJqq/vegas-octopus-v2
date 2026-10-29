@@ -58,7 +58,7 @@ function updateFocusScale(){
  });
 }
 function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(updateFocusScale)}
-let wheelTarget=left.scrollTop,wheelFrame=0,wheelVelocity=0,wheelLastTime=0,loopDirection=1;
+let wheelTarget=left.scrollTop,wheelFrame=0,wheelVelocity=0,wheelLastTime=0,wheelLastInputAt=0,loopDirection=1;
 function cardStep(){
  const first=left.firstElementChild;
  const style=getComputedStyle(left);
@@ -91,6 +91,9 @@ function normalizeLoopPosition(){
  if(Math.abs(top-left.scrollTop)>.1)left.scrollTop=top;
 }
 function smoothWheelStep(now){
+ if(wheelLastInputAt&&now-wheelLastInputAt>1200){
+  wheelTarget=left.scrollTop;wheelVelocity=0;wheelFrame=0;wheelLastTime=0;wheelLastInputAt=0;return;
+ }
  if(!wheelLastTime)wheelLastTime=now;
  const dt=Math.min(32,Math.max(1,now-wheelLastTime));
  wheelLastTime=now;
@@ -107,7 +110,8 @@ function smoothWheelStep(now){
  wheelFrame=requestAnimationFrame(smoothWheelStep);
 }
 left.addEventListener('wheel',e=>{
- autoResumeAt=performance.now()+1800;
+ wheelLastInputAt=performance.now();
+ autoResumeAt=wheelLastInputAt+1800;
  if(Math.abs(e.deltaY)<.1)return;
  e.preventDefault();
  e.stopPropagation();
