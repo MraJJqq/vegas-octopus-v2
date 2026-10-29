@@ -17,3 +17,17 @@
 #vegas-layer5-resize:after{content:"";position:absolute;right:4px;bottom:4px;width:10px;height:10px;border-right:1px solid rgba(180,225,255,.48);border-bottom:1px solid rgba(180,225,255,.48)}
 @media(max-width:600px){#vegas-layer5-head{min-height:32px;flex-basis:32px;gap:5px}#vegas-layer5-title{font-size:9px;letter-spacing:.04em}#vegas-layer5-status{font-size:9px}#vegas-layer5-period{max-width:52px;font-size:9px}#vegas-layer5-close{width:25px;height:26px;flex-basis:25px}#vegas-layer5-resize{width:30px;height:30px}}
 @media(prefers-reduced-motion:reduce){#vegas-layer5-window{transition:none}}
+
+#vegas-layer5-root .vegas-l5-edge{position:absolute;z-index:2;display:block;pointer-events:auto;touch-action:none}
+#vegas-layer5-root .vegas-l5-edge[data-edge="n"],#vegas-layer5-root .vegas-l5-edge[data-edge="s"]{left:18px;right:18px;height:16px;cursor:ns-resize}
+#vegas-layer5-root .vegas-l5-edge[data-edge="n"]{top:0}
+#vegas-layer5-root .vegas-l5-edge[data-edge="s"]{bottom:0}
+#vegas-layer5-root .vegas-l5-edge[data-edge="e"],#vegas-layer5-root .vegas-l5-edge[data-edge="w"]{top:18px;bottom:18px;width:16px;cursor:ew-resize}
+#vegas-layer5-root .vegas-l5-edge[data-edge="e"]{right:0}
+#vegas-layer5-root .vegas-l5-edge[data-edge="w"]{left:0}
+#vegas-layer5-root .vegas-l5-edge[data-edge="ne"],#vegas-layer5-root .vegas-l5-edge[data-edge="nw"],#vegas-layer5-root .vegas-l5-edge[data-edge="se"],#vegas-layer5-root .vegas-l5-edge[data-edge="sw"]{width:24px;height:24px}
+#vegas-layer5-root .vegas-l5-edge[data-edge="ne"]{top:0;right:0;cursor:nesw-resize}
+#vegas-layer5-root .vegas-l5-edge[data-edge="nw"]{top:0;left:0;cursor:nwse-resize}
+#vegas-layer5-root .vegas-l5-edge[data-edge="se"]{right:0;bottom:0;cursor:nwse-resize}
+#vegas-layer5-root .vegas-l5-edge[data-edge="sw"]{left:0;bottom:0;cursor:nesw-resize}
+@media(max-width:600px){#vegas-layer5-root .vegas-l5-edge[data-edge="n"],#vegas-layer5-root .vegas-l5-edge[data-edge="s"]{height:20px}#vegas-layer5-root .vegas-l5-edge[data-edge="e"],#vegas-layer5-root .vegas-l5-edge[data-edge="w"]{width:20px}#vegas-layer5-root .vegas-l5-edge[data-edge="ne"],#vegas-layer5-root .vegas-l5-edge[data-edge="nw"],#vegas-layer5-root .vegas-l5-edge[data-edge="se"],#vegas-layer5-root .vegas-l5-edge[data-edge="sw"]{width:30px;height:30px}}
