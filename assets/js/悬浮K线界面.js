@@ -107,17 +107,15 @@
     if(view.pointers.size===1)view.gestureMoved=false;
     else view.gestureMoved=true;
     if(view.pointers.size===1){
-      const r=panel.getBoundingClientRect();
-      // 使用合成层位移，避免每次触控都触发布局重算。
-      panel.style.left=r.left+'px';panel.style.top=r.top+'px';panel.style.transform='translate3d(0,0,0)';
-      view.drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top};
+      // 图表内单指/鼠标拖动只平移行情，不移动整个悬浮窗口或左上角代码标签。
+      view.chartPan={id:e.pointerId,startX:e.clientX,startOffset:Math.floor(view.offset),visible:visibleCount()};
+      view.drag=null;
       view.pinch=null;
     }else if(view.pointers.size===2){
-      // 双指操作优先用于缩放；停止窗口拖动，避免与缩放冲突。
-      view.drag=null;
+      view.chartPan=null;view.drag=null;
       const p=[...view.pointers.values()];
       const rect=canvas.getBoundingClientRect(),midX=(p[0].x+p[1].x)/2;
-      view.pinch={distance:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),scale:view.scale,midX,anchor:clamp((midX-rect.left)/Math.max(1,rect.width),0,1),offset:view.offset,visible:visibleCount()};
+      view.pinch={distance:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),scale:view.scale,midX,anchor:clamp((midX-rect.left)/Math.max(1,rect.width),0,1),offset:Math.floor(view.offset),visible:visibleCount()};
     }
   }
   function chartPointerMove(e){
@@ -133,21 +131,19 @@
       const total=state?.candles.length||1;
       const newVisible=Math.max(1,Math.min(total,Math.floor(total/next)));
       // 双指缩放以手势开始时的中心位置为锚点，保持该位置对应的K线不漂移。
-      view.offset=clamp(view.pinch.offset+(view.pinch.visible-newVisible)*(1-view.pinch.anchor),0,Math.max(0,total-newVisible));
+      view.offset=clamp(Math.round(view.pinch.offset+(view.pinch.visible-newVisible)*(1-view.pinch.anchor)),0,Math.max(0,total-newVisible));
       view.scale=next;draw();
-    }else if(view.drag&&view.drag.id===e.pointerId){
-      const w=panel.offsetWidth,h=panel.offsetHeight;
-      const viewport=window.visualViewport;
-      const vw=Math.max(1,Math.floor(viewport?.width||document.documentElement.clientWidth||innerWidth));
-      const vh=Math.max(1,Math.floor(viewport?.height||document.documentElement.clientHeight||innerHeight));
-      const left=clamp(view.drag.left+e.clientX-view.drag.x,0,Math.max(0,vw-w));
-      const top=clamp(view.drag.top+e.clientY-view.drag.y,0,Math.max(0,vh-h));
-      panel.style.transform='translate3d('+(left-view.drag.left)+'px,'+(top-view.drag.top)+'px,0)';
+    }else if(view.chartPan&&view.chartPan.id===e.pointerId&&state?.candles?.length){
+      const rect=canvas.getBoundingClientRect(),step=Math.max(1,rect.width/view.chartPan.visible);
+      const total=state.candles.length;
+      view.offset=clamp(view.chartPan.startOffset+Math.round((e.clientX-view.chartPan.startX)/step),0,Math.max(0,total-visibleCount()));
+      draw();
     }
   }
   function chartPointerEnd(e){
     if(view.gestureMoved)view.suppressChartClickUntil=Date.now()+800;
     view.pointers.delete(e.pointerId);
+    if(view.chartPan&&view.chartPan.id===e.pointerId)view.chartPan=null;
     if(view.drag&&view.drag.id===e.pointerId){
       const d=view.drag,viewport=window.visualViewport;
       const vw=Math.max(1,Math.floor(viewport?.width||document.documentElement.clientWidth||innerWidth));
@@ -157,21 +153,21 @@
       panel.style.transform='none';view.drag=null;
     }
     if(view.pointers.size<2)view.pinch=null;
-    // 双指结束后剩余单指重新开始窗口拖动，避免位置跳跃。
+    // 双指结束后若剩余一指，重新建立图表平移起点，避免位置跳跃。
     if(view.pointers.size===1){
-      const [id,p]=[...view.pointers.entries()][0],r=panel.getBoundingClientRect();
-      view.drag={id,x:p.x,y:p.y,left:r.left,top:r.top};
-    }else view.drag=null;
+      const [id,p]=[...view.pointers.entries()][0];
+      view.chartPan={id,startX:p.x,startOffset:Math.floor(view.offset),visible:visibleCount()};
+    }else view.chartPan=null;
   }
   function chartWheel(e){
     e.preventDefault();
     if(!state?.candles?.length)return;
-    const old=visibleCount(),factor=e.deltaY<0?1.15:.87;
+    const old=visibleCount(),oldOffset=Math.floor(view.offset),factor=e.deltaY<0?1.15:.87;
     const rect=canvas.getBoundingClientRect(),anchor=clamp((e.clientX-rect.left)/Math.max(1,rect.width),0,1);
     view.scale=clamp(view.scale*factor,view.minScale,view.maxScale);
     const next=visibleCount(),total=state.candles.length;
-    // 以鼠标所在横向位置为缩放锚点，避免缩放时K线整体向一侧跳动。
-    view.offset=clamp(view.offset+(old-next)*(1-anchor),0,Math.max(0,total-next));
+    // 用整数K线偏移计算锚点，避免连续缩放时因小数偏移累计造成K线跳失。
+    view.offset=clamp(Math.round(oldOffset+(old-next)*(1-anchor)),0,Math.max(0,total-next));
     draw();
   }
   function visibleCount(){return Math.max(1,Math.min(state?.candles.length||1,Math.floor((state?.candles.length||1)/view.scale)));}
