@@ -30,13 +30,13 @@
     P.push({ x: s * Math.cos(a), y: u, z: s * Math.sin(a), k: R() });
   }
 
-  /* 每张小卡片分配一条流光线；卡片滚动时每帧重新读取其屏幕位置。 */
+  /* 整组数据流共用一个起点；小卡片组滚动或布局变化时，仅同步组锚点，不按卡片拆线。 */
+  const STREAM_COUNT = 36;
   function syncCardLines() {
-    const cards = Array.from(document.querySelectorAll('#market-cards-layer .mc-card'));
     F.length = 0;
-    cards.forEach((card, index) => {
-      F.push({ card, t: Math.floor(R() * P.length), o: R(), v: .18 + R() * .25, index });
-    });
+    for (let i = 0; i < STREAM_COUNT; i++) {
+      F.push({ t: Math.floor(R() * P.length), o: R(), v: .18 + R() * .25, index: i });
+    }
   }
   syncCardLines();
 
@@ -90,17 +90,27 @@
     });
   }
 
-  function getCardStart(card) {
-    if (!card || !card.isConnected) return null;
-    const r = card.getBoundingClientRect();
+  function getCardGroupStart() {
+    const group = $('mc-left');
+    if (!group || !group.isConnected) return null;
+    const r = group.getBoundingClientRect();
     const appRect = app.getBoundingClientRect();
     const visibleTop = Math.max(r.top, appRect.top, 0);
     const visibleBottom = Math.min(r.bottom, appRect.bottom, window.innerHeight);
-    const visibleRight = Math.min(r.right, appRect.right, window.innerWidth);
     if (visibleBottom <= visibleTop || r.right <= appRect.left || r.left >= appRect.right) return null;
+    /* 以可见卡片中最靠右的边缘作为整组数据流的共同起点，避免锚定到空白容器边缘。 */
+    const cards = group.querySelectorAll('.mc-card');
+    let right = -Infinity;
+    cards.forEach(card => {
+      const cr = card.getBoundingClientRect();
+      if (cr.bottom > visibleTop && cr.top < visibleBottom && cr.right > appRect.left && cr.left < appRect.right) {
+        right = Math.max(right, Math.min(cr.right, appRect.right, window.innerWidth));
+      }
+    });
+    if (!Number.isFinite(right)) return null;
     return {
-      x: visibleRight - appRect.left,
-      y: (Math.max(visibleTop, Math.min(visibleBottom, r.top + r.height * .5))) - appRect.top,
+      x: right - appRect.left,
+      y: (visibleTop + visibleBottom) * .5 - appRect.top,
       visibleRatio: Math.min(1, (visibleBottom - visibleTop) / Math.max(1, r.height))
     };
   }
@@ -115,9 +125,9 @@
 
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineWidth = .8;
+    const start = getCardGroupStart();
+    if (!start) return;
     F.forEach(f => {
-      const start = getCardStart(f.card);
-      if (!start) return;
       const q = pr[f.t];
       if (!q) return;
       const fa = q[3] == null ? 1 : q[3];
@@ -151,9 +161,6 @@
   function frame(ms) {
     frameId = 0;
     if (document.hidden) return;
-    /* 兼容卡片列表后续异步重建或数量变化。 */
-    const count = document.querySelectorAll('#market-cards-layer .mc-card').length;
-    if (count !== F.length) syncCardLines();
     flowDraw(ms / 1000);
     frameId = requestAnimationFrame(frame);
   }
@@ -186,7 +193,9 @@
       layer: 4,
       ready: true,
       connectedToOrb: !!(window.VegasOrbProjectedPoints && window.VegasOrbProjectedPoints.length),
-      connectedToSmallCards: F.length,
+      connectedToSmallCards: !!$('mc-left'),
+      streamCount: F.length,
+      anchorMode: 'single-group-anchor',
       canvasWidth: width,
       canvasHeight: height
     })
