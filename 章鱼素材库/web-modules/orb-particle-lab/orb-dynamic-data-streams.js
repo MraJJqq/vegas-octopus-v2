@@ -7,12 +7,13 @@
   const FADE_SECONDS = 0.14;
   // 同步原版参数面板的数据流强度上限，并固定使用最大值 3.00。
   const STREAM_INTENSITY = 3.0;
-  const particles = Array.from({ length: 300 }, (_, i) => ({
+  const PARTICLE_COUNT = 378; // 27 张卡片 × 每张 14 条数据流，避免卡片之间复用粒子参数。
+  const particles = Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
     color: i % COLORS.length,
     point: Math.floor(Math.random() * 900),
     speed: 0.18 + Math.random() * 0.25,
-    // 为粒子分配均匀错开的起始相位，避免整组粒子同时从出口起步造成空档。
-    phaseOffset: Math.random()
+    // 使用黄金比例分布相位，避免纯随机导致粒子相位偶发聚集。
+    phaseOffset: (i * 0.618033988749895) % 1
   }));
 
   function start() {
@@ -61,6 +62,8 @@
         const orbCenterX = orbRect.left + orbRect.width / 2 - appRect.left;
         const cards = document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]');
         const targets = [];
+        // 每帧只扫描一次可见球面点，避免每条数据流重复遍历全部投影点。
+        const visiblePoints = points.filter(point => point && point.length >= 4 && point[3] >= 0.08);
 
         cards.forEach(card => {
           const rect = card.getBoundingClientRect();
@@ -74,7 +77,7 @@
           const slotOpacity = slot ? Number.parseFloat(getComputedStyle(slot).opacity) : 1;
           let state = states.get(card);
           if (!state) {
-            state = { opacity: 0, visibleSince: null, connected: false, endpoints: [] };
+            state = { opacity: 0, visibleSince: null, connectedStreams: Array(STREAMS_PER_CARD).fill(false), endpoints: [] };
             states.set(card, state);
             groups.set(card, nextGroup++);
           }
@@ -85,7 +88,7 @@
           const eligible = visibleRatio >= 0.18 && slotVisibility >= 0.08;
           if (!eligible) {
             state.visibleSince = null;
-            state.connected = false;
+            state.connectedStreams.fill(false);
             state.opacity = 0;
           } else if (state.visibleSince === null) {
             state.visibleSince = time;
@@ -121,9 +124,8 @@
               let nearest = null, nearestDistance = Infinity;
               const referenceX = endpoint ? endpoint.x : point[0];
               const referenceY = endpoint ? endpoint.y : point[1];
-              for (let k = 0; k < points.length; k++) {
-                const candidate = points[k];
-                if (!candidate || candidate.length < 4 || candidate[3] < 0.08) continue;
+              for (let k = 0; k < visiblePoints.length; k++) {
+                const candidate = visiblePoints[k];
                 const distance = Math.hypot(candidate[0] - referenceX, candidate[1] - referenceY);
                 if (distance < nearestDistance) {
                   nearest = candidate;
@@ -151,14 +153,16 @@
             const elapsed = Math.max(0, time - state.visibleSince);
             // 保留错开的初始相位，让粒子持续流动，同时不改变连接状态判断。
             const travel = elapsed * p.speed + p.phaseOffset;
-            if (travel >= 1) state.connected = true;
+            // 相位只负责错开粒子位置；每条流必须经过完整行程后才独立建立连接。
+            if (elapsed * p.speed >= 1) state.connectedStreams[j] = true;
+            const connected = state.connectedStreams[j];
             const phase = travel % 1;
             const inverse = 1 - phase;
             const particleX = inverse * inverse * startX + 2 * inverse * phase * controlX + phase * phase * endX;
             const particleY = inverse * inverse * startY + 2 * inverse * phase * startY + phase * phase * endY;
             ctx.beginPath();
             ctx.moveTo(startX, startY);
-            if (state.connected) {
+            if (connected) {
               // 连接逻辑保持原样：首次抵达后保留完整连接线。
               ctx.quadraticCurveTo(controlX, startY, endX, endY);
             } else {
