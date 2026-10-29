@@ -167,15 +167,11 @@ function autoWaveScroll(now){
   autoEngage=Math.min(1,autoEngage+engageDt/1000);
   const step=cardStep();
   if(focusSlots.length>1&&step>0&&left.scrollHeight>left.clientHeight+1){
-   /* 恢复为约 120 秒完成一轮卡片循环。 */
-   const baseSpeed=Math.max(1,step*focusSlots.length/120);
-   if(!autoWaveScroll.nextChange||now>=autoWaveScroll.nextChange){
-    autoWaveScroll.targetSpeed=baseSpeed*(.9+Math.random()*.2);
-    autoWaveScroll.nextChange=now+3500+Math.random()*2500;
-   }
-   const target=autoWaveScroll.targetSpeed??baseSpeed;
-   const speed=autoWaveScroll.speed??baseSpeed;
-   autoWaveScroll.speed=speed+(target-speed)*(1-Math.exp(-dt/2.2));
+   /* 固定按容器实际单轮位移计算速度：约 120 秒完成一轮；不设置过高的像素速度下限。 */
+   const baseSpeed=Math.max(.1,step*focusSlots.length/120);
+   /* 不再随机改变速度，避免一轮滚动时快慢不一致。 */
+   autoWaveScroll.targetSpeed=baseSpeed;
+   autoWaveScroll.speed=baseSpeed;
    autoScrollRemainder+=autoWaveScroll.speed*autoEngage*dt;
    const wholePixels=Math.floor(autoScrollRemainder);
    if(wholePixels>=1){
@@ -190,7 +186,7 @@ function autoWaveScroll(now){
  }
  requestAnimationFrame(autoWaveScroll);
 }
-autoWaveScroll.speed=Math.max(1,cardStep()*focusSlots.length/120);
+autoWaveScroll.speed=Math.max(.1,cardStep()*focusSlots.length/120);
 autoWaveScroll.targetSpeed=autoWaveScroll.speed;
 requestAnimationFrame(autoWaveScroll);
 
