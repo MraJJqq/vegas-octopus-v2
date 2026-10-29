@@ -176,7 +176,7 @@ left.addEventListener('touchmove',e=>{
 },{passive:false});
 left.addEventListener('touchend',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;autoResumeAt=performance.now()+1400},{passive:true});
 left.addEventListener('touchcancel',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;autoResumeAt=performance.now()+1400},{passive:true});
-let autoEngageLastTime=0,autoLoopErrorReported=false;
+let autoEngageLastTime=0,autoLoopErrorReported=false,autoScrollRemainder=0;
 function autoWaveScroll(now){
  try{
   if(!autoLastTime)autoLastTime=now;
@@ -186,25 +186,28 @@ function autoWaveScroll(now){
   const engageDt=Math.min(40,Math.max(0,now-autoEngageLastTime));
   autoEngageLastTime=now;
   if(!wheelFrame&&now>=autoResumeAt){
-   /* 手动操作后逐步恢复自动滚动；以实际容器布局计算速度。 */
    autoEngage=Math.min(1,autoEngage+engageDt/1000);
+   /* 每帧重新读取真实卡片数与布局，避免初始化/屏幕尺寸变化时沿用失效参数。 */
+   if(focusSlots.length!==left.children.length)focusSlots=Array.from(left.querySelectorAll('.mc-slot'));
    const step=cardStep();
-   if(focusSlots.length>1&&step>0){
-    /* 固定按容器实际单轮位移计算速度：约 120 秒完成一轮。 */
-    const baseSpeed=Math.max(.1,step*focusSlots.length/120);
-    autoWaveScroll.speed=baseSpeed;
-    const movement=autoWaveScroll.speed*autoEngage*dt;
-    if(movement>0){
+   const overflow=left.scrollHeight-left.clientHeight;
+   if(focusSlots.length>1&&step>0&&left.clientHeight>0&&overflow>0){
+    const speed=Math.max(.1,step*focusSlots.length/120);
+    autoScrollRemainder+=speed*autoEngage*dt;
+    /* 保留小数余量，兼容移动端低帧率与 scrollTop 精度差异。 */
+    if(autoScrollRemainder>=.1){
+     const movement=autoScrollRemainder;
+     autoScrollRemainder=0;
      loopDirection=1;
-     left.scrollTop+=movement;
+     const before=left.scrollTop;
+     left.scrollTop=before+movement;
      normalizeLoopPosition();
      wheelTarget=left.scrollTop;
-     queueFocusScale();
+     if(Math.abs(left.scrollTop-before)>.01)queueFocusScale();
     }
    }
   }
  }catch(error){
-  /* 单帧异常不得终止自动滚动循环；避免重复刷屏，只报告首次异常。 */
   if(!autoLoopErrorReported){
    autoLoopErrorReported=true;
    console.warn('[Vegas Octopus] auto-scroll frame recovered:',error);
