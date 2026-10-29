@@ -117,3 +117,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
   white-space:nowrap;
 }
 .v9-nochange{display:block!important}
+
+/* 最新事件板块恢复右上角，避免遮挡中央发光球。 */
+.topbar{top:clamp(12px,2.2vh,28px)!important;right:clamp(12px,2.2vw,32px)!important;bottom:auto!important;left:auto!important}
+@media(max-width:700px){.topbar{top:12px!important;right:10px!important;bottom:auto!important;left:auto!important}}
