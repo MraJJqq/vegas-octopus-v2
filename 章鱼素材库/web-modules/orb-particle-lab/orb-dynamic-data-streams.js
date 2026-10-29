@@ -105,6 +105,7 @@
     formalCards = hasDirectSignalSync
       ? cards.filter(card => directSignalSymbols.has(String(card.dataset.symbol || '').toUpperCase()))
       : cards.filter(card => card.matches('[data-formal-signal="true"]'));
+    start();
   }
 
   function setFormalSignals(symbols) {
@@ -236,7 +237,7 @@
     if (!starts.length) {
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over';
-      return;
+      return false;
     }
 
     ctx.globalCompositeOperation = 'lighter';
@@ -272,13 +273,13 @@
     });
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
+    return true;
   }
 
   function frame(ms) {
     frameId = 0;
     if (document.hidden) return;
-    flowDraw(ms / 1000);
-    frameId = requestAnimationFrame(frame);
+    if (flowDraw(ms / 1000)) frameId = requestAnimationFrame(frame);
   }
   function start() {
     if (!frameId && !document.hidden) {
@@ -286,13 +287,16 @@
       frameId = requestAnimationFrame(frame);
     }
   }
+  /* 无可见正式信号时停止逐帧绘制；滚动、窗口尺寸或信号变化时按需恢复。 */
+  const motionScroller = $('mc-left');
+  if (motionScroller) motionScroller.addEventListener('scroll', start, { passive: true });
   function stop() {
     if (frameId) cancelAnimationFrame(frameId);
     frameId = 0;
   }
 
   resize();
-  window.addEventListener('resize', resize, { passive: true });
+  window.addEventListener('resize', () => { resize(); start(); }, { passive: true });
   if (window.ResizeObserver) {
     resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(app);
