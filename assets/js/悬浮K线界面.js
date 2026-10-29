@@ -159,17 +159,25 @@
     panel.classList.add('vfk-open');panel.style.left='50%';panel.style.top='50%';panel.style.transform='translate(-50%,-50%)';
     $(panel,'.vfk-title').textContent=activeSymbol+' · 4H';
     setStatus('正在加载历史行情…');ctx.clearRect(0,0,canvas.width,canvas.height);
+    const requestedSymbol=activeSymbol;
     try{
-      state=await logic.loadHistory(activeSymbol,{isReality:isReality(activeSymbol)});
+      state=await logic.loadHistory(requestedSymbol,{isReality:isReality(requestedSymbol),fast:true});
+      if(activeSymbol!==requestedSymbol||!panel.classList.contains('vfk-open'))return;
       draw();
-      setStatus(activeSymbol+' · 4H · 历史数据 '+state.candles.length+' 根 · 正在接入实时行情');
+      setStatus('');
       stopLive=logic.subscribeLive(state.apiSymbol,{isReality:state.isReality,onCandle:c=>{
-        if(!state)return;
+        if(!state||activeSymbol!==requestedSymbol)return;
         state.candles=logic.mergeCandles(state.candles,[c]).slice(-logic.constants.maxCandles);
         state.series=logic.buildEmaSeries(state.candles);
         draw();
       }});
-    }catch(err){setStatus('行情加载失败：'+(err?.message||String(err)));console.error('[悬浮K线]',err);}
+      // 完整历史与长周期 EMA 在后台补齐，不阻塞首次显示。
+      logic.loadHistory(requestedSymbol,{isReality:state.isReality,apiSymbol:state.apiSymbol}).then(fullState=>{
+        if(activeSymbol!==requestedSymbol||!panel.classList.contains('vfk-open'))return;
+        state=fullState;
+        draw();
+      }).catch(err=>console.warn('[悬浮K线] 后台补齐历史失败，继续显示已有行情：',err));
+    }catch(err){if(activeSymbol===requestedSymbol)setStatus('行情加载失败：'+(err?.message||String(err)));console.error('[悬浮K线]',err);}
   }
   function closeLiveOnly(){if(stopLive){try{stopLive()}catch(_){}stopLive=null;}}
   function closePanel(){closeLiveOnly();if(panel)panel.classList.remove('vfk-open');}
