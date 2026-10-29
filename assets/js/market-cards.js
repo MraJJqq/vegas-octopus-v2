@@ -109,7 +109,7 @@ function smoothWheelStep(now){
 }
 left.addEventListener('wheel',e=>{
  wheelLastInputAt=performance.now();
- autoResumeAt=wheelLastInputAt+850;
+ autoResumeAt=wheelLastInputAt+180;
  autoEngage=0;
  if(Math.abs(e.deltaY)<.1)return;
  e.preventDefault();
