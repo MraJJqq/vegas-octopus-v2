@@ -111,6 +111,68 @@
     };
   }
 
+  /* 仅增强卡片发射端：不改变任何流线起点、球体终点或连接关系。 */
+  function drawCardEmission(start, t) {
+    const x = start.x, y = start.y;
+    const pulse = (Math.sin(t * 3.1) + 1) * .5;
+    const alpha = start.visibleRatio;
+
+    /* 卡片边缘的局部辉光，向外衰减，不铺设背景。 */
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, 34 + pulse * 10);
+    glow.addColorStop(0, 'rgba(110,235,255,' + (.34 * alpha) + ')');
+    glow.addColorStop(.28, 'rgba(45,190,255,' + (.18 * alpha) + ')');
+    glow.addColorStop(1, 'rgba(30,150,255,0)');
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(x, y, 44 + pulse * 3, 0, PI * 2);
+    ctx.fill();
+
+    /* 细脉冲环由卡片边缘向外扩散，避免强闪烁。 */
+    for (let i = 0; i < 2; i++) {
+      const phase = (t * .42 + i * .5) % 1;
+      const radius = 3 + phase * 25;
+      ctx.globalAlpha = (1 - phase) * .38 * alpha;
+      ctx.strokeStyle = i === 0 ? '#8af3ff' : '#3fc8ff';
+      ctx.lineWidth = 1.15 - phase * .55;
+      ctx.beginPath();
+      ctx.ellipse(x, y, radius * .72, radius, 0, 0, PI * 2);
+      ctx.stroke();
+    }
+
+    /* 七色短纤维只作用于发射口附近；长距离流线仍沿原路径连接发光球。 */
+    for (let i = 0; i < 7; i++) {
+      const spread = (i - 3) * .105;
+      const drift = (t * (.65 + i * .025) + i * .19) % 1;
+      const len = 9 + drift * 24;
+      const bend = spread * len * .8;
+      ctx.globalAlpha = (.18 + (1 - drift) * .42) * alpha;
+      ctx.strokeStyle = 'hsl(' + (184 + i * 19) + ',100%,' + (68 + (i % 3) * 7) + '%)';
+      ctx.lineWidth = .65 + (1 - drift) * .55;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.quadraticCurveTo(x + len * .48, y + bend * .35, x + len, y + bend);
+      ctx.stroke();
+      ctx.globalAlpha = (.3 + (1 - drift) * .55) * alpha;
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.beginPath();
+      ctx.arc(x + len * .78, y + bend * .72, .7 + (1 - drift) * .55, 0, PI * 2);
+      ctx.fill();
+    }
+
+    /* 发射核心保持贴合卡片右边缘。 */
+    ctx.globalAlpha = .92 * alpha;
+    ctx.fillStyle = '#d9fbff';
+    ctx.shadowColor = '#48d8ff';
+    ctx.shadowBlur = 12 + pulse * 7;
+    ctx.beginPath();
+    ctx.arc(x, y, 2.1 + pulse * .55, 0, PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'lighter';
+  }
+
   function flowDraw(t) {
     const dt = Math.max(0, Math.min(.05, t - lastT));
     lastT = t;
@@ -153,6 +215,7 @@
       ctx.fill();
       ctx.shadowBlur = 0;
     });
+    drawCardEmission(start, t);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
   }
