@@ -187,8 +187,11 @@
     const oldLast=oldCandles[oldCandles.length-1],newLast=newCandles[newCandles.length-1],sameLength=oldCandles.length===newCandles.length;
     const replaced=sameLength&&oldLast.t===newLast.t,appended=newLast.t>oldLast.t&&(newCandles.length===oldCandles.length+1||(sameLength&&newCandles[0].t>oldCandles[0].t));
     if(!replaced&&!appended)return logic.buildEmaSeries(newCandles);
-    const dropped=sameLength&&appended&&newCandles[0].t>oldCandles[0].t,closes=newCandles.map(c=>c.c),index=newCandles.length-1,output=[];
-    for(const series of oldSeries){const period=series.period,values=dropped?series.values.slice(1):series.values.slice(),k=2/(period+1);
+    const dropped=sameLength&&appended&&newCandles[0].t>oldCandles[0].t;
+    // 达到历史上限并移除最老K线时，EMA预热起点改变，完整重算以保证指标精确。
+    if(dropped)return logic.buildEmaSeries(newCandles);
+    const closes=newCandles.map(c=>c.c),index=newCandles.length-1,output=[];
+    for(const series of oldSeries){const period=series.period,values=series.values.slice(),k=2/(period+1);
       if(index<period-1)values[index]=null;
       else if(index===period-1){let sum=0;for(let i=0;i<period;i++)sum+=closes[i];values[index]=sum/period;}
       else{const previous=values[index-1];if(Number.isFinite(previous))values[index]=closes[index]*k+previous*(1-k);else return logic.buildEmaSeries(newCandles);}
