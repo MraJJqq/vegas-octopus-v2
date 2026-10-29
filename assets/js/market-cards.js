@@ -5,7 +5,7 @@ const P=[
 ];
 const REALITY_STOCKS=new Set(P.slice(0,23).map(x=>x[0]));
 const fmt=p=>p>=100?p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):p>=1?p.toFixed(3):p.toFixed(4);
-const S=P.map(([s,api],i)=>({s,api,i,p:0,o:0,candles:[],candleUpdatedAt:0,candleLoading:false,ready:false}));
+const S=P.map(([s,api],i)=>({s,api,i,p:0,o:0,candles:[],candleUpdatedAt:0,candleLoading:false,flashTimer:0,ready:false}));
 const left=document.getElementById('mc-left');
 S.forEach(d=>{
  left.insertAdjacentHTML('beforeend',`<div class="mc-slot"><div class="mc-float" style="--d:${-d.i*.9}s"><div class="mc-card" id="mc-c${d.i}" data-symbol="${d.s}"><div class="mc-bg"></div><i class="mc-g1"></i><i class="mc-g2"></i><i class="mc-gl"></i><div class="mc-row mc-l2"><span class="mc-coin">${d.s[0]}</span><b class="mc-sym">${d.s}</b></div><div class="mc-price mc-l4">加载中</div><div class="mc-l3"><span class="mc-pct">--</span></div><canvas class="mc-kline mc-l1" aria-label="${d.s} K线图"></canvas><div class="mc-hl mc-l2">高<span class="mc-hi">--</span>低<span class="mc-lo">--</span></div></div></div><div class="mc-gshadow" style="--d:${-d.i*.9}s"></div></div>`);
@@ -40,9 +40,9 @@ function paint(d){
  const symbolLabel=q('.mc-sym');if(symbolLabel&&symbolLabel.firstChild)symbolLabel.firstChild.textContent=d.s;
  if(!d.ready||!Number.isFinite(d.p)||d.p<=0){q('.mc-price').textContent='加载中';q('.mc-pct').textContent='--';q('.mc-hi').textContent='--';q('.mc-lo').textContent='--';drawKline(d,q('.mc-kline'));return}
  const up=d.p>=d.o;c.classList.toggle('up',up);c.classList.toggle('dn',!up);
- const nextPrice=fmt(d.p);if(priceEl.textContent!==nextPrice&&priceEl.textContent!=='加载中'){priceEl.classList.add('flash');window.setTimeout(()=>priceEl.classList.remove('flash'),250)}priceEl.textContent=nextPrice;q('.mc-pct').textContent=(up?'+':'')+((d.p/d.o-1)*100).toFixed(2)+'%';
- const values=d.candles.flatMap(c=>[c.high,c.low]).filter(v=>Number.isFinite(v)&&v>0);
- if(values.length>1){const mn=Math.min(...values),mx=Math.max(...values);q('.mc-hi').textContent=fmt(mx);q('.mc-lo').textContent=fmt(mn)}
+ const nextPrice=fmt(d.p);if(priceEl.textContent!==nextPrice&&priceEl.textContent!=='加载中'){priceEl.classList.add('flash');if(d.flashTimer)window.clearTimeout(d.flashTimer);d.flashTimer=window.setTimeout(()=>{priceEl.classList.remove('flash');d.flashTimer=0},250)}priceEl.textContent=nextPrice;q('.mc-pct').textContent=(up?'+':'')+((d.p/d.o-1)*100).toFixed(2)+'%';
+ let mn=Infinity,mx=-Infinity,valueCount=0;for(const candle of d.candles){const hi=candle.high,lo=candle.low;if(Number.isFinite(hi)&&hi>0){if(hi<mn)mn=hi;if(hi>mx)mx=hi;valueCount++}if(Number.isFinite(lo)&&lo>0){if(lo<mn)mn=lo;if(lo>mx)mx=lo;valueCount++}}
+ if(valueCount>1){q('.mc-hi').textContent=fmt(mx);q('.mc-lo').textContent=fmt(mn)}
  drawKline(d,q('.mc-kline'));
 }
 window.addEventListener('resize',()=>{
