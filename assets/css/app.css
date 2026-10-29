@@ -230,3 +230,28 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 @media(max-width:700px){
   .v9-symbols{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:5px 8px!important}
 }
+
+
+/* 最新事件两列紧凑排列：靠右成组，列间距接近 Bark 通知。 */
+.v9-symbols{
+  grid-template-columns:repeat(2,max-content)!important;
+  justify-content:end!important;
+  justify-items:start!important;
+  column-gap:5px!important;
+  row-gap:clamp(4px,.6vh,7px)!important;
+}
+.v9-symbol,.v9-nochange{
+  width:auto!important;
+  max-width:100%!important;
+  text-align:left!important;
+  white-space:nowrap!important;
+  overflow-wrap:normal!important;
+}
+.v9-nochange{grid-column:1/-1!important;text-align:right!important}
+@media(max-width:700px){
+  .v9-symbols{
+    grid-template-columns:repeat(2,max-content)!important;
+    column-gap:4px!important;
+    row-gap:5px!important;
+  }
+}
