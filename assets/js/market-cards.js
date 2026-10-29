@@ -11,7 +11,11 @@ S.forEach(d=>{
  left.insertAdjacentHTML('beforeend',`<div class="mc-slot"><div class="mc-float" style="--d:${-d.i*.9}s"><div class="mc-card" id="mc-c${d.i}" data-symbol="${d.s}"><div class="mc-bg"></div><i class="mc-g1"></i><i class="mc-g2"></i><i class="mc-gl"></i><div class="mc-row mc-l2"><span class="mc-coin">${d.s[0]}</span><b class="mc-sym">${d.s}</b></div><div class="mc-price mc-l4">加载中</div><div class="mc-l3"><span class="mc-pct">--</span></div><canvas class="mc-kline mc-l1" aria-label="${d.s} K线图"></canvas><div class="mc-hl mc-l2">高<span class="mc-hi">--</span>低<span class="mc-lo">--</span></div></div></div><div class="mc-gshadow" style="--d:${-d.i*.9}s"></div></div>`);
 });
 function drawKline(d,canvas){
- const ctx=canvas.getContext('2d'),rect=canvas.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),ratio=window.devicePixelRatio||1;
+ const rect=canvas.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),ratio=window.devicePixelRatio||1;
+ const renderKey=[w,h,ratio,d.candleUpdatedAt,d.ready?1:0,d.p,d.o,d.candles.length].join('|');
+ if(canvas.__mcRenderKey===renderKey)return;
+ canvas.__mcRenderKey=renderKey;
+ const ctx=canvas.getContext('2d');
  if(canvas.width!==Math.round(w*ratio))canvas.width=Math.round(w*ratio);
  if(canvas.height!==Math.round(h*ratio))canvas.height=Math.round(h*ratio);
  ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,w,h);
@@ -41,7 +45,11 @@ function paint(d){
  if(values.length>1){const mn=Math.min(...values),mx=Math.max(...values);q('.mc-hi').textContent=fmt(mx);q('.mc-lo').textContent=fmt(mn)}
  drawKline(d,q('.mc-kline'));
 }
-window.addEventListener('resize',()=>S.forEach(d=>drawKline(d,document.querySelector('#mc-c'+d.i+' .mc-kline'))),{passive:true});
+window.addEventListener('resize',()=>{
+ cachedCardStep=0;
+ S.forEach(d=>drawKline(d,document.querySelector('#mc-c'+d.i+' .mc-kline')));
+ queueFocusScale();
+},{passive:true});
 let focusSlots=Array.from(left.querySelectorAll('.mc-slot'));
 let focusFrame=0;
 function updateFocusScale(){
@@ -59,12 +67,15 @@ function updateFocusScale(){
 }
 function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(updateFocusScale)}
 let wheelTarget=left.scrollTop,wheelFrame=0,wheelVelocity=0,wheelLastTime=0,loopDirection=1,autoEngage=1;
+let cachedCardStep=0;
 function cardStep(){
+ if(cachedCardStep>0)return cachedCardStep;
  const first=left.firstElementChild;
  const second=first?.nextElementSibling;
  if(!first||!second)return 0;
- /* 直接读取相邻卡片的实际布局间距，避免用高度+小数 gap 计算导致循环重排时 scrollTop 累积误差。 */
- return Math.max(0,second.offsetTop-first.offsetTop);
+ /* 相邻卡片步长在同一视口尺寸下恒定；缓存布局读取，避免每帧重复触发几何计算。 */
+ cachedCardStep=Math.max(0,second.offsetTop-first.offsetTop);
+ return cachedCardStep;
 }
 let lastObservedScrollTop=left.scrollTop;
 function normalizeLoopPosition(){
@@ -264,6 +275,12 @@ window.setInterval(()=>{
 
 window.addEventListener('resize',queueFocusScale,{passive:true});
 left.style.scrollBehavior='auto';
+/* 容器/卡片尺寸变化时使步长缓存失效，兼顾旋转屏幕和响应式布局。 */
+if('ResizeObserver' in window){
+ const stepObserver=new ResizeObserver(()=>{cachedCardStep=0;queueFocusScale()});
+ stepObserver.observe(left);
+ if(left.firstElementChild)stepObserver.observe(left.firstElementChild);
+}
 queueFocusScale();
 const API='https://api.bitget.com';
 const CANDLE_REFRESH_MS=5*60*1000;
