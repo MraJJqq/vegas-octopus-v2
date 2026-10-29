@@ -121,12 +121,13 @@
     const isReality=options.isReality===undefined?REALITY_STOCKS.has(name):!!options.isReality;
     const apiSymbol=options.apiSymbol||(isReality?await resolveRealitySymbol(name):await resolveContract(name));
     const stored=await readPersistentCandles(apiSymbol,isReality);
+    if(options.fast&&stored&&stored.length>=2){const cached=stored.slice(-MAX_CANDLE_BARS);return {symbol:name,apiSymbol,isReality,candles:cached,series:buildEmaSeries(cached),source:'cache',pagesLoaded:0};}
     let latest=[];
     try{latest=normalize(await getJson(candlePath(apiSymbol,undefined,isReality)));}
     catch(error){if(stored&&stored.length>=2)return {symbol:name,apiSymbol,isReality,candles:stored.slice(-MAX_CANDLE_BARS),series:buildEmaSeries(stored.slice(-MAX_CANDLE_BARS)),source:'cache'};throw error;}
     let combined=mergeCandles(stored||[],latest),pages=0,cursor=combined.length?combined[0].t-1:Date.now();
     const target=Math.min(EMA_WARMUP_BARS,MAX_CANDLE_BARS),maxPages=Math.ceil(target/100)+2;
-    while(combined.length<target&&pages<maxPages&&cursor>0){
+    while(!options.fast&&combined.length<target&&pages<maxPages&&cursor>0){
       let raw;try{raw=await getJson(historyCandlePath(apiSymbol,cursor,isReality));}catch(_){break;}
       pages++;const page=normalize(raw);if(!page.length)break;
       const old=combined.length?combined[0].t:Infinity,next=mergeCandles(page,combined);
