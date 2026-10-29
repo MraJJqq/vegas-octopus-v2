@@ -11,6 +11,7 @@
   const cardStartByElement = new Map();
   const SYMBOL_HUES = new Map(Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-symbol]')).map((card, index) => [String(card.dataset.symbol || '').toUpperCase(), (190 + index * 137.508) % 360]));
   let canvas, ctx, width = 1, height = 1, dpr = 1;
+  let geometryAppRect = null, geometryOrbRect = null, geometryStartsDirty = true;
   let rotA = 0, lastT = 0, frameId = 0, frameTimer = 0, lastFrameAt = 0, resizeObserver = null;
   const FRAME_INTERVAL = 1000 / 30;
 
@@ -46,6 +47,10 @@
 
   function resize() {
     const r = layer.getBoundingClientRect();
+    geometryAppRect = app.getBoundingClientRect();
+    const orbCanvas = $('orb-core-canvas');
+    geometryOrbRect = orbCanvas ? orbCanvas.getBoundingClientRect() : null;
+    geometryStartsDirty = true;
     dpr = Math.max(1, window.devicePixelRatio || 1);
     width = Math.max(1, r.width);
     height = Math.max(1, r.height);
@@ -68,8 +73,8 @@
     const orbCanvas = $('orb-core-canvas');
     const projected = window.VegasOrbProjectedPoints;
     if (orbCanvas && Array.isArray(projected) && projected.length) {
-      const r = orbCanvas.getBoundingClientRect();
-      const appRect = frameAppRect || app.getBoundingClientRect();
+      const r = geometryOrbRect || orbCanvas.getBoundingClientRect();
+      const appRect = frameAppRect || geometryAppRect || app.getBoundingClientRect();
       return {
         points: projected,
         sx: r.width / Math.max(1, orbCanvas.clientWidth),
@@ -123,10 +128,13 @@
     refreshFormalCards();
   }
 
-  function getFormalSignalCardStarts(frameAppRect) {
-    /* 每张正式信号卡片各自发出独立数据流组；复用缓存列表和起点数组。 */
+  function updateGeometrySnapshot() {
+    /* 几何读取集中在滚动/尺寸/信号变化时；动画帧只消费缓存，避免逐卡布局查询。 */
+    const appRect = app.getBoundingClientRect();
+    geometryAppRect = appRect;
+    const orbCanvas = $('orb-core-canvas');
+    geometryOrbRect = orbCanvas ? orbCanvas.getBoundingClientRect() : null;
     cardStarts.length = 0;
-    const appRect = frameAppRect || app.getBoundingClientRect();
     const scroller = $('mc-left');
     const view = scroller ? scroller.getBoundingClientRect() : appRect;
     const clipTop = Math.max(view.top, appRect.top, 0);
@@ -151,6 +159,12 @@
       start.visibleRatio = visibleRatio;
       cardStarts.push(start);
     }
+    geometryStartsDirty = false;
+    return cardStarts;
+  }
+
+  function getFormalSignalCardStarts() {
+    if (geometryStartsDirty) updateGeometrySnapshot();
     return cardStarts;
   }
 
@@ -239,10 +253,10 @@
     rotA += dt * .2;
     ctx.clearRect(0, 0, width, height);
     /* 同一动画帧共用 app 的几何快照，避免球体投影与卡片锚点重复读取。 */
-    const appRect = app.getBoundingClientRect();
+    const appRect = geometryAppRect || app.getBoundingClientRect();
     const projection = getOrbPoints(t, appRect);
     const pr = projection.points;
-    const starts = getFormalSignalCardStarts(appRect);
+    const starts = getFormalSignalCardStarts();
     /* 每帧只计算一次 36 个球体投影端点，供所有独立卡片组复用。 */
     for (let i = 0; i < F.length; i++) {
       const f = F[i], q = pr[f.t];
@@ -317,7 +331,8 @@
   }
   /* 无可见正式信号时停止绘制；滚动、窗口尺寸或信号变化时按需恢复。 */
   const motionScroller = $('mc-left');
-  if (motionScroller) motionScroller.addEventListener('scroll', start, { passive: true });
+  if (motionScroller) motionScroller.addEventListener('scroll', () => { updateGeometrySnapshot(); start(); }, { passive: true });
+  window.addEventListener('scroll', updateGeometrySnapshot, { passive: true });
   function stop() {
     if (frameId) cancelAnimationFrame(frameId);
     if (frameTimer) clearTimeout(frameTimer);
@@ -326,9 +341,9 @@
   }
 
   resize();
-  window.addEventListener('resize', () => { resize(); start(); }, { passive: true });
+  window.addEventListener('resize', () => { resize(); updateGeometrySnapshot(); start(); }, { passive: true });
   if (window.ResizeObserver) {
-    resizeObserver = new ResizeObserver(resize);
+    resizeObserver = new ResizeObserver(() => { resize(); updateGeometrySnapshot(); });
     resizeObserver.observe(app);
   }
   document.addEventListener('visibilitychange', () => {
@@ -338,7 +353,7 @@
   if (window.MutationObserver) {
     const cardLayer = $('market-cards-layer');
     if (cardLayer) {
-      const signalObserver = new MutationObserver(refreshFormalCards);
+      const signalObserver = new MutationObserver(() => { refreshFormalCards(); updateGeometrySnapshot(); });
       signalObserver.observe(cardLayer, { subtree: true, attributes: true, attributeFilter: ['data-formal-signal'] });
     }
   }
@@ -362,6 +377,7 @@
     })
   };
   refreshFormalCards();
+  updateGeometrySnapshot();
   start();
   console.info('[Vegas Fourth Layer] data stream directly synced with V9 formal signals');
 })();
