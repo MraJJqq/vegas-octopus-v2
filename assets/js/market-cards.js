@@ -135,9 +135,8 @@ left.addEventListener('touchmove',e=>{
 },{passive:false});
 left.addEventListener('touchend',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;autoResumeAt=performance.now()+1400},{passive:true});
 left.addEventListener('touchcancel',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;autoResumeAt=performance.now()+1400},{passive:true});
-let autoScrollRemainder=0,autoFrameTicks=0,autoDeltaRequested=0;
+let autoScrollRemainder=0;
 function autoWaveScroll(now){
- autoFrameTicks++;
  if(!autoLastTime)autoLastTime=now;
  const dt=Math.min(40,Math.max(0,now-autoLastTime))/1000;
  autoLastTime=now;
@@ -155,7 +154,6 @@ function autoWaveScroll(now){
    const wholePixels=Math.floor(autoScrollRemainder);
    if(wholePixels>0){
     autoScrollRemainder-=wholePixels;
-    autoDeltaRequested=wholePixels;
     left.scrollTop=left.scrollTop+wholePixels;
     loopDirection=1;
     normalizeLoopPosition();
@@ -169,59 +167,6 @@ function autoWaveScroll(now){
 autoWaveScroll.speed=Math.max(1,cardStep()*focusSlots.length/120);
 autoWaveScroll.targetSpeed=autoWaveScroll.speed;
 autoFrame=requestAnimationFrame(autoWaveScroll);
-
-/* 仅在 URL 带 ?debugScroll=1 时显示滚动诊断，不改变正常页面外观或滚动逻辑。 */
-if (new URLSearchParams(location.search).get('debugScroll') === '1') {
- const panel = document.createElement('pre');
- panel.id = 'mc-scroll-diagnostics';
- panel.style.cssText = 'position:fixed;z-index:2147483646;top:8px;left:8px;max-width:min(94vw,520px);max-height:45vh;overflow:auto;margin:0;padding:10px;border:1px solid rgba(100,220,255,.8);border-radius:8px;background:rgba(0,8,20,.92);color:#d9f5ff;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;pointer-events:none';
- panel.textContent = '小卡片滚动诊断初始化中…';
- document.body.appendChild(panel);
- let diagLastTop = left.scrollTop;
- let diagLastAt = performance.now();
- let diagLastDelta = 0;
- const diagTimer = window.setInterval(() => {
-  const now = performance.now();
-  const top = left.scrollTop;
-  const elapsed = Math.max(1, now - diagLastAt);
-  diagLastDelta = top - diagLastTop;
-  const first = left.firstElementChild;
-  const cs = getComputedStyle(left);
-  const step = cardStep();
-  const data = {
-   script: 'market-cards.js diagnostic 20261029-2',
-   cards: focusSlots.length,
-   clientHeight: left.clientHeight,
-   scrollHeight: left.scrollHeight,
-   scrollTop: Number(top.toFixed(2)),
-   scrollDeltaPer500ms: Number(diagLastDelta.toFixed(2)),
-   firstCardHeight: first ? first.getBoundingClientRect().height : null,
-   cardStep: Number(step.toFixed(2)),
-   overflowY: cs.overflowY,
-   position: cs.position,
-   autoFrame: autoFrame,
-   autoFrameTicks: autoFrameTicks,
-   autoDeltaRequested: autoDeltaRequested,
-   maxScrollTop: Math.max(0,left.scrollHeight-left.clientHeight),
-   autoScrollRemainder: Number(autoScrollRemainder.toFixed(3)),
-   wheelFrame: wheelFrame,
-   autoPaused: now < autoResumeAt,
-   autoResumeInMs: Math.max(0, Math.round(autoResumeAt - now)),
-   speed: Number((autoWaveScroll.speed || 0).toFixed(3)),
-   lastFrameDtMs: Number((autoLastTime ? now - autoLastTime : 0).toFixed(2)),
-   pageVisibility: document.visibilityState
-  };
-  panel.textContent = 'VEGAS 小卡片滚动诊断\n' + JSON.stringify(data, null, 2)
-   + '\n\n观察 3 秒：scrollDeltaPer500ms 应持续变化；若为 0，请截图回传。';
-  diagLastTop = top;
-  diagLastAt = now;
- }, 500);
- window.VegasMarketCardsScrollDiagnostics = () => ({
-  cards: focusSlots.length, clientHeight: left.clientHeight, scrollHeight: left.scrollHeight,
-  scrollTop: left.scrollTop, cardStep: cardStep(), autoFrame, wheelFrame,
-  autoResumeAt, speed: autoWaveScroll.speed
- });
-}
 
 left.addEventListener('wheel',()=>{autoResumeAt=performance.now()+1800},{passive:true});
 window.addEventListener('resize',queueFocusScale,{passive:true});
