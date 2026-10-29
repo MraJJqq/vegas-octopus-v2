@@ -163,23 +163,25 @@ function autoWaveScroll(now){
  const engageDt=Math.min(40,Math.max(0,now-autoEngageLastTime));
  autoEngageLastTime=now;
  if(!wheelFrame&&now>=autoResumeAt){
-  /* 自动滚动在约 1 秒内恢复到完整介入比例。 */
+  /* 手动操作后约 1 秒恢复自动滚动；以实际容器布局计算速度。 */
   autoEngage=Math.min(1,autoEngage+engageDt/1000);
-  if(!autoWaveScroll.nextChange||now>=autoWaveScroll.nextChange){
-   const cycleSpeed=Math.max(1,cardStep()*focusSlots.length/120);
-   autoWaveScroll.targetSpeed=cycleSpeed*(.72+Math.random()*.56);
-   autoWaveScroll.nextChange=now+2200+Math.random()*3600;
-  }
-  const speed=autoWaveScroll.speed??Math.max(1,cardStep()*focusSlots.length/120);
-  autoWaveScroll.speed=speed+(autoWaveScroll.targetSpeed-speed)*(1-Math.exp(-dt/2.2));
-  if(focusSlots.length>1&&cardStep()>0){
-   /* 用小数累积、整像素提交，兼容部分移动浏览器对 scrollTop 小数赋值不稳定的情况。 */
+  const step=cardStep();
+  if(focusSlots.length>1&&step>0&&left.scrollHeight>left.clientHeight+1){
+   /* 每约 35 秒完成一轮卡片循环，避免原先 120 秒一轮造成移动感过弱。 */
+   const baseSpeed=Math.max(18,step*focusSlots.length/35);
+   if(!autoWaveScroll.nextChange||now>=autoWaveScroll.nextChange){
+    autoWaveScroll.targetSpeed=baseSpeed*(.9+Math.random()*.2);
+    autoWaveScroll.nextChange=now+3500+Math.random()*2500;
+   }
+   const target=autoWaveScroll.targetSpeed??baseSpeed;
+   const speed=autoWaveScroll.speed??baseSpeed;
+   autoWaveScroll.speed=speed+(target-speed)*(1-Math.exp(-dt/2.2));
    autoScrollRemainder+=autoWaveScroll.speed*autoEngage*dt;
    const wholePixels=Math.floor(autoScrollRemainder);
    if(wholePixels>=1){
     autoScrollRemainder-=wholePixels;
-    left.scrollTop+=wholePixels;
     loopDirection=1;
+    left.scrollTop=left.scrollTop+wholePixels;
     normalizeLoopPosition();
     wheelTarget=left.scrollTop;
     queueFocusScale();
@@ -188,7 +190,7 @@ function autoWaveScroll(now){
  }
  requestAnimationFrame(autoWaveScroll);
 }
-autoWaveScroll.speed=Math.max(1,cardStep()*focusSlots.length/120);
+autoWaveScroll.speed=Math.max(18,cardStep()*focusSlots.length/35);
 autoWaveScroll.targetSpeed=autoWaveScroll.speed;
 requestAnimationFrame(autoWaveScroll);
 
