@@ -171,3 +171,32 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
   .v9-symbol,.v9-nochange{font-size:clamp(8px,2.3vw,10px)}
   .v9-symbols{column-gap:4px!important;row-gap:5px!important}
 }
+
+/* 自适应补强：窄屏内容约束与横屏高度优化，不改变卡片视觉主题。 */
+#market-cards-layer .mc-card{min-width:0;overflow:hidden}
+#market-cards-layer .mc-row{max-width:100%;overflow:hidden}
+#market-cards-layer .mc-sym{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+#market-cards-layer .mc-hl{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:360px){
+  #market-cards-layer .mc-columns{width:46vw}
+  #market-cards-layer .mc-slot{width:min(100%,clamp(116px,43vw,156px))}
+  #market-cards-layer .mc-card{padding:5px;border-radius:14px}
+  #market-cards-layer .mc-row{gap:4px}
+  #market-cards-layer .mc-coin{flex-basis:18px;width:18px;height:18px;font-size:8px}
+  #market-cards-layer .mc-sym{font-size:9px}
+  #market-cards-layer .mc-sym small{margin-left:2px;font-size:7px}
+  #market-cards-layer .mc-price{font-size:clamp(12px,3.6vw,14px)}
+  #market-cards-layer .mc-hl span{margin-right:3px;margin-left:1px}
+}
+@media(max-height:500px) and (orientation:landscape){
+  #market-cards-layer .mc-side{gap:2px}
+  #market-cards-layer .mc-slot{padding-top:1px;padding-bottom:2px}
+  #market-cards-layer .mc-card{height:clamp(66px,calc((100dvh - 24px)/5),82px);padding:4px;border-radius:13px}
+  #market-cards-layer .mc-coin{flex-basis:18px;width:18px;height:18px;font-size:8px}
+  #market-cards-layer .mc-sym{font-size:10px}
+  #market-cards-layer .mc-price{font-size:clamp(12px,1.8vw,15px);margin:0}
+  #market-cards-layer .mc-kline{height:14px;margin-top:0}
+  #market-cards-layer .mc-hl{font-size:7px;margin-top:0}
+  .topbar{max-height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important}
+  .v9-notification{max-height:calc(100dvh - 58px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important}
+}
