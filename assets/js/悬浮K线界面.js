@@ -1,0 +1,174 @@
+/* 第五层：悬浮K线独立显示与交互层
+ * 依赖 VegasFloatingKlineLogic；不修改第三层卡片模块。
+ * 窗口拖动与图表平移/缩放分区处理，支持鼠标与触屏。
+ */
+(function(){
+  'use strict';
+  if(window.VegasFloatingKlineUI) return;
+  const getLogic=()=>window.VegasFloatingKlineLogic;
+  let panel=null,canvas=null,ctx=null,activeSymbol='',state=null,stopLive=null,resizeObserver=null;
+  const view={scale:1,offset:0,minScale:1,maxScale:12,drag:null,pointers:new Map(),pinch:null,baseWidth:0,baseHeight:0};
+  const $=(root,sel)=>root.querySelector(sel);
+  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+  const isReality=s=>!!(getLogic()&&getLogic().isRealitySymbol(s));
+  function ensurePanel(){
+    if(panel)return;
+    const style=document.createElement('style');
+    style.textContent=`
+      #vegas-floating-kline{position:fixed;z-index:2147483000;left:50%;top:50%;transform:translate(-50%,-50%);width:min(900px,calc(100vw - 24px));height:min(620px,calc(100dvh - 32px));display:none;flex-direction:column;background:rgba(3,9,22,.96);border:1px solid rgba(49,217,255,.58);border-radius:14px;box-shadow:0 0 32px rgba(49,217,255,.18),0 18px 70px rgba(0,0,0,.55);backdrop-filter:blur(14px);color:#e8f5ff;overflow:hidden;touch-action:none}
+      #vegas-floating-kline.vfk-open{display:flex}
+      #vegas-floating-kline .vfk-head{height:46px;min-height:46px;display:flex;align-items:center;gap:12px;padding:0 12px;border-bottom:1px solid rgba(120,190,255,.2);cursor:move;touch-action:none;user-select:none}
+      #vegas-floating-kline .vfk-title{font-weight:750;letter-spacing:.04em;color:#9deaff;flex:1}
+      #vegas-floating-kline .vfk-hint{font-size:11px;color:#8198b6}
+      #vegas-floating-kline button{background:rgba(49,217,255,.09);border:1px solid rgba(49,217,255,.28);border-radius:6px;color:#d9f7ff;padding:5px 9px;font:inherit;cursor:pointer}
+      #vegas-floating-kline .vfk-chart-wrap{position:relative;flex:1;min-height:0;overflow:hidden;touch-action:none}
+      #vegas-floating-kline canvas{display:block;width:100%;height:100%;touch-action:none}
+      #vegas-floating-kline .vfk-status{min-height:26px;padding:5px 12px;font-size:11px;color:#90a9c7;border-top:1px solid rgba(120,190,255,.14)}
+      @media(max-width:600px){#vegas-floating-kline{width:calc(100vw - 16px);height:calc(100dvh - 24px);border-radius:10px}#vegas-floating-kline .vfk-head{height:42px;min-height:42px;padding:0 8px;gap:7px}#vegas-floating-kline .vfk-hint{display:none}#vegas-floating-kline button{padding:5px 7px}}
+    `;
+    document.head.appendChild(style);
+    panel=document.createElement('section');
+    panel.id='vegas-floating-kline';
+    panel.setAttribute('aria-label','悬浮K线图');
+    panel.innerHTML='<header class="vfk-head"><span class="vfk-title">K线图</span><span class="vfk-hint">拖动标题栏移动窗口 · 图表双指缩放/单指平移</span><button type="button" data-act="reset">复位</button><button type="button" data-act="close" aria-label="关闭">关闭</button></header><div class="vfk-chart-wrap"><canvas aria-label="4小时K线与EMA指标"></canvas></div><div class="vfk-status">等待行情数据…</div>';
+    document.body.appendChild(panel);
+    canvas=$(panel,'canvas');ctx=canvas.getContext('2d');
+    panel.addEventListener('click',e=>{
+      const act=e.target.closest('button')?.dataset.act;
+      if(act==='close')closePanel();
+      if(act==='reset'){view.scale=1;view.offset=0;draw();}
+    });
+    const head=$(panel,'.vfk-head');
+    head.addEventListener('pointerdown',startWindowDrag);
+    head.addEventListener('pointermove',moveWindowDrag);
+    head.addEventListener('pointerup',endWindowDrag);
+    head.addEventListener('pointercancel',endWindowDrag);
+    const wrap=$(panel,'.vfk-chart-wrap');
+    wrap.addEventListener('pointerdown',chartPointerDown);
+    wrap.addEventListener('pointermove',chartPointerMove);
+    wrap.addEventListener('pointerup',chartPointerEnd);
+    wrap.addEventListener('pointercancel',chartPointerEnd);
+    wrap.addEventListener('wheel',chartWheel,{passive:false});
+    resizeObserver=new ResizeObserver(()=>draw());
+    resizeObserver.observe(wrap);
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')closePanel();});
+  }
+  function setStatus(text){if(panel)$(panel,'.vfk-status').textContent=text;}
+  function startWindowDrag(e){
+    if(e.target.closest('button'))return;
+    e.preventDefault();e.currentTarget.setPointerCapture?.(e.pointerId);
+    const r=panel.getBoundingClientRect();
+    view.drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top};
+    panel.style.transform='none';panel.style.left=r.left+'px';panel.style.top=r.top+'px';
+  }
+  function moveWindowDrag(e){
+    const d=view.drag;if(!d||d.id!==e.pointerId)return;
+    const r=panel.getBoundingClientRect(),w=r.width,h=r.height;
+    const left=clamp(d.left+e.clientX-d.x,0,Math.max(0,innerWidth-w));
+    const top=clamp(d.top+e.clientY-d.y,0,Math.max(0,innerHeight-h));
+    panel.style.left=left+'px';panel.style.top=top+'px';
+  }
+  function endWindowDrag(e){if(view.drag&&view.drag.id===e.pointerId)view.drag=null;}
+  function chartPointerDown(e){
+    e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);
+    view.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(view.pointers.size===1)view.panStart={id:e.pointerId,x:e.clientX,offset:view.offset};
+    if(view.pointers.size===2){
+      const p=[...view.pointers.values()];
+      view.pinch={distance:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),scale:view.scale,midX:(p[0].x+p[1].x)/2};
+      view.panStart=null;
+    }
+  }
+  function chartPointerMove(e){
+    if(!view.pointers.has(e.pointerId))return;
+    e.preventDefault();view.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(view.pointers.size>=2&&view.pinch){
+      const p=[...view.pointers.values()];
+      const distance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);
+      const next=clamp(view.pinch.scale*(distance/Math.max(1,view.pinch.distance)),view.minScale,view.maxScale);
+      const rect=canvas.getBoundingClientRect(),anchor=(view.pinch.midX-rect.left)/Math.max(1,rect.width);
+      const oldVisible=visibleCount(),newVisible=Math.max(8,Math.floor((state?.candles.length||0)/next));
+      view.offset=clamp(view.offset+(newVisible-oldVisible)*anchor,0,Math.max(0,(state?.candles.length||1)-newVisible));
+      view.scale=next;draw();
+    }else if(view.panStart&&view.panStart.id===e.pointerId){
+      const width=Math.max(1,canvas.getBoundingClientRect().width);
+      const count=visibleCount(),delta=(e.clientX-view.panStart.x)/width*count;
+      view.offset=clamp(view.panStart.offset+delta,0,Math.max(0,(state?.candles.length||1)-count));draw();
+    }
+  }
+  function chartPointerEnd(e){
+    view.pointers.delete(e.pointerId);
+    if(view.pointers.size<2)view.pinch=null;
+    if(view.pointers.size===1){const [id,p]=[...view.pointers.entries()][0];view.panStart={id,x:p.x,offset:view.offset};}
+    else view.panStart=null;
+  }
+  function chartWheel(e){
+    e.preventDefault();
+    const old=visibleCount(),factor=e.deltaY<0?1.15:.87;
+    view.scale=clamp(view.scale*factor,view.minScale,view.maxScale);
+    const next=visibleCount(),r=canvas.getBoundingClientRect(),anchor=clamp((e.clientX-r.left)/Math.max(1,r.width),0,1);
+    view.offset=clamp(view.offset+(next-old)*anchor,0,Math.max(0,(state?.candles.length||1)-next));draw();
+  }
+  function visibleCount(){return Math.max(8,Math.min(state?.candles.length||8,Math.floor((state?.candles.length||8)/view.scale)));}
+  function draw(){
+    if(!canvas||!ctx||!state)return;
+    const rect=canvas.getBoundingClientRect(),ratio=window.devicePixelRatio||1,w=Math.max(1,rect.width),h=Math.max(1,rect.height);
+    if(canvas.width!==Math.round(w*ratio))canvas.width=Math.round(w*ratio);
+    if(canvas.height!==Math.round(h*ratio))canvas.height=Math.round(h*ratio);
+    ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,w,h);
+    const all=state.candles||[];if(!all.length)return;
+    const count=visibleCount(),end=clamp(all.length-Math.floor(view.offset),1,all.length),start=Math.max(0,end-count),rows=all.slice(start,end);
+    if(!rows.length)return;
+    const ema=state.series||[],values=[];
+    rows.forEach(c=>values.push(c.h,c.l));
+    ema.forEach(s=>s.values.slice(start,end).forEach(v=>{if(Number.isFinite(v))values.push(v)}));
+    const min=Math.min(...values),max=Math.max(...values),pad=(max-min)*.08||Math.abs(max)*.005||1,lo=min-pad,hi=max+pad;
+    const left=12,right=58,top=18,bottom=24,pw=Math.max(1,w-left-right),ph=Math.max(1,h-top-bottom),y=v=>top+(hi-v)/(hi-lo)*ph,step=pw/rows.length,bw=Math.max(1,step*.62);
+    ctx.font='10px -apple-system,BlinkMacSystemFont,sans-serif';ctx.lineWidth=1;
+    for(let i=0;i<=4;i++){const yy=top+ph*i/4,val=hi-(hi-lo)*i/4;ctx.strokeStyle='rgba(150,190,230,.13)';ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(left+pw,yy);ctx.stroke();ctx.fillStyle='#8ca7c5';ctx.fillText(formatPrice(val),left+pw+6,yy+3);}
+    rows.forEach((c,i)=>{
+      const x=left+(i+.5)*step,up=c.c>=c.o,color=up?'#2ee6a6':'#ff5c7c';
+      ctx.strokeStyle=color;ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(x,y(c.h));ctx.lineTo(x,y(c.l));ctx.stroke();
+      const yo=y(c.o),yc=y(c.c);ctx.fillRect(x-bw/2,Math.min(yo,yc),bw,Math.max(1,Math.abs(yc-yo)));
+    });
+    const colors=['#f4d35e','#63d7ff','#f78cde','#b7f34a','#ff9f43','#9d8cff','#ffffff'];
+    ema.forEach((series,si)=>{
+      ctx.beginPath();let begun=false;ctx.strokeStyle=colors[si%colors.length];ctx.lineWidth=1.15;
+      series.values.slice(start,end).forEach((v,i)=>{if(!Number.isFinite(v)){begun=false;return}const x=left+(i+.5)*step,yy=y(v);if(!begun){ctx.moveTo(x,yy);begun=true}else ctx.lineTo(x,yy)});
+      ctx.stroke();
+    });
+    ctx.fillStyle='#8ca7c5';ctx.fillText(new Date(rows[0].t).toLocaleDateString(),left, h-7);
+    ctx.fillText(new Date(rows[rows.length-1].t).toLocaleDateString(),Math.max(left+pw-75,left),h-7);
+    setStatus(activeSymbol+' · 4H · '+rows.length+' / '+all.length+' 根 · 缩放 '+view.scale.toFixed(2)+'×');
+  }
+  function formatPrice(v){return v>=1000?v.toLocaleString('en-US',{maximumFractionDigits:2}):v>=1?v.toFixed(3):v.toPrecision(4);}
+  async function openPanel(symbol){
+    const logic=getLogic();if(!logic){console.error('[悬浮K线] 数据逻辑未加载');return;}
+    ensurePanel();closeLiveOnly();
+    activeSymbol=String(symbol||'').toUpperCase();state=null;view.scale=1;view.offset=0;view.drag=null;view.pointers.clear();view.pinch=null;
+    panel.classList.add('vfk-open');panel.style.left='50%';panel.style.top='50%';panel.style.transform='translate(-50%,-50%)';
+    $(panel,'.vfk-title').textContent=activeSymbol+' · 4H';
+    setStatus('正在加载历史行情…');ctx.clearRect(0,0,canvas.width,canvas.height);
+    try{
+      state=await logic.loadHistory(activeSymbol,{isReality:isReality(activeSymbol)});
+      draw();
+      setStatus(activeSymbol+' · 4H · 历史数据 '+state.candles.length+' 根 · 正在接入实时行情');
+      stopLive=logic.subscribeLive(state.apiSymbol,{isReality:state.isReality,onCandle:c=>{
+        if(!state)return;
+        state.candles=logic.mergeCandles(state.candles,[c]).slice(-logic.constants.maxCandles);
+        state.series=logic.buildEmaSeries(state.candles);
+        draw();
+      }});
+    }catch(err){setStatus('行情加载失败：'+(err?.message||String(err)));console.error('[悬浮K线]',err);}
+  }
+  function closeLiveOnly(){if(stopLive){try{stopLive()}catch(_){}stopLive=null;}}
+  function closePanel(){closeLiveOnly();if(panel)panel.classList.remove('vfk-open');}
+  document.addEventListener('click',e=>{
+    const card=e.target.closest('#market-cards-layer .mc-card[data-symbol]');
+    if(!card||e.target.closest('button'))return;
+    if(e.detail===0)return;
+    openPanel(card.dataset.symbol);
+  });
+  window.VegasFloatingKlineUI=Object.freeze({open:openPanel,close:closePanel});
+  console.info('[悬浮K线界面] 独立显示与触控交互模块已加载。');
+})();
