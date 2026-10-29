@@ -10,6 +10,7 @@
   const BASE_VISIBLE_BARS=120,MIN_VISIBLE_BARS=20,MAX_VISIBLE_BARS=5000;
   let openRequestId=0,drawFrame=0;
   const view={scale:1,offset:0,drag:null,chartPan:null,pointers:new Map(),pinch:null,baseWidth:0,baseHeight:0,gestureMoved:false,suppressChartClickUntil:0};
+  const savedViews=new Map();
   const $=(root,sel)=>root.querySelector(sel);
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const isReality=s=>!!(getLogic()&&getLogic().isRealitySymbol(s));
@@ -159,6 +160,29 @@
   function getScaleLimits(total){const bars=Math.max(1,Math.min(MAX_VISIBLE_BARS,total||1));return {min:Math.min(1,BASE_VISIBLE_BARS/bars),max:BASE_VISIBLE_BARS/MIN_VISIBLE_BARS};}
   function visibleCountForScale(scale,total=state?.candles?.length||1){const n=Math.max(1,Math.min(MAX_VISIBLE_BARS,total||1));return Math.max(1,Math.min(n,Math.round(BASE_VISIBLE_BARS/Math.max(.0001,scale))));}
   function visibleCount(){return visibleCountForScale(view.scale,state?.candles?.length||1);}
+  // 每个品种分别记忆关闭时的缩放比例和可视窗口右边缘K线时间。
+  function saveCurrentView(){
+    if(!activeSymbol||!panel?.classList.contains('vfk-open')||!state?.candles?.length)return;
+    const rows=state.candles,end=clamp(rows.length-Math.floor(view.offset),1,rows.length);
+    const anchor=rows[end-1];
+    savedViews.set(activeSymbol,{scale:view.scale,rightEdgeTime:anchor?.t??null});
+  }
+  function restoreSavedView(rows,saved){
+    if(!saved||!Array.isArray(rows)||!rows.length)return false;
+    const limits=getScaleLimits(rows.length);
+    view.scale=clamp(Number(saved.scale)||1,limits.min,limits.max);
+    let index=-1;
+    if(Number.isFinite(saved.rightEdgeTime)){
+      index=rows.findIndex(c=>c.t===saved.rightEdgeTime);
+      if(index<0){
+        // 若该根K线不在当前历史窗口，选择时间上最接近且不晚于原锚点的K线。
+        for(let i=0;i<rows.length;i++)if(rows[i].t<=saved.rightEdgeTime)index=i;else break;
+      }
+    }
+    view.offset=index>=0?rows.length-1-index:0;
+    view.offset=clamp(view.offset,0,Math.max(0,rows.length-visibleCountForScale(view.scale,rows.length)));
+    return true;
+  }
   function chartWheel(e){
     e.preventDefault();if(!state?.candles?.length)return;
     const total=state.candles.length,old=visibleCount(),oldOffset=view.offset,factor=e.deltaY<0?1.15:.87;
@@ -238,20 +262,23 @@
   }
   async function openPanel(symbol){
     const logic=getLogic();if(!logic){console.error('[悬浮K线] 数据逻辑未加载');return;}
-    ensurePanel();closeLiveOnly();
+    ensurePanel();saveCurrentView();closeLiveOnly();
     const requestId=++openRequestId;
-    activeSymbol=String(symbol||'').toUpperCase();state=null;view.scale=1;view.offset=0;view.drag=null;view.chartPan=null;view.pointers.clear();view.pinch=null;
+    activeSymbol=String(symbol||'').toUpperCase();
+    const savedView=savedViews.get(activeSymbol)||null;
+    state=null;view.scale=savedView?.scale||1;view.offset=0;view.drag=null;view.chartPan=null;view.pointers.clear();view.pinch=null;
     panel.classList.add('vfk-open');panel.style.left='50%';panel.style.top='50%';panel.style.transform='translate(-50%,-50%)';
     $(panel,'.vfk-symbol-label').textContent=activeSymbol;
 ctx.clearRect(0,0,canvas.width,canvas.height);
     const requestedSymbol=activeSymbol;
     // 同步读取本地快速缓存，立即绘制；网络更新在后台进行。
     try{state=logic.getInstantHistory?.(requestedSymbol)||null;}catch(_){state=null;}
-    if(state)draw();
+    if(state){restoreSavedView(state.candles,savedView);draw();}
     try{
       const fastState=await logic.loadHistory(requestedSymbol,{isReality:isReality(requestedSymbol),fast:true});
       if(requestId!==openRequestId||activeSymbol!==requestedSymbol||!panel.classList.contains('vfk-open'))return;
-      if(state&&state.candles?.length){const prior=state.candles;fastState.candles=logic.mergeCandles(fastState.candles,prior).slice(-logic.constants.maxCandles);preserveRightEdge(prior,fastState.candles);}
+      if(state&&state.candles?.length){const prior=state.candles;fastState.candles=logic.mergeCandles(fastState.candles,prior).slice(-logic.constants.maxCandles);if(!savedView)preserveRightEdge(prior,fastState.candles);}
+      if(savedView)restoreSavedView(fastState.candles,savedView);
       state=fastState;
       state.series=logic.buildEmaSeries(state.candles);
       if(activeSymbol!==requestedSymbol||!panel.classList.contains('vfk-open'))return;
@@ -266,13 +293,14 @@ ctx.clearRect(0,0,canvas.width,canvas.height);
       logic.loadHistory(requestedSymbol,{isReality:state.isReality,apiSymbol:state.apiSymbol}).then(fullState=>{
         if(requestId!==openRequestId||activeSymbol!==requestedSymbol||!panel.classList.contains('vfk-open'))return;
         const prior=state?.candles||[];fullState.candles=logic.mergeCandles(fullState.candles,prior).slice(-logic.constants.maxCandles);
-        preserveRightEdge(prior,fullState.candles);fullState.series=logic.buildEmaSeries(fullState.candles);state=fullState;scheduleDraw();
+        if(savedView)restoreSavedView(fullState.candles,savedView);else preserveRightEdge(prior,fullState.candles);
+        fullState.series=logic.buildEmaSeries(fullState.candles);state=fullState;scheduleDraw();
       }).catch(err=>console.warn('[悬浮K线] 后台补齐历史失败，继续显示已有行情：',err));
     }catch(err){console.error('[悬浮K线]',err);}
   }
   function closeLiveOnly(){if(stopLive){try{stopLive()}catch(_){}stopLive=null;}}
   function closePanel(){
-    openRequestId++;closeLiveOnly();
+    saveCurrentView();openRequestId++;closeLiveOnly();
     view.pointers.clear();view.drag=null;view.chartPan=null;view.pinch=null;view.gestureMoved=false;
     if(panel)panel.classList.remove('vfk-open');
     if(drawFrame){cancelAnimationFrame(drawFrame);drawFrame=0;}
