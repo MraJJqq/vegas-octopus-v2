@@ -93,3 +93,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
   .v9-symbol,.v9-nochange{min-height:21px;padding:3px 4px;font-size:9px}
 }
 
+
+/* 最新事件板块固定在右下角；保留原有信号内容与交互逻辑。 */
+.topbar{top:auto!important;right:clamp(12px,2.2vw,32px)!important;bottom:clamp(12px,2.2vh,28px)!important;left:auto!important}
+@media(max-width:700px){.topbar{top:auto!important;right:10px!important;bottom:12px!important;left:auto!important}}
