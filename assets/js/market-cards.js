@@ -58,7 +58,7 @@ function updateFocusScale(){
  });
 }
 function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(updateFocusScale)}
-let wheelTarget=left.scrollTop,wheelFrame=0,wheelVelocity=0,wheelLastTime=0,wheelLastInputAt=0,loopDirection=1,autoEngage=1,autoBoostUntil=0,autoBoost=1;
+let wheelTarget=left.scrollTop,wheelFrame=0,wheelVelocity=0,wheelLastTime=0,wheelLastInputAt=0,loopDirection=1,autoEngage=1;
 function cardStep(){
  const first=left.firstElementChild;
  const style=getComputedStyle(left);
@@ -91,9 +91,6 @@ function normalizeLoopPosition(){
  if(Math.abs(top-left.scrollTop)>.1)left.scrollTop=top;
 }
 function smoothWheelStep(now){
- if(wheelLastInputAt&&now-wheelLastInputAt>1200){
-  wheelTarget=left.scrollTop;wheelVelocity=0;wheelFrame=0;wheelLastTime=0;wheelLastInputAt=0;return;
- }
  if(!wheelLastTime)wheelLastTime=now;
  const dt=Math.min(32,Math.max(1,now-wheelLastTime));
  wheelLastTime=now;
@@ -112,9 +109,8 @@ function smoothWheelStep(now){
 }
 left.addEventListener('wheel',e=>{
  wheelLastInputAt=performance.now();
- autoResumeAt=wheelLastInputAt+1800;
+ autoResumeAt=wheelLastInputAt+850;
  autoEngage=0;
- autoBoostUntil=wheelLastInputAt+900;
  if(Math.abs(e.deltaY)<.1)return;
  e.preventDefault();
  e.stopPropagation();
@@ -155,8 +151,6 @@ function autoWaveScroll(now){
  if(!autoEngageLastTime)autoEngageLastTime=now;
  const engageDt=Math.min(40,Math.max(0,now-autoEngageLastTime));
  autoEngageLastTime=now;
- const boostTarget=now<autoBoostUntil?1.85:1;
- autoBoost+=(boostTarget-autoBoost)*(1-Math.exp(-engageDt/260));
  if(!wheelFrame&&now>=autoResumeAt){
   autoEngage=Math.min(1,autoEngage+engageDt/900);
   if(!autoWaveScroll.nextChange||now>=autoWaveScroll.nextChange){
@@ -168,7 +162,7 @@ function autoWaveScroll(now){
   autoWaveScroll.speed=speed+(autoWaveScroll.targetSpeed-speed)*(1-Math.exp(-dt/2.2));
   if(focusSlots.length>1&&cardStep()>0){
    /* 累积小数位移，再按整像素写入，避免低速时每帧小于 1px 被浏览器舍入后永远停在原位。 */
-   autoScrollRemainder+=autoWaveScroll.speed*autoEngage*autoBoost*dt;
+   autoScrollRemainder+=autoWaveScroll.speed*autoEngage*dt;
    const wholePixels=Math.floor(autoScrollRemainder);
    if(wholePixels>0){
     autoScrollRemainder-=wholePixels;
