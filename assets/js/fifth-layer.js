@@ -63,6 +63,7 @@
   const MAX_CANDLE_BARS = 5000;
   const PREWARM_CACHE = new Map();
   const PREWARM_MAX_AGE = 4 * 60 * 60 * 1000;
+  const VIEW_STORAGE_KEY = 'vegas-octopus-kline-view-v1';
   const INITIAL_HISTORY_MS = 90 * 24 * 60 * 60 * 1000;
   const CANDLE_DB_NAME = 'vegas-octopus-market-cache';
   const CANDLE_DB_VERSION = 1;
@@ -130,6 +131,22 @@
         tx.onerror = tx.onabort = () => resolve(false);
       } catch (_) { resolve(false); }
     });
+  }
+  function readSavedView(symbol) {
+    try {
+      const all=JSON.parse(localStorage.getItem(VIEW_STORAGE_KEY)||'{}');
+      const view=all&&all[String(symbol||'').toUpperCase()];
+      if(view&&Number.isFinite(view.startTime)&&Number.isFinite(view.endTime)&&view.endTime>=view.startTime) return view;
+    } catch (_) {}
+    return null;
+  }
+  function saveCurrentView() {
+    if(!state.symbol||!Number.isFinite(state.startTime)||!Number.isFinite(state.endTime))return;
+    try {
+      const all=JSON.parse(localStorage.getItem(VIEW_STORAGE_KEY)||'{}');
+      all[state.symbol]={startTime:state.startTime,endTime:state.endTime,viewCount:state.viewCount,savedAt:Date.now()};
+      localStorage.setItem(VIEW_STORAGE_KEY,JSON.stringify(all));
+    } catch (_) {}
   }
   const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -496,18 +513,33 @@
         }
       } else {
         state.candles=rows;
-        // The 90-day window is based on candle timestamps, not on the
-        // current request/cache size. Include the newest candle in the range.
-        state.endTime=rows[rows.length-1].t;
-        state.startTime=state.endTime-INITIAL_HISTORY_MS;
-        const firstVisible=rows.findIndex(c=>c.t>=state.startTime);
-        state.viewCount=Math.max(1,rows.length-(firstVisible<0?Math.max(0,rows.length-540):firstVisible));
+        // Restore the last viewport separately for each instrument.
+        const saved=readSavedView(state.symbol);
+        if(saved) {
+          state.startTime=saved.startTime;
+          state.endTime=saved.endTime;
+          state.viewCount=Math.max(1,Math.min(MAX_CANDLE_BARS,Math.round(saved.viewCount||540)));
+        } else {
+          state.endTime=rows[rows.length-1].t;
+          state.startTime=state.endTime-INITIAL_HISTORY_MS;
+          const firstVisible=rows.findIndex(c=>c.t>=state.startTime);
+          state.viewCount=Math.max(1,rows.length-(firstVisible<0?Math.max(0,rows.length-540):firstVisible));
+        }
         rebuildSeries();
       }
 
       const range=visibleIndices();
       if(range.end>range.start) state.viewCount=range.end-range.start;
       draw();
+      // If the saved viewport predates the loaded candles, request older pages until it is covered.
+      if(!isRefresh&&Number.isFinite(state.startTime)&&state.startTime<state.candles[0].t) {
+        let attempts=0;
+        while(!overlay.hidden&&state.generation===generation&&state.startTime<state.candles[0].t&&!state.historyExhausted&&state.candles.length<MAX_CANDLE_BARS&&attempts++<20) {
+          const before=state.candles[0].t;
+          await loadOlderHistory();
+          if(state.candles[0].t>=before)break;
+        }
+      }
       // Show cached/latest data first. If it is short, enrich this active chart in the background.
       if(rows.length < EMA_WARMUP_BARS){
         const activeSymbol=state.symbol,activeApiSymbol=state.contractSymbol,activeGeneration=generation;
@@ -582,6 +614,7 @@
     state.timer=window.setInterval(()=>{if(overlay.hidden||state.drag)return;const socketOpen=state.ws&&state.ws.readyState===WebSocket.OPEN;const liveStale=!state.lastLiveAt||Date.now()-state.lastLiveAt>45000;if(!socketOpen||liveStale)loadData(true);},15000);
   }
   function close() {
+    saveCurrentView();
     stopContractKline();overlay.hidden=true;state.drag=null;state.generation++;
     if(state.timer) clearInterval(state.timer);
     state.timer=0;
@@ -613,14 +646,16 @@
       const older=page.filter(c=>c.t<oldest);
       if(!older.length){state.historyExhausted=true;return;}
       const previousStart=state.startTime,previousEnd=state.endTime;
-      const oldCount=Math.max(1,visibleIndices().end-visibleIndices().start);
+      const oldRange=visibleIndices();
+      const oldCount=Math.max(1,oldRange.end-oldRange.start);
+      const atLeftBoundary=Number.isFinite(previousStart)&&previousStart>=oldest&&previousStart<=state.candles[Math.min(state.candles.length-1,oldRange.start+1)].t;
       state.candles=mergeCandles(older,state.candles).slice(-MAX_CANDLE_BARS);
       rebuildSeries();
-      // If the user reached the left boundary, reveal the newly loaded candles immediately.
-      if(Number.isFinite(previousStart)&&previousStart<=oldest+oldCount*4*60*60*1000){
-        const earliestNew=older[Math.max(0,older.length-Math.min(older.length,oldCount))].t;
-        state.startTime=earliestNew;
-        state.endTime=state.candles[Math.min(state.candles.length-1,older.length+oldCount-1)].t;
+      if(atLeftBoundary) {
+        const newStartIndex=Math.max(0,oldRange.start-older.length);
+        const newEndIndex=Math.min(state.candles.length-1,newStartIndex+oldCount-1);
+        state.startTime=state.candles[newStartIndex].t;
+        state.endTime=state.candles[newEndIndex].t;
       } else {state.startTime=previousStart;state.endTime=previousEnd;}
       await writePersistentCandles(apiSymbol,isReality,state.candles);
       draw();
