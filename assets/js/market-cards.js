@@ -162,7 +162,17 @@ left.addEventListener('touchmove',e=>{
  autoResumeAt=performance.now()+1800;
  const atTop=left.scrollTop<=0;
  const atBottom=left.scrollTop+left.clientHeight>=left.scrollHeight-1;
- if((atTop&&dy>0)||(atBottom&&dy<0))e.preventDefault();
+ if(atTop&&dy>0){
+  e.preventDefault();
+  loopDirection=-1;
+  normalizeLoopPosition();
+  wheelTarget=left.scrollTop;
+ }else if(atBottom&&dy<0){
+  e.preventDefault();
+  loopDirection=1;
+  normalizeLoopPosition();
+  wheelTarget=left.scrollTop;
+ }
 },{passive:false});
 left.addEventListener('touchend',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;autoResumeAt=performance.now()+1400},{passive:true});
 left.addEventListener('touchcancel',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;autoResumeAt=performance.now()+1400},{passive:true});
