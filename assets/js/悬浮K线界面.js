@@ -228,10 +228,47 @@
     if(e.detail===0)return;
     openPanel(card.dataset.symbol);
   });
+  function clickedOnKline(e){
+    if(e.target!==canvas||!state?.candles?.length)return false;
+    const rect=canvas.getBoundingClientRect();
+    const px=e.clientX-rect.left,py=e.clientY-rect.top;
+    const all=state.candles,count=visibleCount();
+    const end=clamp(all.length-Math.floor(view.offset),1,all.length);
+    const start=Math.max(0,end-count),rows=all.slice(start,end);
+    if(!rows.length)return false;
+    const ema=state.series||[],values=[];
+    rows.forEach(c=>values.push(c.h,c.l));
+    ema.forEach(s=>s.values.slice(start,end).forEach(v=>{if(Number.isFinite(v))values.push(v)}));
+    if(!values.length)return false;
+    const min=Math.min(...values),max=Math.max(...values);
+    const pad=(max-min)*.08||Math.abs(max)*.005||1,lo=min-pad,hi=max+pad;
+    const w=rect.width,h=rect.height,pw=Math.max(1,w-4),ph=Math.max(1,h-4);
+    const y=v=>2+(hi-v)/(hi-lo)*ph,step=pw/rows.length,bw=Math.max(1,step*.62);
+    // 只将实际蜡烛（实体与影线）附近视为K线本身。
+    for(let i=0;i<rows.length;i++){
+      const c=rows[i],x=2+(i+.5)*step;
+      if(Math.abs(px-x)<=bw/2+5&&py>=Math.min(y(c.h),y(c.l))-5&&py<=Math.max(y(c.h),y(c.l))+5)return true;
+    }
+    // EMA曲线也属于图表内容，点击线条附近不关闭。
+    for(const series of ema){
+      let prev=null;
+      for(let i=start;i<end;i++){
+        const v=series.values[i];
+        if(!Number.isFinite(v)){prev=null;continue;}
+        const point={x:2+(i-start+.5)*step,y:y(v)};
+        if(prev){
+          const dx=point.x-prev.x,dy=point.y-prev.y,len2=dx*dx+dy*dy;
+          const t=len2?clamp(((px-prev.x)*dx+(py-prev.y)*dy)/len2,0,1):0;
+          if(Math.hypot(px-(prev.x+t*dx),py-(prev.y+t*dy))<=5)return true;
+        }
+        prev=point;
+      }
+    }
+    return false;
+  }
   document.addEventListener('click',e=>{
     if(!panel||!panel.classList.contains('vfk-open'))return;
-    // 只有点击K线画布本身不退出；标题栏、窗口内其他区域及页面其他区域点击均关闭。
-    if(e.target===canvas)return;
+    if(clickedOnKline(e))return;
     closePanel();
   },true);
   window.VegasFloatingKlineUI=Object.freeze({open:openPanel,close:closePanel});
