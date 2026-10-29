@@ -313,12 +313,36 @@ async function loadSparkline(d,symbol,isStock){
 }
 let marketLoadInFlight=false;
 let realitySymbolCache=null,realitySymbolCacheAt=0;
-async function runSparkJobs(jobs){
- for(let i=0;i<jobs.length;i+=4){
-  if(document.hidden)return;
-  await Promise.allSettled(jobs.slice(i,i+4).map(job=>job()));
+/* K线请求使用全局队列限流，避免每轮行情刷新都创建独立批次导致并发叠加。 */
+const SPARK_CONCURRENCY=4;
+const sparkQueue=[];
+const sparkQueued=new Set();
+let sparkWorkers=0;
+function enqueueSparkJobs(jobs){
+ for(const job of jobs){
+  if(sparkQueued.has(job.key)||job.d.candleLoading)continue;
+  sparkQueued.add(job.key);
+  sparkQueue.push(job);
+ }
+ pumpSparkJobs();
+}
+function pumpSparkJobs(){
+ while(sparkWorkers<SPARK_CONCURRENCY&&sparkQueue.length&&!document.hidden){
+  const job=sparkQueue.shift();
+  sparkQueued.delete(job.key);
+  if(job.d.candleLoading)continue;
+  sparkWorkers++;
+  Promise.resolve().then(job.run).catch(error=>{
+   console.warn('[Vegas Octopus] candle queue job failed:',error);
+  }).finally(()=>{
+   sparkWorkers=Math.max(0,sparkWorkers-1);
+   pumpSparkJobs();
+  });
  }
 }
+document.addEventListener('visibilitychange',()=>{
+ if(!document.hidden)pumpSparkJobs();
+},{passive:true});
 async function loadMarketData(){
  if(marketLoadInFlight)return;marketLoadInFlight=true;
  try{
@@ -345,17 +369,17 @@ async function loadMarketData(){
     if(!ticker){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='暂无行情';return}
     const last=Number(ticker.lastPrice),open=Number(ticker.openPrice24h);
     if(!(last>0&&open>0)){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='数据无效';return}
-    d.api=symbol;d.p=last;d.o=open;d.ready=true;paint(d);if(Date.now()-d.candleUpdatedAt>=CANDLE_REFRESH_MS)sparkJobs.push(()=>loadSparkline(d,symbol,true));
+    d.api=symbol;d.p=last;d.o=open;d.ready=true;paint(d);if(Date.now()-d.candleUpdatedAt>=CANDLE_REFRESH_MS)sparkJobs.push({key:d.i,d,run:()=>loadSparkline(d,symbol,true)});
    }else{
     if(!futures){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='行情暂不可用';return}
     const ticker=futures.get(d.api.toUpperCase());
     if(!ticker){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='暂无行情';return}
     const last=Number(ticker.lastPr),open=Number(ticker.open24h);
     if(!(last>0&&open>0)){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='数据无效';return}
-    d.p=last;d.o=open;d.ready=true;paint(d);if(Date.now()-d.candleUpdatedAt>=CANDLE_REFRESH_MS)sparkJobs.push(()=>loadSparkline(d,d.api,false));
+    d.p=last;d.o=open;d.ready=true;paint(d);if(Date.now()-d.candleUpdatedAt>=CANDLE_REFRESH_MS)sparkJobs.push({key:d.i,d,run:()=>loadSparkline(d,d.api,false)});
    }
   });
-  if(sparkJobs.length)runSparkJobs(sparkJobs);
+  if(sparkJobs.length)enqueueSparkJobs(sparkJobs);
  }catch(error){console.warn('[Vegas Octopus] market feed failed:',error)}finally{marketLoadInFlight=false}
 }
 window.VegasApplyFormalSignals=function(){
