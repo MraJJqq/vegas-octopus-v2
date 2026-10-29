@@ -207,3 +207,6 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 
 /* 发光球模块自身保持完全透明，只显示粒子；不叠加任何模块底色。 */
 .main-grid,.center-stage,#orb-core-canvas{background:transparent!important;background-color:transparent!important;}
+
+/* 全屏禁止双击放大；保留正常单指滚动与系统手势。 */
+html,body{touch-action:manipulation;}
