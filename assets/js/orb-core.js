@@ -9,7 +9,7 @@ var V={spd:.13,zm:.83,ln:2.5,ps:1.6,fl:3};
 /* 发光粒子纹理 */
 var SG=[];
 for(i=0;i<36;i++){(function(h){var c=document.createElement("canvas");c.width=c.height=64;var g=c.getContext("2d"),q=g.createRadialGradient(32,32,0,32,32,32);q.addColorStop(0,"hsla("+h+",100%,85%,1)");q.addColorStop(.25,"hsla("+h+",100%,62%,.5)");q.addColorStop(1,"hsla("+h+",100%,50%,0)");g.fillStyle=q;g.fillRect(0,0,64,64);SG.push(c)})(i*10)}
-function blit(idx,px,py,s,al){x.globalAlpha=Math.max(0,Math.min(1,al));x.drawImage(SG[idx],px-s,py-s,s*2,s*2);x.globalAlpha=1}
+function blit(idx,px,py,s,al){x.globalAlpha=al;x.drawImage(SG[idx],px-s,py-s,s*2,s*2);x.globalAlpha=1}
 function hrgb(h){h/=360;var q=.62+1-.62,p2=2*.62-q;function f(t){t=((t%1)+1)%1;return t<1/6?p2+(q-p2)*6*t:t<.5?q:t<2/3?p2+(q-p2)*(2/3-t)*6:p2}return[f(h+1/3)*255,f(h)*255,f(h-1/3)*255]}
 /* 发光球粒子与颜色模型 */
 var PAL=[0,28,52,150,190,245,320,280,170],PAL_SG=PAL.map(function(h){return((Math.round(h/10)%36)+36)%36}),PR=PAL.map(hrgb),N=900,P=[];
