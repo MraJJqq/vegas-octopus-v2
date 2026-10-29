@@ -172,7 +172,6 @@ autoWaveScroll.speed=Math.max(1,cardStep()*focusSlots.length/120);
 autoWaveScroll.targetSpeed=autoWaveScroll.speed;
 autoFrame=requestAnimationFrame(autoWaveScroll);
 
-left.addEventListener('wheel',()=>{autoResumeAt=performance.now()+1800},{passive:true});
 window.addEventListener('resize',queueFocusScale,{passive:true});
 left.style.scrollBehavior='auto';
 queueFocusScale();
