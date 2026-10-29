@@ -15,6 +15,7 @@
   const CANDLE_DB_NAME='vegas-octopus-market-cache', CANDLE_DB_VERSION=1, CANDLE_STORE_NAME='candles';
   const FAST_CACHE_PREFIX='vegas-octopus-fast-kline:', FAST_CACHE_BARS=1000;
   let candleDbPromise=null, contractInfoPromise=null, legacyContractInfoPromise=null, realityInfoPromise=null;
+  const latestCandleRequests=new Map();
   const sockets=new Map();
 
   function candleCacheKey(symbol,isReality){return (isReality?'SPOT:':'USDT-FUTURES:')+String(symbol||'').toUpperCase()+':4H';}
@@ -95,6 +96,16 @@
     if(json.code!=='00000'||!Array.isArray(json.data))throw new Error((json.msg||'Bitget response invalid')+' · '+url);
     return json.data;
   }
+  // 同一交易对的最新K线请求共享进行中的 Promise，避免快速加载与完整加载重复打接口。
+  function loadLatestCandles(symbol,isReality){
+    const key=candleCacheKey(symbol,isReality);
+    if(latestCandleRequests.has(key))return latestCandleRequests.get(key);
+    const request=getJson(candlePath(symbol,undefined,isReality)).then(normalize).finally(()=>{
+      if(latestCandleRequests.get(key)===request)latestCandleRequests.delete(key);
+    });
+    latestCandleRequests.set(key,request);
+    return request;
+  }
   function candlePath(symbol,endTime,isReality=false){
     const q=new URLSearchParams({category:isReality?'SPOT':'USDT-FUTURES',symbol,interval:'4H',limit:'1000',...(Number.isFinite(endTime)?{endTime:String(endTime)}:{})});
     return '/api/v3/market/candles?'+q;
@@ -150,10 +161,10 @@
     const stored=await readPersistentCandles(apiSymbol,isReality);
     if(options.fast&&stored&&stored.length>=2){const cached=stored.slice(-MAX_CANDLE_BARS);writeFastCache(name,apiSymbol,isReality,cached);return {symbol:name,apiSymbol,isReality,candles:cached,series:buildEmaSeries(cached),source:'cache',pagesLoaded:0};}
     let latest=[];
-    try{latest=normalize(await getJson(candlePath(apiSymbol,undefined,isReality)));}
+    try{latest=await loadLatestCandles(apiSymbol,isReality);}
     catch(error){
       if(!isReality&&!options.apiSymbol&&!mappedApiSymbol){
-        try{const resolved=await resolveContract(name);if(resolved!==apiSymbol){apiSymbol=resolved;latest=normalize(await getJson(candlePath(apiSymbol,undefined,isReality)));}}
+        try{const resolved=await resolveContract(name);if(resolved!==apiSymbol){apiSymbol=resolved;latest=await loadLatestCandles(apiSymbol,isReality);}}
         catch(_){}
       }
       if(!latest.length){if(stored&&stored.length>=2){const cached=stored.slice(-MAX_CANDLE_BARS);writeFastCache(name,apiSymbol,isReality,cached);return {symbol:name,apiSymbol,isReality,candles:cached,series:buildEmaSeries(cached),source:'cache'};}throw error;}
