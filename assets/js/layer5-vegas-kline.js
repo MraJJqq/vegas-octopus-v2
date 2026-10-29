@@ -16,7 +16,7 @@ const EMA_LINES=[
  {n:576,color:'#ff4e5e',width:1.8},
  {n:676,color:'#ff4e5e',width:1.8}
 ];
-const state={open:false,symbol:'',period:'2H',candles:[],loading:false,frame:0,raf:0,fetchAt:0,rotateTimer:0,pointers:new Map(),drag:null,resize:null,view:{count:120,end:0},saved:{}};
+const state={open:false,symbol:'',period:'2H',candles:[],loading:false,frame:0,raf:0,fetchAt:0,rotateTimer:0,view:{count:120,end:0},saved:{}};
 const readSaved=()=>{try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}catch{return {}}};
 state.saved=readSaved();
 function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({geometry:state.geometry||savedGeometry||null,perSymbol:state.saved}))}catch{}}
@@ -210,18 +210,8 @@ document.addEventListener('click',e=>{
  }
  /* 全屏画布覆盖整个可视屏幕，无法再定义窗口外区域；使用 Escape 退出。 */
 },true);
-/* TradingView Lightweight Charts handles horizontal panning, pinch zoom and touch kinetic scrolling.
-   Preserve the existing two-finger downward swipe to exit full screen. */
-let exitTouches=null;
-chartHost.addEventListener('touchstart',e=>{exitTouches=e.touches.length===2?[...e.touches].map(t=>({x:t.clientX,y:t.clientY})):null},{passive:true});
-chartHost.addEventListener('touchmove',e=>{
- if(!state.open||!exitTouches||e.touches.length!==2)return;
- const a=e.touches[0],b=e.touches[1],da=a.clientY-exitTouches[0].y,db=b.clientY-exitTouches[1].y;
- const dist=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),startDist=Math.hypot(exitTouches[0].x-exitTouches[1].x,exitTouches[0].y-exitTouches[1].y);
- if(da>105&&db>105&&Math.abs(da-db)<65&&dist>=startDist*.72&&dist<=startDist*1.35){e.preventDefault();exitTouches=null;close()}
-},{passive:false});
-chartHost.addEventListener('touchend',()=>{exitTouches=null},{passive:true});
-chartHost.addEventListener('touchcancel',()=>{exitTouches=null},{passive:true});
+/* Chart pan, pinch zoom and touch kinetic scrolling are owned by TradingView Lightweight Charts.
+   Full-screen exit remains available via header double-tap and Escape to avoid gesture conflicts. */
 window.addEventListener('resize',()=>{if(state.open)applyGeometry()},{passive:true});
 document.addEventListener('keydown',e=>{if(state.open&&e.key==='Escape')close()});
 setInterval(()=>{if(state.open&&!document.hidden)loadCandles(false)},30000);
