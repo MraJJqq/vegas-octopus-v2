@@ -74,11 +74,11 @@
     e.preventDefault();
     try{e.currentTarget.setPointerCapture(e.pointerId)}catch(_){}
     const r=panel.getBoundingClientRect();
-    // 先记录窗口实际坐标，再解除居中变换，避免拖动起点跳位。
-    view.drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top,moved:false};
+    // 拖动期间统一使用 left/top 实际坐标，避免 transform 与布局坐标切换造成位移异常。
     panel.style.left=r.left+'px';
     panel.style.top=r.top+'px';
-    panel.style.transform='translate3d(0,0,0)';
+    panel.style.transform='none';
+    view.drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top,moved:false};
   }
   function moveWindowDrag(e){
     const d=view.drag;if(!d||d.id!==e.pointerId)return;
@@ -90,15 +90,16 @@
     const vh=Math.max(1,Math.floor(viewport?.height||document.documentElement.clientHeight||innerHeight));
     const left=clamp(d.left+e.clientX-d.x,0,Math.max(0,vw-w));
     const top=clamp(d.top+e.clientY-d.y,0,Math.max(0,vh-h));
-    panel.style.transform='translate3d('+(left-d.left)+'px,'+(top-d.top)+'px,0)';
+    panel.style.left=left+'px';
+    panel.style.top=top+'px';
   }
   function endWindowDrag(e){
     if(view.drag&&view.drag.id===e.pointerId){
       const d=view.drag,viewport=window.visualViewport;
       const vw=Math.max(1,Math.floor(viewport?.width||document.documentElement.clientWidth||innerWidth));
       const vh=Math.max(1,Math.floor(viewport?.height||document.documentElement.clientHeight||innerHeight));
-      const left=clamp(d.left+e.clientX-d.x,0,Math.max(0,vw-panel.offsetWidth));
-      const top=clamp(d.top+e.clientY-d.y,0,Math.max(0,vh-panel.offsetHeight));
+      const left=clamp(parseFloat(panel.style.left)||0,0,Math.max(0,vw-panel.offsetWidth));
+      const top=clamp(parseFloat(panel.style.top)||0,0,Math.max(0,vh-panel.offsetHeight));
       panel.style.left=left+'px';panel.style.top=top+'px';panel.style.transform='none';
       view.drag=null;
       if(d.moved)view.suppressChartClickUntil=Date.now()+800;
