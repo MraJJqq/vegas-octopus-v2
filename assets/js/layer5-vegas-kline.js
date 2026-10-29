@@ -24,7 +24,7 @@ const oldSave=state.saved;state.saved=oldSave.perSymbol||oldSave;
 const savedGeometry=oldSave.geometry||null;
 const root=document.createElement('div');root.id='vegas-layer5-root';
 root.innerHTML=`<section id="vegas-layer5-window" aria-label="Vegas K线悬浮图">
-<header id="vegas-layer5-head"><span id="vegas-layer5-title">VEGAS · KLINE</span><button id="vegas-layer5-prev" class="vegas-l5-nav" type="button" aria-label="上一个正式信号">‹</button><button id="vegas-layer5-next" class="vegas-l5-nav" type="button" aria-label="下一个正式信号">›</button><span id="vegas-layer5-status" aria-live="polite"></span><select id="vegas-layer5-period" aria-label="K线周期"></select><button id="vegas-layer5-close" type="button" aria-label="关闭K线">×</button></header>
+<header id="vegas-layer5-head"><span id="vegas-layer5-title">VEGAS · KLINE</span><button id="vegas-layer5-prev" class="vegas-l5-nav" type="button" aria-label="上一个正式信号">‹</button><button id="vegas-layer5-next" class="vegas-l5-nav" type="button" aria-label="下一个正式信号">›</button><span id="vegas-layer5-status" aria-live="polite"></span><select id="vegas-layer5-period" aria-label="K线周期"></select></header>
 <div id="vegas-layer5-chart-wrap"><canvas id="vegas-layer5-canvas" aria-label="K线与Vegas均线图"></canvas><div id="vegas-layer5-message">等待行情</div></div>
 <div id="vegas-layer5-resize" aria-label="调整窗口大小"></div><i class="vegas-l5-edge" data-edge="n"></i><i class="vegas-l5-edge" data-edge="s"></i><i class="vegas-l5-edge" data-edge="e"></i><i class="vegas-l5-edge" data-edge="w"></i><i class="vegas-l5-edge" data-edge="ne"></i><i class="vegas-l5-edge" data-edge="nw"></i><i class="vegas-l5-edge" data-edge="se"></i><i class="vegas-l5-edge" data-edge="sw"></i>
 </section>`;
@@ -185,14 +185,17 @@ function stepFormalSymbol(direction){
 root.querySelector('#vegas-layer5-prev').addEventListener('click',()=>stepFormalSymbol(-1));
 root.querySelector('#vegas-layer5-next').addEventListener('click',()=>stepFormalSymbol(1));
 function close(){state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];if(state.rotateTimer)clearTimeout(state.rotateTimer);state.rotateTimer=0;win.classList.remove('is-open');}
-root.querySelector('#vegas-layer5-close').addEventListener('click',close);
 periodSelect.addEventListener('change',()=>{if(!state.symbol)return;state.period=periodSelect.value;state.view.end=0;state.fetchAt=0;state.candles=[];saveView();loadCandles(true)});
 document.addEventListener('click',e=>{
  const card=e.target.closest&&e.target.closest('#market-cards-layer .mc-card[data-symbol]');
- if(!card)return;
- const symbol=String(card.dataset.symbol||'').toUpperCase();
- if(!symbol)return;
- e.preventDefault();e.stopPropagation();openSymbol(symbol);
+ if(card){
+  const symbol=String(card.dataset.symbol||'').toUpperCase();
+  if(!symbol)return;
+  e.preventDefault();e.stopPropagation();openSymbol(symbol);
+  return;
+ }
+ /* 点击悬浮图以外任意区域退出；图内周期/信号控制不触发关闭。 */
+ if(state.open&&!win.contains(e.target))close();
 },true);
 head.addEventListener('pointerdown',e=>{
  if(e.target.closest('button,select'))return;
