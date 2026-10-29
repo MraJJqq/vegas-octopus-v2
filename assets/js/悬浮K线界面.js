@@ -17,7 +17,7 @@
     style.textContent=`
       #vegas-floating-kline{position:fixed;z-index:2147483647;left:50%;top:50%;transform:translate(-50%,-50%);width:min(900px,calc(100vw - 16px));height:min(620px,calc(100dvh - 16px));max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);display:none;flex-direction:column;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;color:#e8f5ff;overflow:visible;touch-action:none}
       #vegas-floating-kline.vfk-open{display:flex}
-      #vegas-floating-kline .vfk-head{position:absolute;z-index:2;left:0;right:0;top:0;height:22px;min-height:22px;display:flex;align-items:center;gap:12px;padding:0;border:0;background:transparent;cursor:move;touch-action:none;user-select:none}
+      #vegas-floating-kline .vfk-head{position:absolute;z-index:3;left:0;right:0;top:0;height:48px;min-height:48px;display:flex;align-items:flex-start;gap:12px;padding:0;border:0;background:transparent;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none}
       #vegas-floating-kline .vfk-title,#vegas-floating-kline .vfk-hint,#vegas-floating-kline button,#vegas-floating-kline .vfk-status{display:none!important}
       #vegas-floating-kline .vfk-chart-wrap{position:relative;flex:1;min-height:0;overflow:hidden;touch-action:none;background:transparent}
       #vegas-floating-kline canvas{position:absolute;inset:0;display:block;width:100%;height:100%;touch-action:none}
@@ -67,21 +67,32 @@
   }
   function startWindowDrag(e){
     if(e.target.closest('button'))return;
-    e.preventDefault();e.currentTarget.setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+    try{e.currentTarget.setPointerCapture(e.pointerId)}catch(_){}
     const r=panel.getBoundingClientRect();
+    // 先记录窗口实际坐标，再解除居中变换，避免拖动起点跳位。
     view.drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top};
-    panel.style.transform='none';panel.style.left=r.left+'px';panel.style.top=r.top+'px';
+    panel.style.transform='none';
+    panel.style.left=r.left+'px';
+    panel.style.top=r.top+'px';
   }
   function moveWindowDrag(e){
     const d=view.drag;if(!d||d.id!==e.pointerId)return;
+    e.preventDefault();
     const r=panel.getBoundingClientRect(),w=r.width,h=r.height;
-    const vw=Math.max(1,document.documentElement.clientWidth||innerWidth);
-    const vh=Math.max(1,document.documentElement.clientHeight||innerHeight);
+    const viewport=window.visualViewport;
+    const vw=Math.max(1,Math.floor(viewport?.width||document.documentElement.clientWidth||innerWidth));
+    const vh=Math.max(1,Math.floor(viewport?.height||document.documentElement.clientHeight||innerHeight));
     const left=clamp(d.left+e.clientX-d.x,0,Math.max(0,vw-w));
     const top=clamp(d.top+e.clientY-d.y,0,Math.max(0,vh-h));
     panel.style.left=left+'px';panel.style.top=top+'px';
   }
-  function endWindowDrag(e){if(view.drag&&view.drag.id===e.pointerId)view.drag=null;}
+  function endWindowDrag(e){
+    if(view.drag&&view.drag.id===e.pointerId){
+      view.drag=null;
+      try{if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId)}catch(_){}
+    }
+  }
   function chartPointerDown(e){
     e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);
     view.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
