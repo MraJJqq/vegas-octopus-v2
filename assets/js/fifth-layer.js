@@ -647,10 +647,13 @@
     if(!state.drag.moved) return;
     const d=state.drag;
     if(d.mode==='history') {
-      const range=visibleIndices(),count=Math.max(1,range.end-range.start);
+      const baseStartIndex=Math.max(0,state.candles.findIndex(c=>c.t>=d.baseStart));
+      let baseEndIndex=state.candles.findIndex(c=>c.t>d.baseEnd);
+      if(baseEndIndex<0)baseEndIndex=state.candles.length;
+      const count=Math.max(1,baseEndIndex-baseStartIndex);
       const bars=Math.round(-dx/Math.max(1,state.width)*count);
-      const startIndex=Math.max(0,Math.min(state.candles.length-1,range.start+bars));
-      const endIndex=Math.max(startIndex+1,Math.min(state.candles.length,range.end+bars));
+      const startIndex=Math.max(0,Math.min(state.candles.length-1,baseStartIndex+bars));
+      const endIndex=Math.max(startIndex+1,Math.min(state.candles.length,baseEndIndex+bars));
       state.startTime=state.candles[startIndex].t;
       state.endTime=state.candles[endIndex-1].t;
       if(startIndex<35)loadOlderHistory();
