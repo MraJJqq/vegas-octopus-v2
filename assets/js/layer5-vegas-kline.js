@@ -161,6 +161,8 @@ function scheduleAutoRotate(){
  if(state.rotateTimer)clearTimeout(state.rotateTimer);
  state.rotateTimer=0;
  if(!state.open)return;
+ /* 无正式信号的卡片也可打开K线，但只对正式信号品种启用自动轮播。 */
+ if(!formalSymbols().includes(state.symbol))return;
  state.rotateTimer=setTimeout(()=>{
   state.rotateTimer=0;
   if(!state.open)return;
@@ -187,8 +189,10 @@ root.querySelector('#vegas-layer5-close').addEventListener('click',close);
 periodSelect.addEventListener('change',()=>{if(!state.symbol)return;state.period=periodSelect.value;state.view.end=0;state.fetchAt=0;state.candles=[];saveView();loadCandles(true)});
 document.addEventListener('click',e=>{
  const card=e.target.closest&&e.target.closest('#market-cards-layer .mc-card[data-symbol]');
- if(!card||card.getAttribute('data-formal-signal')!=='true')return;
- e.preventDefault();e.stopPropagation();openSymbol(String(card.dataset.symbol||'').toUpperCase());
+ if(!card)return;
+ const symbol=String(card.dataset.symbol||'').toUpperCase();
+ if(!symbol)return;
+ e.preventDefault();e.stopPropagation();openSymbol(symbol);
 },true);
 head.addEventListener('pointerdown',e=>{
  if(e.target.closest('button,select'))return;
