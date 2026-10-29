@@ -126,7 +126,7 @@
     try{latest=normalize(await getJson(candlePath(apiSymbol,undefined,isReality)));}
     catch(error){if(stored&&stored.length>=2)return {symbol:name,apiSymbol,isReality,candles:stored.slice(-MAX_CANDLE_BARS),series:buildEmaSeries(stored.slice(-MAX_CANDLE_BARS)),source:'cache'};throw error;}
     let combined=mergeCandles(stored||[],latest),pages=0,cursor=combined.length?combined[0].t-1:Date.now();
-    const target=Math.min(EMA_WARMUP_BARS,MAX_CANDLE_BARS),maxPages=Math.ceil(target/100)+2;
+    const target=MAX_CANDLE_BARS,maxPages=Math.ceil(target/100)+2;
     while(!options.fast&&combined.length<target&&pages<maxPages&&cursor>0){
       let raw;try{raw=await getJson(historyCandlePath(apiSymbol,cursor,isReality));}catch(_){break;}
       pages++;const page=normalize(raw);if(!page.length)break;
