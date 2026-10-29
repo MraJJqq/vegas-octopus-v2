@@ -18,6 +18,7 @@
       #vegas-floating-kline{position:fixed;z-index:2147483647;left:50%;top:50%;transform:translate(-50%,-50%);width:min(900px,calc(100vw - 16px));height:min(620px,calc(100dvh - 16px));max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);display:none;flex-direction:column;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;color:#e8f5ff;overflow:visible;touch-action:none}
       #vegas-floating-kline.vfk-open{display:flex}
       #vegas-floating-kline .vfk-head{position:absolute;z-index:3;left:0;right:0;top:0;height:48px;min-height:48px;display:flex;align-items:flex-start;gap:12px;padding:0;border:0;background:transparent;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none}
+      #vegas-floating-kline .vfk-symbol-label{position:absolute;z-index:5;left:8px;top:8px;display:block;margin:0;padding:0;background:transparent;border:0;box-shadow:none;color:#e8f5ff;font:600 14px/1.2 system-ui,-apple-system,"PingFang SC",sans-serif;text-shadow:0 1px 3px rgba(0,0,0,.7);pointer-events:none;user-select:none;-webkit-user-select:none}
       #vegas-floating-kline .vfk-title,#vegas-floating-kline .vfk-hint,#vegas-floating-kline button,#vegas-floating-kline .vfk-status{display:none!important}
       #vegas-floating-kline .vfk-chart-wrap{position:relative;flex:1;min-height:0;overflow:hidden;touch-action:none;background:transparent}
       #vegas-floating-kline canvas{position:absolute;inset:0;display:block;width:100%;height:100%;touch-action:none}
@@ -26,7 +27,7 @@
     panel=document.createElement('section');
     panel.id='vegas-floating-kline';
     panel.setAttribute('aria-label','悬浮K线图');
-    panel.innerHTML='<header class="vfk-head"><span class="vfk-title">K线图</span><span class="vfk-hint">拖动标题栏移动窗口 · 图表双指缩放/单指平移</span><button type="button" data-act="reset">复位</button><button type="button" data-act="close" aria-label="关闭">关闭</button></header><div class="vfk-chart-wrap"><canvas aria-label="4小时K线与EMA指标"></canvas></div><div class="vfk-status">等待行情数据…</div>';
+    panel.innerHTML='<span class="vfk-symbol-label" aria-live="polite"></span><header class="vfk-head"><span class="vfk-title">K线图</span><span class="vfk-hint">拖动标题栏移动窗口 · 图表双指缩放/单指平移</span><button type="button" data-act="reset">复位</button><button type="button" data-act="close" aria-label="关闭">关闭</button></header><div class="vfk-chart-wrap"><canvas aria-label="4小时K线与EMA指标"></canvas></div><div class="vfk-status">等待行情数据…</div>';
     document.body.appendChild(panel);
     canvas=$(panel,'canvas');ctx=canvas.getContext('2d');
     panel.addEventListener('click',e=>{
