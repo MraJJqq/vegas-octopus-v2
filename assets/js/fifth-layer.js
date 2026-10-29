@@ -54,7 +54,7 @@
   const state = {
     symbol:'', contractSymbol:'', candles:[], series:[], ws:null, wsReconnect:0, wsHeartbeat:0, pendingDraw:false,
     startTime:null, endTime:null, viewCount:720,
-    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, pendingRefresh:false, offsetX:null, offsetY:null, error:'', lastLiveAt:0, drawFrame:0, historyLoading:false, historyExhausted:false
+    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, pendingRefresh:false, offsetX:null, offsetY:null, error:'', lastLiveAt:0, drawFrame:0, historyLoading:false, historyLoadDeferred:false, historyExhausted:false
   };
 
   // 4H candles are persisted per instrument in IndexedDB; 4,400 bars cover roughly two calendar years for 24/7 markets.
@@ -658,6 +658,9 @@
     try {
       const page=normalize(await getJson(historyCandlePath(apiSymbol,oldest-1,isReality)));
       if(overlay.hidden||state.generation!==generation||state.symbol!==symbol||state.contractSymbol!==apiSymbol)return;
+      // Do not prepend history while pointer coordinates are being translated to candle indices.
+      // A mid-gesture insertion shifts the data boundary and can make the latest/history seam jump.
+      if(state.drag){state.historyLoadDeferred=true;return;}
       const older=page.filter(c=>c.t<oldest);
       if(!older.length){state.historyExhausted=true;return;}
       const previousStart=state.startTime,previousEnd=state.endTime;
@@ -741,6 +744,10 @@
     const drag=state.drag;
     state.drag=null;
     if(state.pendingDraw){state.pendingDraw=false;draw();}
+    if(state.historyLoadDeferred && !overlay.hidden){
+      state.historyLoadDeferred=false;
+      window.setTimeout(()=>{if(!overlay.hidden && !state.drag)loadOlderHistory();},0);
+    }
     // Cancel/lost-capture must finish exactly like pointerup, otherwise a touch
     // interruption can leave the chart stuck in drag mode or delay live refresh.
     if(state.pendingRefresh && !overlay.hidden) {
