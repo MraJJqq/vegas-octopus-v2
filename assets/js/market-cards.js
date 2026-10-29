@@ -58,7 +58,7 @@ function updateFocusScale(){
  });
 }
 function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(updateFocusScale)}
-let wheelTarget=left.scrollTop,wheelFrame=0,wheelVelocity=0,wheelLastTime=0,wheelLastInputAt=0,loopDirection=1,autoEngage=1;
+let wheelTarget=left.scrollTop,wheelFrame=0,wheelVelocity=0,wheelLastTime=0,wheelLastInputAt=0,loopDirection=1,autoEngage=1,autoBoostUntil=0,autoBoost=1;
 function cardStep(){
  const first=left.firstElementChild;
  const style=getComputedStyle(left);
@@ -98,13 +98,14 @@ function smoothWheelStep(now){
  const dt=Math.min(32,Math.max(1,now-wheelLastTime));
  wheelLastTime=now;
  const current=left.scrollTop,diff=wheelTarget-current;
- left.scrollTop=current+diff*(1-Math.exp(-dt/68));
+ const ease=1-Math.exp(-dt/92);
+ left.scrollTop=current+diff*ease;
  normalizeLoopPosition();
- wheelVelocity*=Math.exp(-dt/320);
- if(Math.abs(wheelVelocity)>.01)wheelTarget+=wheelVelocity*dt;
+ wheelVelocity*=Math.exp(-dt/220);
+ if(Math.abs(wheelVelocity)>.008)wheelTarget+=wheelVelocity*dt;
  else wheelVelocity=0;
  queueFocusScale();
- if(Math.abs(wheelTarget-left.scrollTop)<.6&&Math.abs(wheelVelocity)<.01){
+ if(Math.abs(wheelTarget-left.scrollTop)<.45&&Math.abs(wheelVelocity)<.008){
   wheelTarget=left.scrollTop;wheelFrame=0;wheelLastTime=0;return;
  }
  wheelFrame=requestAnimationFrame(smoothWheelStep);
@@ -113,6 +114,7 @@ left.addEventListener('wheel',e=>{
  wheelLastInputAt=performance.now();
  autoResumeAt=wheelLastInputAt+1800;
  autoEngage=0;
+ autoBoostUntil=wheelLastInputAt+900;
  if(Math.abs(e.deltaY)<.1)return;
  e.preventDefault();
  e.stopPropagation();
@@ -121,11 +123,12 @@ left.addEventListener('wheel',e=>{
  loopDirection=delta<0?-1:1;
  if(!wheelFrame){
   wheelTarget=left.scrollTop;
-  const inheritedDirection=loopDirection;
-  wheelVelocity=(autoWaveScroll.speed||1)*inheritedDirection/1000;
+  wheelVelocity=0;
  }
- wheelTarget+=delta*1.05;
- wheelVelocity=Math.max(-1.2,Math.min(1.2,wheelVelocity+delta*.016));
+ const sameDirection=wheelVelocity===0||Math.sign(wheelVelocity)===Math.sign(delta);
+ const boost=sameDirection?1.32:1.08;
+ wheelTarget+=delta*boost;
+ wheelVelocity=Math.max(-1.2,Math.min(1.2,wheelVelocity+delta*(sameDirection?.022:.012)));
  if(!wheelFrame)wheelFrame=requestAnimationFrame(smoothWheelStep);
 },{passive:false});
 left.addEventListener('scroll',()=>{
@@ -152,6 +155,8 @@ function autoWaveScroll(now){
  if(!autoEngageLastTime)autoEngageLastTime=now;
  const engageDt=Math.min(40,Math.max(0,now-autoEngageLastTime));
  autoEngageLastTime=now;
+ const boostTarget=now<autoBoostUntil?1.85:1;
+ autoBoost+=(boostTarget-autoBoost)*(1-Math.exp(-engageDt/260));
  if(!wheelFrame&&now>=autoResumeAt){
   autoEngage=Math.min(1,autoEngage+engageDt/900);
   if(!autoWaveScroll.nextChange||now>=autoWaveScroll.nextChange){
@@ -163,7 +168,7 @@ function autoWaveScroll(now){
   autoWaveScroll.speed=speed+(autoWaveScroll.targetSpeed-speed)*(1-Math.exp(-dt/2.2));
   if(focusSlots.length>1&&cardStep()>0){
    /* 累积小数位移，再按整像素写入，避免低速时每帧小于 1px 被浏览器舍入后永远停在原位。 */
-   autoScrollRemainder+=autoWaveScroll.speed*autoEngage*dt;
+   autoScrollRemainder+=autoWaveScroll.speed*autoEngage*autoBoost*dt;
    const wholePixels=Math.floor(autoScrollRemainder);
    if(wholePixels>0){
     autoScrollRemainder-=wholePixels;
