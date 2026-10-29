@@ -75,13 +75,13 @@ async function loadCandles(force=false){
  if(!force&&Date.now()-state.fetchAt<25000)return;
  state.loading=true;const requestId=++requestVersion;const symbolAtRequest=state.symbol;message.hidden=false;message.textContent=state.candles.length?'更新行情…':'读取历史行情…';
  try{
-  const stock=STOCKS.has(symbolAtRequest),period=state.period,interval=period;
+  const stock=STOCKS.has(symbolAtRequest),period=state.period;
   let rows;
   if(stock){
    const sym=await getStockSymbol(symbolAtRequest);
-   rows=await getJson('/api/v3/market/candles?'+new URLSearchParams({category:'SPOT',symbol:sym,interval,limit:'1000'}));
+   rows=await getJson('/api/v3/market/candles?'+new URLSearchParams({category:'SPOT',symbol:sym,interval:period,limit:'1000'}));
   }else{
-   rows=await getJson('/api/v2/mix/market/candles?'+new URLSearchParams({symbol:symbolFor(symbolAtRequest),productType:'USDT-FUTURES',granularity:interval,limit:'1000'}));
+   rows=await getJson('/api/v2/mix/market/candles?'+new URLSearchParams({symbol:symbolFor(symbolAtRequest),productType:'USDT-FUTURES',granularity:period,limit:'1000'}));
   }
   if(requestId!==requestVersion||symbolAtRequest!==state.symbol)return;
   const data=rows.filter(r=>Array.isArray(r)&&Number(r[0])>0&&Number(r[1])>0&&Number(r[2])>0&&Number(r[3])>0&&Number(r[4])>0)
