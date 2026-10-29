@@ -37,7 +37,7 @@ window.VegasOrbProjectedPoints=pr;
 x.globalCompositeOperation="lighter";x.globalAlpha=1;
 var g=x.createRadialGradient(cx,cy,0,cx,cy,Rr*.22);g.addColorStop(0,"rgba(255,225,160,.45)");g.addColorStop(1,"rgba(255,200,100,0)");x.fillStyle=g;x.fillRect(cx-Rr*.22,cy-Rr*.22,Rr*.44,Rr*.44);
 x.lineWidth=.6;
-for(var k=0;k<N;k++){var q=pr[k],gw=q[3],tw0=Math.sin(t*1.1+k*13.7)*.5+.5,tw=tw0*tw0*tw0,a=(.012+.11*tw)*(.35+.65*q[4])*(.45+.55*gw)*V.ln;if(a<.012)continue;x.strokeStyle="rgba("+(140+115*gw|0)+","+(185+5*gw|0)+","+(255-185*gw|0)+","+Math.min(a,.5)+")";x.beginPath();x.moveTo(cx+(q[0]-cx)*.1,cy+(q[1]-cy)*.1);x.lineTo(q[0],q[1]);x.stroke()}
+for(var k=0;k<N;k++){var q=pr[k],gw=q[3],tw0=trigPair(t*1.1+k*13.7,trigOut)[1]*.5+.5,tw=tw0*tw0*tw0,a=(.012+.11*tw)*(.35+.65*q[4])*(.45+.55*gw)*V.ln;if(a<.012)continue;x.strokeStyle="rgba("+(140+115*gw|0)+","+(185+5*gw|0)+","+(255-185*gw|0)+","+Math.min(a,.5)+")";x.beginPath();x.moveTo(cx+(q[0]-cx)*.1,cy+(q[1]-cy)*.1);x.lineTo(q[0],q[1]);x.stroke()}
 
 /* dots */
 x.globalAlpha=1;
