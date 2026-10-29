@@ -5,41 +5,16 @@ const P=[
 ];
 const REALITY_STOCKS=new Set(P.slice(0,23).map(x=>x[0]));
 const fmt=p=>p>=100?p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):p>=1?p.toFixed(3):p.toFixed(4);
-const S=P.map(([s,api],i)=>({s,api,i,p:0,o:0,candles:[],candleUpdatedAt:0,candleLoading:false,flashTimer:0,ready:false}));
+const S=P.map(([s,api],i)=>({s,api,i,p:0,o:0,flashTimer:0,ready:false}));
 const left=document.getElementById('mc-left');
 S.forEach(d=>{
- left.insertAdjacentHTML('beforeend',`<div class="mc-slot"><div class="mc-float" style="--d:${-d.i*.9}s"><div class="mc-card" id="mc-c${d.i}" data-symbol="${d.s}"><div class="mc-bg"></div><i class="mc-g1"></i><i class="mc-g2"></i><i class="mc-gl"></i><div class="mc-row mc-l2"><span class="mc-coin">${d.s[0]}</span><b class="mc-sym">${d.s}</b></div><div class="mc-price mc-l4">加载中</div><div class="mc-l3"><span class="mc-pct">--</span></div><canvas class="mc-kline mc-l1" aria-label="${d.s} K线图"></canvas><div class="mc-hl mc-l2">高<span class="mc-hi">--</span>低<span class="mc-lo">--</span></div></div></div><div class="mc-gshadow" style="--d:${-d.i*.9}s"></div></div>`);
- d.dom={card:left.querySelector('#mc-c'+d.i),price:left.querySelector('#mc-c'+d.i+' .mc-price'),pct:left.querySelector('#mc-c'+d.i+' .mc-pct'),high:left.querySelector('#mc-c'+d.i+' .mc-hi'),low:left.querySelector('#mc-c'+d.i+' .mc-lo'),symbol:left.querySelector('#mc-c'+d.i+' .mc-sym'),canvas:left.querySelector('#mc-c'+d.i+' .mc-kline')};
- d.high=0;d.low=0;
+ left.insertAdjacentHTML('beforeend',`<div class="mc-slot"><div class="mc-float" style="--d:${-d.i*.9}s"><div class="mc-card" id="mc-c${d.i}" data-symbol="${d.s}"><div class="mc-bg"></div><i class="mc-g1"></i><i class="mc-g2"></i><i class="mc-gl"></i><div class="mc-row mc-l2"><span class="mc-coin">${d.s[0]}</span><b class="mc-sym">${d.s}</b></div><div class="mc-price mc-l4">加载中</div><div class="mc-l3"><span class="mc-pct">--</span></div></div></div><div class="mc-gshadow" style="--d:${-d.i*.9}s"></div></div>`);
+ d.dom={card:left.querySelector('#mc-c'+d.i),price:left.querySelector('#mc-c'+d.i+' .mc-price'),pct:left.querySelector('#mc-c'+d.i+' .mc-pct'),symbol:left.querySelector('#mc-c'+d.i+' .mc-sym')};
+
 });
-function drawKline(d,canvas){
- const rect=canvas.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),ratio=Math.min(1.5,Math.max(1,window.devicePixelRatio||1));
- const renderKey=[w,h,ratio,d.candleUpdatedAt,d.ready?1:0,d.p,d.o,d.candles.length].join('|');
- if(canvas.__mcRenderKey===renderKey)return;
- canvas.__mcRenderKey=renderKey;
- const ctx=canvas.getContext('2d');
- if(canvas.width!==Math.round(w*ratio))canvas.width=Math.round(w*ratio);
- if(canvas.height!==Math.round(h*ratio))canvas.height=Math.round(h*ratio);
- ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,w,h);
- const rows=d.candles||[];if(rows.length<2)return;
- let mn=Infinity,mx=-Infinity;
- rows.forEach(c=>{mn=Math.min(mn,c.low);mx=Math.max(mx,c.high)});
- if(!Number.isFinite(mn)||!Number.isFinite(mx))return;
- const range=mx-mn||1,y=v=>h-3-(v-mn)/range*(h-6),step=w/rows.length,bw=Math.max(1,step*.58);
- ctx.strokeStyle='rgba(255,255,255,.08)';ctx.lineWidth=1;
- for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke()}
- rows.forEach((c,i)=>{
-  const up=c.close>=c.open,col=up?'#2ee6a6':'#ff5c7c',x=i*step+step/2,top=y(Math.max(c.open,c.close)),bottom=y(Math.min(c.open,c.close));
-  ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=1.2;ctx.shadowColor=col;ctx.shadowBlur=3;
-  ctx.beginPath();ctx.moveTo(x,y(c.high));ctx.lineTo(x,y(c.low));ctx.stroke();
-  ctx.fillRect(x-bw/2,top,bw,Math.max(2,bottom-top));
- });
- if(d.ready&&Number.isFinite(d.p)&&d.p>0){const col=d.p>=d.o?'#2ee6a6':'#ff5c7c';ctx.shadowBlur=0;ctx.setLineDash([3,4]);ctx.strokeStyle=col;ctx.globalAlpha=.5;ctx.beginPath();ctx.moveTo(0,y(d.p));ctx.lineTo(w,y(d.p));ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1}
- ctx.shadowBlur=0;
-}
 function paint(d){
  const el=d.dom,priceEl=el.price;
- if(!d.ready||!Number.isFinite(d.p)||d.p<=0){if(priceEl.textContent!=='加载中')priceEl.textContent='加载中';if(el.pct.textContent!=='--')el.pct.textContent='--';if(el.high.textContent!=='--')el.high.textContent='--';if(el.low.textContent!=='--')el.low.textContent='--';drawKline(d,el.canvas);return}
+ if(!d.ready||!Number.isFinite(d.p)||d.p<=0){if(priceEl.textContent!=='加载中')priceEl.textContent='加载中';if(el.pct.textContent!=='--')el.pct.textContent='--';return}
  const up=d.p>=d.o;
  el.card.classList.toggle('up',up);el.card.classList.toggle('dn',!up);
  const nextPrice=fmt(d.p);
@@ -49,12 +24,10 @@ function paint(d){
  }
  const nextPct=(up?'+':'')+((d.p/d.o-1)*100).toFixed(2)+'%';
  if(el.pct.textContent!==nextPct)el.pct.textContent=nextPct;
- if(d.high>0&&d.low>0){const hi=fmt(d.high),lo=fmt(d.low);if(el.high.textContent!==hi)el.high.textContent=hi;if(el.low.textContent!==lo)el.low.textContent=lo}
- drawKline(d,el.canvas);
+ 
 }
 window.addEventListener('resize',()=>{
  cachedCardStep=0;
- S.forEach(d=>drawKline(d,document.querySelector('#mc-c'+d.i+' .mc-kline')));
  queueFocusScale();
 },{passive:true});
 let focusSlots=Array.from(left.querySelectorAll('.mc-slot'));
@@ -301,8 +274,6 @@ left.style.scrollBehavior='auto';
 if('ResizeObserver' in window){
  const stepObserver=new ResizeObserver(()=>{
   cachedCardStep=0;
-  /* 视口/断点改变时同步重绘迷你 K 线，避免沿用旧尺寸的 canvas 缓冲区。 */
-  S.forEach(d=>drawKline(d,document.querySelector('#mc-c'+d.i+' .mc-kline')));
   queueFocusScale();
 });
  stepObserver.observe(left);
@@ -317,7 +288,6 @@ if('IntersectionObserver' in window){
  focusSlots.forEach(slot=>cardMotionObserver.observe(slot));
 }
 const API='https://api.bitget.com';
-const CANDLE_REFRESH_MS=5*60*1000;
 async function bitgetJson(path){
  const controller=new AbortController();
  const timeoutId=window.setTimeout(()=>controller.abort(),12000);
@@ -332,54 +302,10 @@ async function bitgetJson(path){
   throw error;
  }finally{window.clearTimeout(timeoutId)}
 }
-async function loadSparkline(d,symbol,isStock){
- if(d.candleLoading||document.hidden)return;
- d.candleLoading=true;
- try{
-  const params=isStock?new URLSearchParams({category:'SPOT',symbol,interval:'1H',limit:'30'}):new URLSearchParams({symbol,productType:'USDT-FUTURES',granularity:'1H',limit:'30'});
-  const path=isStock?'/api/v3/market/candles':'/api/v2/mix/market/candles';
-  const rows=await bitgetJson(path+'?'+params);
-  d.candles=rows.filter(r=>Array.isArray(r)&&Number(r[1])>0&&Number(r[2])>0&&Number(r[3])>0&&Number(r[4])>0).sort((a,b)=>Number(a[0])-Number(b[0])).slice(-30).map(r=>({open:Number(r[1]),high:Number(r[2]),low:Number(r[3]),close:Number(r[4])}));
-  let high=0,low=Infinity;
-  for(const candle of d.candles){if(candle.high>high)high=candle.high;if(candle.low>0&&candle.low<low)low=candle.low}
-  d.high=high;d.low=Number.isFinite(low)?low:0;
-  d.candleUpdatedAt=Date.now();
- }catch(error){d.candleUpdatedAt=Date.now()-CANDLE_REFRESH_MS+60000;console.warn('[Vegas Octopus] 1H candles failed for '+d.s+':',error)}
- finally{d.candleLoading=false}
- paint(d)
-}
 let marketLoadInFlight=false;
 let realitySymbolCache=null,realitySymbolCacheAt=0;
-/* K线请求使用全局队列限流，避免每轮行情刷新都创建独立批次导致并发叠加。 */
-const SPARK_CONCURRENCY=4;
-const sparkQueue=[];
-const sparkQueued=new Set();
-let sparkWorkers=0;
-function enqueueSparkJobs(jobs){
- for(const job of jobs){
-  if(sparkQueued.has(job.key)||job.d.candleLoading)continue;
-  sparkQueued.add(job.key);
-  sparkQueue.push(job);
- }
- pumpSparkJobs();
-}
-function pumpSparkJobs(){
- while(sparkWorkers<SPARK_CONCURRENCY&&sparkQueue.length&&!document.hidden){
-  const job=sparkQueue.shift();
-  sparkQueued.delete(job.key);
-  if(job.d.candleLoading)continue;
-  sparkWorkers++;
-  Promise.resolve().then(job.run).catch(error=>{
-   console.warn('[Vegas Octopus] candle queue job failed:',error);
-  }).finally(()=>{
-   sparkWorkers=Math.max(0,sparkWorkers-1);
-   pumpSparkJobs();
-  });
- }
-}
 document.addEventListener('visibilitychange',()=>{
  if(!document.hidden){
-  pumpSparkJobs();
   loadMarketData();
  }
 },{passive:true});
@@ -389,7 +315,6 @@ async function loadMarketData(){
  const needRealityDirectory=!realitySymbolCache||Date.now()-realitySymbolCacheAt>5*60*1000;
  let futures=null,spots=null,realitySymbols=realitySymbolCache;
  let futuresDone=false,spotsDone=false,directoryDone=!needRealityDirectory,stocksProcessed=false;
- const futureSparkJobs=[],stockSparkJobs=[];
  function processFutures(){
   if(!futuresDone)return;
   S.forEach(d=>{
@@ -400,9 +325,7 @@ async function loadMarketData(){
    const last=Number(ticker.lastPr),open=Number(ticker.open24h);
    if(!(last>0&&open>0)){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='数据无效';return}
    d.p=last;d.o=open;d.ready=true;paint(d);
-   if(Date.now()-d.candleUpdatedAt>=CANDLE_REFRESH_MS)futureSparkJobs.push({key:d.i,d,run:()=>loadSparkline(d,d.api,false)});
   });
-  if(futureSparkJobs.length)enqueueSparkJobs(futureSparkJobs.splice(0));
  }
  function processStocks(){
   if(stocksProcessed||!spotsDone||!directoryDone)return;
@@ -415,9 +338,7 @@ async function loadMarketData(){
    const last=Number(ticker.lastPrice),open=Number(ticker.openPrice24h);
    if(!(last>0&&open>0)){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='数据无效';return}
    d.api=symbol;d.p=last;d.o=open;d.ready=true;paint(d);
-   if(Date.now()-d.candleUpdatedAt>=CANDLE_REFRESH_MS)stockSparkJobs.push({key:d.i,d,run:()=>loadSparkline(d,symbol,true)});
   });
-  if(stockSparkJobs.length)enqueueSparkJobs(stockSparkJobs.splice(0));
  }
  try{
   const tasks=[
