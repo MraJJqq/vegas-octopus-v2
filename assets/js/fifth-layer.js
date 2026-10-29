@@ -650,7 +650,7 @@
     draw();
   }
   async function loadOlderHistory() {
-    if(state.historyLoading || state.historyExhausted || overlay.hidden || !state.contractSymbol || !state.candles.length || state.candles.length>=MAX_CANDLE_BARS) return;
+    if(state.historyLoading || state.historyLoadDeferred || state.historyExhausted || overlay.hidden || !state.contractSymbol || !state.candles.length || state.candles.length>=MAX_CANDLE_BARS) return;
     const symbol=state.symbol,apiSymbol=state.contractSymbol,generation=state.generation;
     const isReality=REALITY_STOCKS.has(symbol),oldest=state.candles[0].t;
     if(!Number.isFinite(oldest)||oldest<=0){state.historyExhausted=true;return;}
@@ -685,10 +685,12 @@
   function pointerDown(e) {
     if(overlay.hidden || !state.candles.length) return;
     const onPlot=hitRenderedChart(e.clientX,e.clientY);
+    const range=visibleIndices();
     state.drag={
       x:e.clientX,y:e.clientY,
       baseOffsetX:state.offsetX,baseOffsetY:state.offsetY,
       baseStart:state.startTime,baseEnd:state.endTime,
+      baseStartIndex:range.start,baseCount:Math.max(1,range.end-range.start),
       mode:onPlot?'history':'position',moved:false
     };
     try{canvas.setPointerCapture(e.pointerId);}catch(_){}
@@ -700,10 +702,8 @@
     if(!state.drag.moved) return;
     const d=state.drag;
     if(d.mode==='history') {
-      const baseStartIndex=Math.max(0,state.candles.findIndex(c=>c.t>=d.baseStart));
-      let baseEndIndex=state.candles.findIndex(c=>c.t>d.baseEnd);
-      if(baseEndIndex<0)baseEndIndex=state.candles.length;
-      const count=Math.max(1,baseEndIndex-baseStartIndex);
+      const baseStartIndex=Math.max(0,Math.min(state.candles.length-1,d.baseStartIndex));
+      const count=Math.max(1,Math.min(state.candles.length-baseStartIndex,d.baseCount));
       const {frameW}=getFrameSize();
       const plotW=Math.max(1,frameW-Math.min(8,frameW*.03)*2);
       const bars=Math.round(-dx/plotW*count);
@@ -718,14 +718,14 @@
       state.startTime=state.candles[startIndex].t;
       state.endTime=state.candles[endIndex-1].t;
       if(startIndex<35)loadOlderHistory();
-      draw();
+      scheduleDraw();
       return;
     }
     // Dragging outside the plotted candles still repositions the transparent chart.
     const {minX,maxX,minY,maxY}=getViewportBounds();
     state.offsetX=Math.max(minX,Math.min(maxX,d.baseOffsetX+dx));
     state.offsetY=Math.max(minY,Math.min(maxY,d.baseOffsetY+dy));
-    draw();
+    scheduleDraw();
   }
   function hitRenderedChart(x,y) {
     // The canvas is transparent; only candle and EMA strokes have non-zero alpha.
