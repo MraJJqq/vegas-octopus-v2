@@ -174,6 +174,8 @@
       // 完整历史与长周期 EMA 在后台补齐，不阻塞首次显示。
       logic.loadHistory(requestedSymbol,{isReality:state.isReality,apiSymbol:state.apiSymbol}).then(fullState=>{
         if(activeSymbol!==requestedSymbol||!panel.classList.contains('vfk-open'))return;
+        fullState.candles=logic.mergeCandles(fullState.candles,state?.candles||[]).slice(-logic.constants.maxCandles);
+        fullState.series=logic.buildEmaSeries(fullState.candles);
         state=fullState;
         draw();
       }).catch(err=>console.warn('[悬浮K线] 后台补齐历史失败，继续显示已有行情：',err));
