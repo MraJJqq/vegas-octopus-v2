@@ -90,25 +90,31 @@
     });
   }
 
-  function getFormalSignalCardStart() {
-    /* 与最新事件模块共用 data-formal-signal 标记；只选一张卡片作为整组数据流起点。 */
+  function getFormalSignalCardStarts() {
+    /* 每张正式信号卡片只在第三层滚动容器的可视区域内发出独立数据流组。 */
     const cards = Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]'));
-    if (!cards.length) return null;
     const appRect = app.getBoundingClientRect();
-    /* 固定选择通知顺序中的第一张正式信号卡片，避免滚动时在多张信号卡之间跳转。 */
-    const selected = cards[0] ? { card: cards[0], r: cards[0].getBoundingClientRect() } : null;
-    if (!selected) return null;
-    const { r } = selected;
-    const visibleTop = Math.max(r.top, appRect.top, 0);
-    const visibleBottom = Math.min(r.bottom, appRect.bottom, window.innerHeight);
-    if (visibleBottom <= visibleTop || r.right <= appRect.left || r.left >= appRect.right) return null;
-    return {
-      card: selected.card,
-      symbol: String(selected.card.dataset.symbol || '').toUpperCase(),
-      x: Math.min(r.right, appRect.right, window.innerWidth) - appRect.left,
-      y: Math.max(visibleTop, Math.min(visibleBottom, r.top + r.height * .5)) - appRect.top,
-      visibleRatio: Math.min(1, (visibleBottom - visibleTop) / Math.max(1, r.height))
-    };
+    const scroller = $('mc-left');
+    const view = scroller ? scroller.getBoundingClientRect() : appRect;
+    const clipTop = Math.max(view.top, appRect.top, 0);
+    const clipBottom = Math.min(view.bottom, appRect.bottom, window.innerHeight);
+    if (clipBottom <= clipTop) return [];
+    return cards.map(card => {
+      const r = card.getBoundingClientRect();
+      const visibleTop = Math.max(r.top, clipTop);
+      const visibleBottom = Math.min(r.bottom, clipBottom);
+      const visibleWidth = Math.max(0, Math.min(r.right, view.right, appRect.right) - Math.max(r.left, view.left, appRect.left));
+      const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+      const visibleRatio = Math.min(1, visibleHeight / Math.max(1, r.height)) * Math.min(1, visibleWidth / Math.max(1, r.width));
+      if (visibleRatio <= 0 || visibleWidth <= 0) return null;
+      return {
+        card,
+        symbol: String(card.dataset.symbol || '').toUpperCase(),
+        x: Math.min(r.right, view.right, appRect.right, window.innerWidth) - appRect.left,
+        y: (visibleTop + visibleBottom) * .5 - appRect.top,
+        visibleRatio
+      };
+    }).filter(Boolean);
   }
 
   /* 仅增强卡片发射端：不改变任何流线起点、球体终点或连接关系。 */
@@ -179,43 +185,45 @@
     rotA += dt * .2;
     ctx.clearRect(0, 0, width, height);
     const pr = getOrbPoints(t);
-
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.lineWidth = .8;
-    const start = getFormalSignalCardStart();
-    if (!start) {
+    const starts = getFormalSignalCardStarts();
+    if (!starts.length) {
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over';
       return;
     }
-    F.forEach(f => {
-      const q = pr[f.t];
-      if (!q) return;
-      const fa = q[3] == null ? 1 : q[3];
-      if (fa < .05) return;
-      const col = COL;
-      const c1x = start.x + (q[0] - start.x) * .42;
-      const c1y = start.y;
-      ctx.strokeStyle = col;
-      ctx.globalAlpha = .22 * fa * start.visibleRatio;
-      ctx.beginPath();
-      ctx.moveTo(start.x, start.y);
-      ctx.quadraticCurveTo(c1x, c1y, q[0], q[1]);
-      ctx.stroke();
 
-      const u = (t * f.v + f.o) % 1, v = 1 - u;
-      const px = v * v * start.x + 2 * v * u * c1x + u * u * q[0];
-      const py = v * v * start.y + 2 * v * u * c1y + u * u * q[1];
-      ctx.globalAlpha = .95 * fa * start.visibleRatio;
-      ctx.fillStyle = col;
-      ctx.shadowColor = col;
-      ctx.shadowBlur = 8;
-      ctx.beginPath();
-      ctx.arc(px, py, 1.6, 0, PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineWidth = .8;
+    starts.forEach((start, groupIndex) => {
+      /* 同一组只连接当前卡片；滚动容器裁切比例控制整组渐入/渐出。 */
+      F.forEach(f => {
+        const q = pr[f.t];
+        if (!q) return;
+        const fa = q[3] == null ? 1 : q[3];
+        if (fa < .05) return;
+        const c1x = start.x + (q[0] - start.x) * .42;
+        const c1y = start.y;
+        ctx.strokeStyle = COL;
+        ctx.globalAlpha = .22 * fa * start.visibleRatio;
+        ctx.beginPath();
+        ctx.moveTo(start.x, start.y);
+        ctx.quadraticCurveTo(c1x, c1y, q[0], q[1]);
+        ctx.stroke();
+
+        const u = (t * f.v + f.o + groupIndex * .13) % 1, v = 1 - u;
+        const px = v * v * start.x + 2 * v * u * c1x + u * u * q[0];
+        const py = v * v * start.y + 2 * v * u * c1y + u * u * q[1];
+        ctx.globalAlpha = .95 * fa * start.visibleRatio;
+        ctx.fillStyle = COL;
+        ctx.shadowColor = COL;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(px, py, 1.6, 0, PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+      drawCardEmission(start, t + groupIndex * .17);
     });
-    drawCardEmission(start, t);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
   }
@@ -258,7 +266,8 @@
       connectedToSmallCards: !!$('mc-left'),
       streamCount: F.length,
       anchorMode: 'one-stream-group-to-one-formal-signal-card',
-      activeSignalSymbol: (getFormalSignalCardStart() || {}).symbol || null,
+      activeSignalSymbols: getFormalSignalCardStarts().map(card => card.symbol),
+      visibleFormalSignalCardCount: getFormalSignalCardStarts().length,
       formalSignalCardCount: document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]').length,
       canvasWidth: width,
       canvasHeight: height
