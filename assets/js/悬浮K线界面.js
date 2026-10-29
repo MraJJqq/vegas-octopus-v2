@@ -10,7 +10,14 @@
   const BASE_VISIBLE_BARS=120,MIN_VISIBLE_BARS=20,MAX_VISIBLE_BARS=5000;
   let openRequestId=0,drawFrame=0;
   const view={scale:1,offset:0,drag:null,chartPan:null,pointers:new Map(),pinch:null,baseWidth:0,baseHeight:0,gestureMoved:false,suppressChartClickUntil:0};
+  const VIEW_STORAGE_KEY='vegas-floating-kline-views-v1';
   const savedViews=new Map();
+  try{
+    const stored=JSON.parse(localStorage.getItem(VIEW_STORAGE_KEY)||'{}');
+    Object.entries(stored).forEach(([symbol,entry])=>{
+      if(entry&&Number.isFinite(entry.scale)&&entry.scale>0)savedViews.set(symbol,entry);
+    });
+  }catch(_){}
   const $=(root,sel)=>root.querySelector(sel);
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const isReality=s=>!!(getLogic()&&getLogic().isRealitySymbol(s));
@@ -165,7 +172,9 @@
     if(!activeSymbol||!panel?.classList.contains('vfk-open')||!state?.candles?.length)return;
     const rows=state.candles,end=clamp(rows.length-Math.floor(view.offset),1,rows.length);
     const anchor=rows[end-1];
-    savedViews.set(activeSymbol,{scale:view.scale,rightEdgeTime:anchor?.t??null});
+    const entry={scale:view.scale,rightEdgeTime:anchor?.t??null};
+    savedViews.set(activeSymbol,entry);
+    try{localStorage.setItem(VIEW_STORAGE_KEY,JSON.stringify(Object.fromEntries(savedViews)));}catch(_){}
   }
   function restoreSavedView(rows,saved){
     if(!saved||!Array.isArray(rows)||!rows.length)return false;
