@@ -54,7 +54,7 @@
   const state = {
     symbol:'', contractSymbol:'', candles:[], series:[], ws:null, wsReconnect:0, wsHeartbeat:0, pendingDraw:false,
     startTime:null, endTime:null, viewCount:720,
-    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, pendingRefresh:false, offsetX:null, offsetY:null, error:'', lastLiveAt:0, drawFrame:0
+    width:1,height:1,dpr:1, drag:null, timer:0, generation:0, dataRequest:0, pendingRefresh:false, offsetX:null, offsetY:null, error:'', lastLiveAt:0, drawFrame:0, historyLoading:false, historyExhausted:false
   };
 
   // 4H candles are persisted per instrument in IndexedDB; 4,400 bars cover roughly two calendar years for 24/7 markets.
@@ -571,7 +571,7 @@
     state.dataRequest++;
     state.symbol=symbol;
     state.contractSymbol='';
-    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=540;state.drag=null;state.offsetX=state.width*.07;state.offsetY=state.height*.11;state.error='';
+    state.candles=[];state.series=[];state.startTime=null;state.endTime=null;state.viewCount=540;state.drag=null;state.historyLoading=false;state.historyExhausted=false;state.offsetX=state.width*.07;state.offsetY=state.height*.11;state.error='';
     overlay.hidden=false;
     fitCanvas();
     state.error=REALITY_STOCKS.has(symbol)?'正在连接 Bitget Reality 原生4H股票行情…':'正在连接 Bitget 原生4H合约行情…';draw();
@@ -601,12 +601,42 @@
     state.endTime=state.candles[anchorIndex].t;
     draw();
   }
+  async function loadOlderHistory() {
+    if(state.historyLoading || state.historyExhausted || overlay.hidden || !state.contractSymbol || !state.candles.length || state.candles.length>=MAX_CANDLE_BARS) return;
+    const symbol=state.symbol,apiSymbol=state.contractSymbol,generation=state.generation;
+    const isReality=REALITY_STOCKS.has(symbol),oldest=state.candles[0].t;
+    if(!Number.isFinite(oldest)||oldest<=0){state.historyExhausted=true;return;}
+    state.historyLoading=true;
+    try {
+      const page=normalize(await getJson(historyCandlePath(apiSymbol,oldest-1,isReality)));
+      if(overlay.hidden||state.generation!==generation||state.symbol!==symbol||state.contractSymbol!==apiSymbol)return;
+      const older=page.filter(c=>c.t<oldest);
+      if(!older.length){state.historyExhausted=true;return;}
+      const previousStart=state.startTime,previousEnd=state.endTime;
+      const oldCount=Math.max(1,visibleIndices().end-visibleIndices().start);
+      state.candles=mergeCandles(older,state.candles).slice(-MAX_CANDLE_BARS);
+      rebuildSeries();
+      // If the user reached the left boundary, reveal the newly loaded candles immediately.
+      if(Number.isFinite(previousStart)&&previousStart<=oldest+oldCount*4*60*60*1000){
+        const earliestNew=older[Math.max(0,older.length-Math.min(older.length,oldCount))].t;
+        state.startTime=earliestNew;
+        state.endTime=state.candles[Math.min(state.candles.length-1,older.length+oldCount-1)].t;
+      } else {state.startTime=previousStart;state.endTime=previousEnd;}
+      await writePersistentCandles(apiSymbol,isReality,state.candles);
+      draw();
+      if(page.length<100)state.historyExhausted=true;
+    } catch(error) {
+      console.warn('[Vegas Fifth Layer] 按需加载更早历史K线失败：'+symbol,error);
+    } finally {state.historyLoading=false;}
+  }
   function pointerDown(e) {
     if(overlay.hidden || !state.candles.length) return;
+    const onPlot=hitRenderedChart(e.clientX,e.clientY);
     state.drag={
       x:e.clientX,y:e.clientY,
       baseOffsetX:state.offsetX,baseOffsetY:state.offsetY,
-      moved:false
+      baseStart:state.startTime,baseEnd:state.endTime,
+      mode:onPlot?'history':'position',moved:false
     };
     try{canvas.setPointerCapture(e.pointerId);}catch(_){}
   }
@@ -615,10 +645,19 @@
     const dx=e.clientX-state.drag.x,dy=e.clientY-state.drag.y;
     if(Math.hypot(dx,dy)>3) state.drag.moved=true;
     if(!state.drag.moved) return;
-
-    // Allow travel across the whole page in every direction. Only a narrow
-    // grip remains visible at the far edges so the chart can always be recovered.
     const d=state.drag;
+    if(d.mode==='history') {
+      const range=visibleIndices(),count=Math.max(1,range.end-range.start);
+      const bars=Math.round(-dx/Math.max(1,state.width)*count);
+      const startIndex=Math.max(0,Math.min(state.candles.length-1,range.start+bars));
+      const endIndex=Math.max(startIndex+1,Math.min(state.candles.length,range.end+bars));
+      state.startTime=state.candles[startIndex].t;
+      state.endTime=state.candles[endIndex-1].t;
+      if(startIndex<35)loadOlderHistory();
+      draw();
+      return;
+    }
+    // Dragging outside the plotted candles still repositions the transparent chart.
     const {minX,maxX,minY,maxY}=getViewportBounds();
     state.offsetX=Math.max(minX,Math.min(maxX,d.baseOffsetX+dx));
     state.offsetY=Math.max(minY,Math.min(maxY,d.baseOffsetY+dy));
@@ -757,7 +796,7 @@
     }
     await Promise.all([worker(),worker()]);
   }
-  window.VegasFifthLayer={open,close,refresh:()=>loadData(true),prewarm:()=>startBackgroundPrewarm(),getState:()=>({symbol:state.symbol,contractSymbol:state.contractSymbol,productType:REALITY_STOCKS.has(state.symbol)?'SPOT':'USDT-FUTURES',granularity:'4H',websocket:!!(state.ws&&state.ws.readyState===WebSocket.OPEN),visible:!overlay.hidden,candles:state.candles.length,prewarmed:PREWARM_CACHE.size,cacheStorage:'IndexedDB',historyTarget:EMA_WARMUP_BARS,cacheBars:MAX_CANDLE_BARS})};
+  window.VegasFifthLayer={open,close,refresh:()=>loadData(true),prewarm:()=>startBackgroundPrewarm(),getState:()=>({symbol:state.symbol,contractSymbol:state.contractSymbol,productType:REALITY_STOCKS.has(state.symbol)?'SPOT':'USDT-FUTURES',granularity:'4H',websocket:!!(state.ws&&state.ws.readyState===WebSocket.OPEN),visible:!overlay.hidden,candles:state.candles.length,historyLoading:state.historyLoading,historyExhausted:state.historyExhausted,prewarmed:PREWARM_CACHE.size,cacheStorage:'IndexedDB',historyTarget:EMA_WARMUP_BARS,cacheBars:MAX_CANDLE_BARS})};
   window.__VEGAS_FIFTH_LAYER_READY__=true;
 
   console.info('[Vegas Fifth Layer] initialized');
