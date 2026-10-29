@@ -1,4 +1,4 @@
-/* 第四层：数据流（单组）。流光线起点动态绑定第三层小卡片，终点同步第二层发光球投影点。 */
+/* 第四层：每张正式信号卡片独立连接发光球的数据流。 */
 (function () {
   'use strict';
   if (window.__VEGAS_DATA_STREAM_LAYER_READY__) return;
@@ -6,6 +6,8 @@
   const $ = id => document.getElementById(id);
   const R = Math.random, PI = Math.PI;
   const P = [], F = [];
+  let formalCards = Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]'));
+  const cardStarts = [];
   const SYMBOL_HUES = new Map(Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-symbol]')).map((card, index) => [String(card.dataset.symbol || '').toUpperCase(), (190 + index * 137.508) % 360]));
   let canvas, ctx, width = 1, height = 1, dpr = 1;
   let rotA = 0, lastT = 0, frameId = 0, resizeObserver = null;
@@ -15,7 +17,8 @@
   const layer = document.createElement('div');
   layer.id = 'vegas-data-stream-layer';
   layer.setAttribute('aria-hidden', 'true');
-  layer.style.cssText = 'position:absolute;inset:0;z-index:2.5;pointer-events:none;overflow:hidden;background:transparent;';
+  /* 同级 z-index=2，依靠 DOM 顺序叠在第三层卡片上；第二层最新事件 z-index=3，仍位于数据流上方。 */
+  layer.style.cssText = 'position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden;background:transparent;';
   if (getComputedStyle(app).position === 'static') app.style.position = 'relative';
   canvas = document.createElement('canvas');
   canvas.id = 'vegas-data-stream-canvas';
@@ -90,31 +93,36 @@
     };
   }
 
+  function refreshFormalCards() {
+    formalCards = Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]'));
+  }
+
   function getFormalSignalCardStarts() {
-    /* 每张正式信号卡片只在第三层滚动容器的可视区域内发出独立数据流组。 */
-    const cards = Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]'));
+    /* 每张正式信号卡片各自发出独立数据流组；复用缓存列表和起点数组。 */
+    cardStarts.length = 0;
     const appRect = app.getBoundingClientRect();
     const scroller = $('mc-left');
     const view = scroller ? scroller.getBoundingClientRect() : appRect;
     const clipTop = Math.max(view.top, appRect.top, 0);
     const clipBottom = Math.min(view.bottom, appRect.bottom, window.innerHeight);
     if (clipBottom <= clipTop) return [];
-    return cards.map(card => {
+    for (const card of formalCards) {
       const r = card.getBoundingClientRect();
       const visibleTop = Math.max(r.top, clipTop);
       const visibleBottom = Math.min(r.bottom, clipBottom);
       const visibleWidth = Math.max(0, Math.min(r.right, view.right, appRect.right) - Math.max(r.left, view.left, appRect.left));
       const visibleHeight = Math.max(0, visibleBottom - visibleTop);
       const visibleRatio = Math.min(1, visibleHeight / Math.max(1, r.height)) * Math.min(1, visibleWidth / Math.max(1, r.width));
-      if (visibleRatio <= 0 || visibleWidth <= 0) return null;
-      return {
+      if (visibleRatio <= 0 || visibleWidth <= 0) continue;
+      cardStarts.push({
         card,
         symbol: String(card.dataset.symbol || '').toUpperCase(),
         x: Math.min(r.right, view.right, appRect.right, window.innerWidth) - appRect.left,
         y: (visibleTop + visibleBottom) * .5 - appRect.top,
         visibleRatio
-      };
-    }).filter(Boolean);
+      });
+    }
+    return cardStarts;
   }
 
   /* 仅增强卡片发射端：不改变任何流线起点、球体终点或连接关系。 */
@@ -181,7 +189,12 @@
 
   /* 每个可见卡片组分配唯一色相；黄金角间隔让相邻组颜色尽量易于区分。 */
   function getGroupColor(symbol) {
-    const hue = SYMBOL_HUES.get(symbol) ?? 190;
+    let hue = SYMBOL_HUES.get(symbol);
+    if (hue == null) {
+      /* 新增/延迟出现的品种只分配一次颜色，后续滚动或信号变化不会改色。 */
+      hue = (190 + SYMBOL_HUES.size * 137.508) % 360;
+      SYMBOL_HUES.set(symbol, hue);
+    }
     return 'hsl(' + hue.toFixed(2) + ',100%,68%)';
   }
 
@@ -193,6 +206,15 @@
     const projection = getOrbPoints(t);
     const pr = projection.points;
     const starts = getFormalSignalCardStarts();
+    /* 每帧只计算一次 36 个球体投影端点，供所有独立卡片组复用。 */
+    for (let i = 0; i < F.length; i++) {
+      const f = F[i], q = pr[f.t];
+      f.valid = !!q;
+      if (!q) continue;
+      f.fa = q[3] == null ? 1 : q[3];
+      f.qx = projection.ox + q[0] * projection.sx;
+      f.qy = projection.oy + q[1] * projection.sy;
+    }
     if (!starts.length) {
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over';
@@ -205,12 +227,8 @@
       /* 同一组只连接当前卡片；每组独立配色，当前可见组之间不重复。 */
       const groupColor = getGroupColor(start.symbol);
       F.forEach(f => {
-        const q = pr[f.t];
-        if (!q) return;
-        const fa = q[3] == null ? 1 : q[3];
-        if (fa < .05) return;
-        const qx = projection.ox + q[0] * projection.sx;
-        const qy = projection.oy + q[1] * projection.sy;
+        if (!f.valid || f.fa < .05) return;
+        const fa = f.fa, qx = f.qx, qy = f.qy;
         const c1x = start.x + (qx - start.x) * .42;
         const c1y = start.y;
         ctx.strokeStyle = groupColor;
@@ -265,6 +283,13 @@
     if (document.hidden) stop();
     else start();
   });
+  if (window.MutationObserver) {
+    const cardLayer = $('market-cards-layer');
+    if (cardLayer) {
+      const signalObserver = new MutationObserver(refreshFormalCards);
+      signalObserver.observe(cardLayer, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-formal-signal'] });
+    }
+  }
   window.__VEGAS_DATA_STREAM_LAYER_READY__ = true;
   window.VegasDataStreamLayer = {
     resize,
@@ -275,7 +300,7 @@
       connectedToOrb: !!(window.VegasOrbProjectedPoints && window.VegasOrbProjectedPoints.length),
       connectedToSmallCards: !!$('mc-left'),
       streamCount: F.length,
-      anchorMode: 'one-stream-group-to-one-formal-signal-card',
+      anchorMode: 'one-independent-stream-group-per-formal-signal-card',
       activeSignalSymbols: getFormalSignalCardStarts().map(card => card.symbol),
       visibleFormalSignalCardCount: getFormalSignalCardStarts().length,
       formalSignalCardCount: document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]').length,
