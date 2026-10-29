@@ -199,8 +199,14 @@
     $(panel,'.vfk-title').textContent=activeSymbol+' · 4H';
     setStatus('正在加载历史行情…');ctx.clearRect(0,0,canvas.width,canvas.height);
     const requestedSymbol=activeSymbol;
+    // 同步读取本地快速缓存，立即绘制；网络更新在后台进行。
+    try{state=logic.getInstantHistory?.(requestedSymbol)||null;}catch(_){state=null;}
+    if(state){draw();setStatus('');}
     try{
-      state=await logic.loadHistory(requestedSymbol,{isReality:isReality(requestedSymbol),fast:true});
+      const fastState=await logic.loadHistory(requestedSymbol,{isReality:isReality(requestedSymbol),fast:true});
+      if(state&&state.candles?.length)fastState.candles=logic.mergeCandles(fastState.candles,state.candles).slice(-logic.constants.maxCandles);
+      state=fastState;
+      state.series=logic.buildEmaSeries(state.candles);
       if(activeSymbol!==requestedSymbol||!panel.classList.contains('vfk-open'))return;
       draw();
       setStatus('');
