@@ -2,7 +2,7 @@
 
 var R=Math.random,PI=Math.PI,cv=document.getElementById("orb-core-canvas"),x=cv.getContext("2d"),W,H,i;
 var resizeFrame=0,lastPixelW=0,lastPixelH=0,lastDpr=0;
-function rs(){var d=Math.max(1,window.devicePixelRatio||1),r=cv.getBoundingClientRect(),nw=Math.max(1,r.width),nh=Math.max(1,r.height),pw=Math.round(nw*d),ph=Math.round(nh*d);W=nw;H=nh;if(pw!==lastPixelW||ph!==lastPixelH||d!==lastDpr){lastPixelW=pw;lastPixelH=ph;lastDpr=d;if(cv.width!==pw)cv.width=pw;if(cv.height!==ph)cv.height=ph;x.setTransform(d,0,0,d,0,0)}}
+function rs(){var d=Math.min(1.5,Math.max(1,window.devicePixelRatio||1)),r=cv.getBoundingClientRect(),nw=Math.max(1,r.width),nh=Math.max(1,r.height),pw=Math.round(nw*d),ph=Math.round(nh*d);W=nw;H=nh;if(pw!==lastPixelW||ph!==lastPixelH||d!==lastDpr){lastPixelW=pw;lastPixelH=ph;lastDpr=d;if(cv.width!==pw)cv.width=pw;if(cv.height!==ph)cv.height=ph;x.setTransform(d,0,0,d,0,0)}}
 function scheduleResize(){if(resizeFrame)return;resizeFrame=requestAnimationFrame(function(){resizeFrame=0;rs()})}
 rs();window.addEventListener("resize",scheduleResize,{passive:true});if(window.ResizeObserver)new ResizeObserver(scheduleResize).observe(cv.parentElement);
 var V={spd:.13,zm:.83,ln:2.5,ps:1.6,fl:3};
@@ -22,8 +22,9 @@ cv.addEventListener("pointerdown",function(e){dn=true;lx=e.clientX;ly=e.clientY;
 window.addEventListener("pointerup",function(){dn=false});
 cv.addEventListener("pointermove",function(e){if(!dn)return;rot+=(e.clientX-lx)*.008;pitB=Math.max(-1.2,Math.min(1.2,pitB+(e.clientY-ly)*.006));lx=e.clientX;ly=e.clientY});
 var projectedPoints=Array.from({length:N},function(){return[0,0,0,0,0]});
-var last=0,orbFrame=0;
-function frame(ms){var t=ms/1000,dt=Math.max(0,Math.min(.05,t-last));last=t;if(!dn)rot+=dt*V.spd;
+var last=0,lastDrawMs=0,orbFrame=0;
+var FRAME_INTERVAL=1000/30;
+function frame(ms){if(ms-lastDrawMs<FRAME_INTERVAL){orbFrame=requestAnimationFrame(frame);return}lastDrawMs=ms;var t=ms/1000,dt=Math.max(0,Math.min(.05,t-last));last=t;if(!dn)rot+=dt*V.spd;
 var cx=W*.66,cy=H*.5,roomX=Math.min(cx-8,W-cx-8),roomY=Math.max(1,H*.46),Rr=Math.max(1,Math.min(roomX,roomY)*V.zm),pit=pitB+.1*Math.sin(t*.17),cp=Math.cos(pit),spp=Math.sin(pit);
 x.clearRect(0,0,W,H);
 var pr=projectedPoints;
@@ -46,5 +47,5 @@ orbFrame=requestAnimationFrame(frame)}
 orbFrame=requestAnimationFrame(frame);
 document.addEventListener("visibilitychange",function(){
 if(document.hidden){if(orbFrame){cancelAnimationFrame(orbFrame);orbFrame=0}}
-else if(!orbFrame){last=0;orbFrame=requestAnimationFrame(frame)}
+else if(!orbFrame){last=0;lastDrawMs=0;orbFrame=requestAnimationFrame(frame)}
 });
