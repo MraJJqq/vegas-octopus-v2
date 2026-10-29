@@ -39,7 +39,7 @@ const chart=LWC.createChart(chartHost,{
  crosshair:{vertLine:{visible:false},horzLine:{visible:false}},
  handleScroll:{mouseWheel:false,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
  handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:false,axisDoubleClickReset:false},
- kineticScroll:{touch:true,mouse:false}
+ kineticScroll:{touch:true,mouse:true}
 });
 const candleSeries=chart.addSeries(LWC.CandlestickSeries,{upColor:'#2ee6a6',downColor:'#ff5c7c',borderVisible:false,wickUpColor:'#2ee6a6',wickDownColor:'#ff5c7c',lastValueVisible:false,priceLineVisible:false});
 const emaSeries=EMA_LINES.map(line=>chart.addSeries(LWC.LineSeries,{color:line.color,lineWidth:Math.max(1,Math.min(4,Math.round(line.width))),lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false}));
@@ -53,8 +53,29 @@ function symbolFor(symbol){return symbol+'USDT'}
 function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({perSymbol:state.saved}))}catch{}}
 async function getJson(path){
  const c=new AbortController(),t=setTimeout(()=>c.abort(),10000);state.requestController=c;
- try{const r=await fetch(API+path,{cache:'no-store',signal:c.signal});if(!r.ok)throw Error('HTTP '+r.status);const j=await r.json();if(j.code!=='00000'||!Array.isArray(j.data))throw Error(j.msg||'行情响应无效');return j.data}
- finally{clearTimeout(t);if(state.requestController===c)state.requestController=null}
+ try{
+  let lastError;
+  for(let attempt=0;attempt<3;attempt++){
+   try{
+    const r=await fetch(API+path,{cache:'no-store',signal:c.signal});
+    if(!r.ok){const error=Error('HTTP '+r.status);error.retryable=r.status===429||r.status>=500;if(!error.retryable||attempt===2)throw error;lastError=error}
+    else{
+     const j=await r.json();
+     if(j.code!=='00000'||!Array.isArray(j.data))throw Error(j.msg||'行情响应无效');
+     return j.data;
+    }
+   }catch(error){
+    if(c.signal.aborted||error.name==='AbortError')throw error;
+    if(!error.retryable&&!(error instanceof TypeError))throw error;
+    lastError=error;if(attempt===2)throw error;
+   }
+   await new Promise((resolve,reject)=>{
+    const delay=setTimeout(resolve,350*(attempt+1));
+    c.signal.addEventListener('abort',()=>{clearTimeout(delay);reject(new DOMException('Aborted','AbortError'))},{once:true});
+   });
+  }
+  throw lastError||Error('行情请求失败');
+ }finally{clearTimeout(t);if(state.requestController===c)state.requestController=null}
 }
 let stockDirectory=null,stockDirectoryAt=0;
 async function getStockSymbol(symbol){
@@ -128,7 +149,7 @@ function draw(view={}){
  const ts=chart.timeScale();
  if(view.range){try{ts.setVisibleRange(view.range)}catch{ts.setVisibleLogicalRange({from:Math.max(0,candles.length-120),to:candles.length})}}
  else if(view.follow)ts.scrollToRealTime();
- else if(view.initial)ts.setVisibleLogicalRange({from:Math.max(0,candles.length-120),to:candles.length});
+ else if(view.initial)ts.setVisibleLogicalRange({from:Math.max(0,prepared.chartCandles.length-120),to:prepared.chartCandles.length});
  const last=state.candles[state.candles.length-1];
  title.textContent=state.symbol+' · '+state.period+' · VEGAS';
  status.textContent=last.close.toLocaleString('en-US',{maximumFractionDigits:6})+'  '+new Date(last.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
