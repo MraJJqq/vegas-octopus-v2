@@ -287,7 +287,7 @@
     const cardLayer = $('market-cards-layer');
     if (cardLayer) {
       const signalObserver = new MutationObserver(refreshFormalCards);
-      signalObserver.observe(cardLayer, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-formal-signal'] });
+      signalObserver.observe(cardLayer, { subtree: true, attributes: true, attributeFilter: ['data-formal-signal'] });
     }
   }
   window.__VEGAS_DATA_STREAM_LAYER_READY__ = true;
