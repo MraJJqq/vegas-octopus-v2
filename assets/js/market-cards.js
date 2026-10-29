@@ -95,24 +95,35 @@ function normalizeLoopPosition(){
  lastObservedScrollTop=left.scrollTop;
 }
 function smoothWheelStep(now){
- if(!wheelLastTime)wheelLastTime=now;
- const dt=Math.min(32,Math.max(1,now-wheelLastTime));
- wheelLastTime=now;
- const current=left.scrollTop,diff=wheelTarget-current;
- /* 较短的追随时间常数让滚轮更跟手，同时保留连续缓动，避免目标位置拖在鼠标后面。 */
- const ease=1-Math.exp(-dt/72);
- left.scrollTop=current+diff*ease;
- normalizeLoopPosition();
- wheelVelocity*=Math.exp(-dt/180);
- if(Math.abs(wheelVelocity)>.008)wheelTarget+=wheelVelocity*dt;
- else wheelVelocity=0;
- queueFocusScale();
- if(Math.abs(wheelVelocity)<.025){
-  wheelTarget=left.scrollTop;wheelVelocity=0;wheelFrame=0;wheelLastTime=0;
-  autoResumeAt=Math.min(autoResumeAt,now+80);
-  return;
+ try{
+  if(!wheelLastTime)wheelLastTime=now;
+  const dt=Math.min(32,Math.max(1,now-wheelLastTime));
+  wheelLastTime=now;
+  const current=left.scrollTop,diff=wheelTarget-current;
+  /* 较短的追随时间常数让滚轮更跟手，同时保留连续缓动，避免目标位置拖在鼠标后面。 */
+  const ease=1-Math.exp(-dt/72);
+  left.scrollTop=current+diff*ease;
+  normalizeLoopPosition();
+  wheelVelocity*=Math.exp(-dt/180);
+  if(Math.abs(wheelVelocity)>.008)wheelTarget+=wheelVelocity*dt;
+  else wheelVelocity=0;
+  queueFocusScale();
+  if(Math.abs(wheelVelocity)<.025){
+   wheelTarget=left.scrollTop;wheelVelocity=0;wheelFrame=0;wheelLastTime=0;
+   autoResumeAt=Math.min(autoResumeAt,now+80);
+   return;
+  }
+  wheelFrame=requestAnimationFrame(smoothWheelStep);
+ }catch(error){
+  /* 任何单帧异常都必须释放 wheelFrame，否则自动滚动会被误判为仍在手动滚动。 */
+  wheelTarget=left.scrollTop;
+  wheelVelocity=0;
+  wheelFrame=0;
+  wheelLastTime=0;
+  autoResumeAt=performance.now()+120;
+  console.warn('[Vegas Octopus] wheel-scroll frame recovered:',error);
+  queueFocusScale();
  }
- wheelFrame=requestAnimationFrame(smoothWheelStep);
 }
 left.addEventListener('wheel',e=>{
  const wheelNow=performance.now();
@@ -223,7 +234,6 @@ document.addEventListener('visibilitychange',()=>{
   autoResumeAt=performance.now()+250;
  }
 },{passive:true});
-autoWaveScroll.speed=Math.max(.1,cardStep()*focusSlots.length/120);
 requestAnimationFrame(autoWaveScroll);
 
 /* 自动滚动看门狗：若动画帧运行但滚动位置连续停滞，使用独立定时器恢复位移。 */
@@ -257,7 +267,20 @@ left.style.scrollBehavior='auto';
 queueFocusScale();
 const API='https://api.bitget.com';
 const CANDLE_REFRESH_MS=5*60*1000;
-async function bitgetJson(path){const r=await fetch(API+path,{cache:'no-store'});if(!r.ok)throw new Error('Bitget HTTP '+r.status);const p=await r.json();if(p.code!=='00000'||!Array.isArray(p.data))throw new Error(p.msg||'Bitget response invalid');return p.data}
+async function bitgetJson(path){
+ const controller=new AbortController();
+ const timeoutId=window.setTimeout(()=>controller.abort(),12000);
+ try{
+  const r=await fetch(API+path,{cache:'no-store',signal:controller.signal});
+  if(!r.ok)throw new Error('Bitget HTTP '+r.status);
+  const p=await r.json();
+  if(p.code!=='00000'||!Array.isArray(p.data))throw new Error(p.msg||'Bitget response invalid');
+  return p.data;
+ }catch(error){
+  if(error&&error.name==='AbortError')throw new Error('Bitget request timeout (12s): '+path);
+  throw error;
+ }finally{window.clearTimeout(timeoutId)}
+}
 async function loadSparkline(d,symbol,isStock){
  if(d.candleLoading||document.hidden)return;
  d.candleLoading=true;
