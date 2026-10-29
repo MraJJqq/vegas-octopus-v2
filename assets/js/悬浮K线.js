@@ -181,8 +181,9 @@
     }
     let combined=mergeCandles(stored||[],latest),pages=0,cursor=combined.length?combined[0].t-1:Date.now();
     const target=MAX_CANDLE_BARS,maxPages=Math.ceil(target/100)+2;
+    let historyLoadWarning=null;
     while(!options.fast&&combined.length<target&&pages<maxPages&&cursor>0){
-      let raw;try{raw=await getJson(historyCandlePath(apiSymbol,cursor,isReality));}catch(_){break;}
+      let raw;try{raw=await getJson(historyCandlePath(apiSymbol,cursor,isReality));}catch(error){historyLoadWarning='历史分页请求失败：'+String(error&&error.message||error);break;}
       pages++;const page=normalize(raw);if(!page.length)break;
       const old=combined.length?combined[0].t:Infinity;
       // 历史分页只接纳当前最早K线之前的数据，过滤边界重复或接口意外返回的较新K线。
@@ -193,8 +194,12 @@
       combined=next;cursor=combined[0].t-1;if(olderPage.length<100)break;await delay(120);
     }
     if(combined.length<2)throw new Error('Bitget 未返回足够的有效 4H K 线：'+name);
-    combined=combined.slice(-MAX_CANDLE_BARS);writeFastCache(name,apiSymbol,isReality,combined);await writePersistentCandles(apiSymbol,isReality,combined);
-    return {symbol:name,apiSymbol,isReality,candles:combined,series:buildEmaSeries(combined),source:'bitget',pagesLoaded:pages};
+    combined=combined.slice(-MAX_CANDLE_BARS);
+    const emaWarmupSatisfied=combined.length>=EMA_WARMUP_BARS;
+    if(!emaWarmupSatisfied&&!historyLoadWarning)historyLoadWarning='历史K线共 '+combined.length+' 根，少于 EMA 长周期预热建议值 '+EMA_WARMUP_BARS+' 根；长周期 EMA 初始化误差可能较大。';
+    if(historyLoadWarning)console.warn('[悬浮K线] '+name+'：'+historyLoadWarning);
+    writeFastCache(name,apiSymbol,isReality,combined);await writePersistentCandles(apiSymbol,isReality,combined);
+    return {symbol:name,apiSymbol,isReality,candles:combined,series:buildEmaSeries(combined),source:'bitget',pagesLoaded:pages,historyBars:combined.length,emaWarmupSatisfied,historyLoadWarning};
   }
   function subscribeLive(apiSymbol,options={}){
     const isReality=!!options.isReality,onCandle=typeof options.onCandle==='function'?options.onCandle:()=>{};
