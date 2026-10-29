@@ -16,12 +16,10 @@ const EMA_LINES=[
  {n:576,color:'#ff4e5e',width:1.8},
  {n:676,color:'#ff4e5e',width:1.8}
 ];
-const state={open:false,symbol:'',period:'2H',candles:[],loading:false,frame:0,raf:0,fetchAt:0,rotateTimer:0,view:{count:120,end:0},saved:{}};
+const state={open:false,symbol:'',period:'2H',candles:[],loading:false,fetchAt:0,rotateTimer:0,view:{count:120},saved:{}};
 const readSaved=()=>{try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}catch{return {}}};
 state.saved=readSaved();
-function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({geometry:state.geometry||savedGeometry||null,perSymbol:state.saved}))}catch{}}
-const oldSave=state.saved;state.saved=oldSave.perSymbol||oldSave;
-const savedGeometry=oldSave.geometry||null;
+const storedState=state.saved;state.saved=storedState.perSymbol||storedState;
 const root=document.createElement('div');root.id='vegas-layer5-root';
 root.innerHTML=`<section id="vegas-layer5-window" aria-label="Vegas 全屏 K线图">
 <header id="vegas-layer5-head"><span id="vegas-layer5-title">VEGAS · KLINE</span><button id="vegas-layer5-prev" class="vegas-l5-nav" type="button" aria-label="上一个正式信号">‹</button><button id="vegas-layer5-next" class="vegas-l5-nav" type="button" aria-label="下一个正式信号">›</button><span id="vegas-layer5-status" aria-live="polite"></span><select id="vegas-layer5-period" aria-label="K线周期"></select></header>
@@ -46,8 +44,6 @@ const chart=LWC.createChart(chartHost,{
 const candleSeries=chart.addSeries(LWC.CandlestickSeries,{upColor:'#2ee6a6',downColor:'#ff5c7c',borderVisible:false,wickUpColor:'#2ee6a6',wickDownColor:'#ff5c7c',lastValueVisible:false,priceLineVisible:false});
 const emaSeries=EMA_LINES.map(line=>chart.addSeries(LWC.LineSeries,{color:line.color,lineWidth:Math.max(1,Math.min(4,Math.round(line.width))),lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false}));
 let suppressRangeSaveUntil=0;
-periodSelect.innerHTML=PERIODS.map(p=>`<option value="${p}">${p}</option>`).join('');
-function key(symbol){return symbol+'|'+(state.saved[symbol]?.period|| (STOCKS.has(symbol)?'1H':'2H'))}
 function currentSaved(){if(!state.saved[state.symbol])state.saved[state.symbol]={};return state.saved[state.symbol]}
 chart.timeScale().subscribeVisibleTimeRangeChange(range=>{
  if(!range||!state.open||!state.candles.length||Date.now()<suppressRangeSaveUntil)return;
@@ -55,6 +51,7 @@ chart.timeScale().subscribeVisibleTimeRangeChange(range=>{
 });
 function currentPeriod(){return state.period}
 function symbolFor(symbol){return symbol+'USDT'}
+function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({perSymbol:state.saved}))}catch{}}
 async function getJson(path){
  const c=new AbortController(),t=setTimeout(()=>c.abort(),10000);
  try{const r=await fetch(API+path,{cache:'no-store',signal:c.signal});if(!r.ok)throw Error('HTTP '+r.status);const j=await r.json();if(j.code!=='00000'||!Array.isArray(j.data))throw Error(j.msg||'行情响应无效');return j.data}
@@ -73,16 +70,13 @@ async function getStockSymbol(symbol){
  if(!s)throw Error('交易所未提供该品种的现货映射');
  return s;
 }
-function intervalFor(symbol,period){
- return period;
-}
 async function loadCandles(force=false){
  if(!state.open||!state.symbol)return;
  if(state.loading){if(!force)return;requestVersion++}
  if(!force&&Date.now()-state.fetchAt<25000)return;
  state.loading=true;const requestId=++requestVersion;const symbolAtRequest=state.symbol;message.hidden=false;message.textContent=state.candles.length?'更新行情…':'读取历史行情…';
  try{
-  const stock=STOCKS.has(symbolAtRequest),period=currentPeriod(),interval=intervalFor(symbolAtRequest,period);
+  const stock=STOCKS.has(symbolAtRequest),period=currentPeriod(),interval=period;
   let rows;
   if(stock){
    const sym=await getStockSymbol(symbolAtRequest);
@@ -92,7 +86,7 @@ async function loadCandles(force=false){
   }
   if(requestId!==requestVersion||symbolAtRequest!==state.symbol)return;
   const data=rows.filter(r=>Array.isArray(r)&&Number(r[0])>0&&Number(r[1])>0&&Number(r[2])>0&&Number(r[3])>0&&Number(r[4])>0)
-   .map(r=>({time:Number(r[0]),open:Number(r[1]),high:Number(r[2]),low:Number(r[3]),close:Number(r[4]),volume:Number(r[5]||0)}))
+   .map(r=>({time:Number(r[0]),open:Number(r[1]),high:Number(r[2]),low:Number(r[3]),close:Number(r[4]),}))
    .sort((a,b)=>a.time-b.time);
   const unique=[];for(const c of data){if(unique.length&&unique[unique.length-1].time===c.time)unique[unique.length-1]=c;else unique.push(c)}
   if(!unique.length)throw Error('交易所未返回有效K线');
@@ -100,7 +94,7 @@ async function loadCandles(force=false){
   const previousRange=sameView?chart.timeScale().getVisibleRange():null;
   const wasFollowing=sameView&&chart.timeScale().scrollPosition()<=1.5;
   state.candles=unique;state.fetchAt=Date.now();message.hidden=true;
-  const saved=currentSaved();if(saved.count)state.view.count=saved.count;if(saved.end)state.view.end=saved.end;
+  const saved=currentSaved();if(saved.count)state.view.count=saved.count;
   let range=previousRange,follow=wasFollowing,initial=false;
   if(!sameView){range=(saved.period===period&&saved.visibleRange)?saved.visibleRange:null;follow=false;initial=!range}
   draw({range,follow,initial});
@@ -133,10 +127,7 @@ function draw(view={}){
  title.textContent=state.symbol+' · '+currentPeriod()+' · VEGAS';
  status.textContent=last.close.toLocaleString('en-US',{maximumFractionDigits:6})+'  '+new Date(last.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
 }
-function saveView(){const s=currentSaved();s.period=state.period;s.count=state.view.count;s.end=state.view.end;const range=chart.timeScale().getVisibleRange();if(range)s.visibleRange=range;save()}
-function applyGeometry(){
- win.style.left='0px';win.style.top='0px';win.style.width='100vw';win.style.height='100dvh';
-}
+function saveView(){const s=currentSaved();s.period=state.period;s.count=state.view.count;const range=chart.timeScale().getVisibleRange();if(range)s.visibleRange=range;save()}
 function openSymbol(symbol){
  if(!symbol)return;
  if(state.rotateTimer)clearTimeout(state.rotateTimer);
@@ -144,11 +135,11 @@ function openSymbol(symbol){
  state.open=true;state.symbol=symbol;
  const saved=state.saved[symbol]||{};
  state.period=saved.period||(STOCKS.has(symbol)?'1H':'2H');
- state.view={count:saved.count||120,end:saved.end||0};
+ state.view={count:saved.count||120};
  state.candles=[];state.fetchAt=0;state.loading=false;state.loadedSymbol='';state.loadedPeriod='';candleSeries.setData([]);emaSeries.forEach(s=>s.setData([]));requestVersion++;
  if(STOCKS.has(symbol)&&!STOCK_PERIODS.includes(state.period))state.period='1H';
  periodSelect.replaceChildren(...(STOCKS.has(symbol)?STOCK_PERIODS:PERIODS).map(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;return o}));
- periodSelect.value=state.period;win.classList.add('is-open');applyGeometry();
+ periodSelect.value=state.period;win.classList.add('is-open');
  message.hidden=false;message.textContent='读取历史行情…';
  loadCandles(true);
  scheduleAutoRotate();
@@ -186,7 +177,7 @@ function stepFormalSymbol(direction){
 root.querySelector('#vegas-layer5-prev').addEventListener('click',()=>stepFormalSymbol(-1));
 root.querySelector('#vegas-layer5-next').addEventListener('click',()=>stepFormalSymbol(1));
 function close(){if(state.open&&state.candles.length)saveView();state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];if(state.rotateTimer)clearTimeout(state.rotateTimer);state.rotateTimer=0;win.classList.remove('is-open');}
-/* 触屏退出：顶部非控件区域双击；K线画布双指同步下滑。 */
+/* 触屏退出：顶部非控件区域双击；图表缩放和平移交由 Lightweight Charts 处理。 */
 let lastHeadTap=0;
 function isHeadControl(target){return !!(target&&target.closest&&target.closest('button,select,input,textarea,a'))}
 head.addEventListener('touchend',e=>{
@@ -199,7 +190,7 @@ head.addEventListener('dblclick',e=>{
  if(state.open&&!isHeadControl(e.target)){e.preventDefault();close()}
 });
 
-periodSelect.addEventListener('change',()=>{if(!state.symbol)return;state.period=periodSelect.value;state.view.end=0;state.fetchAt=0;state.candles=[];const saved=currentSaved();saved.period=state.period;delete saved.visibleRange;state.loadedSymbol='';state.loadedPeriod='';save();loadCandles(true)});
+periodSelect.addEventListener('change',()=>{if(!state.symbol)return;state.period=periodSelect.value;state.fetchAt=0;state.candles=[];const saved=currentSaved();saved.period=state.period;delete saved.visibleRange;state.loadedSymbol='';state.loadedPeriod='';save();loadCandles(true)});
 document.addEventListener('click',e=>{
  const card=e.target.closest&&e.target.closest('#market-cards-layer .mc-card[data-symbol]');
  if(card){
@@ -212,7 +203,6 @@ document.addEventListener('click',e=>{
 },true);
 /* Chart pan, pinch zoom and touch kinetic scrolling are owned by TradingView Lightweight Charts.
    Full-screen exit remains available via header double-tap and Escape to avoid gesture conflicts. */
-window.addEventListener('resize',()=>{if(state.open)applyGeometry()},{passive:true});
 document.addEventListener('keydown',e=>{if(state.open&&e.key==='Escape')close()});
 setInterval(()=>{if(state.open&&!document.hidden)loadCandles(false)},30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.open)loadCandles(true)});
