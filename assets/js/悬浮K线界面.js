@@ -15,7 +15,7 @@
     if(panel)return;
     const style=document.createElement('style');
     style.textContent=`
-      #vegas-floating-kline{position:fixed;z-index:2147483000;left:50%;top:50%;transform:translate(-50%,-50%);width:min(900px,calc(100vw - 16px));height:min(620px,calc(100dvh - 16px));display:none;flex-direction:column;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;color:#e8f5ff;overflow:visible;touch-action:none}
+      #vegas-floating-kline{position:fixed;z-index:2147483647;left:50%;top:50%;transform:translate(-50%,-50%);width:min(900px,calc(100vw - 16px));height:min(620px,calc(100dvh - 16px));max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);display:none;flex-direction:column;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;color:#e8f5ff;overflow:visible;touch-action:none}
       #vegas-floating-kline.vfk-open{display:flex}
       #vegas-floating-kline .vfk-head{position:absolute;z-index:2;left:0;right:0;top:0;height:22px;min-height:22px;display:flex;align-items:center;gap:12px;padding:0;border:0;background:transparent;cursor:move;touch-action:none;user-select:none}
       #vegas-floating-kline .vfk-title,#vegas-floating-kline .vfk-hint,#vegas-floating-kline button,#vegas-floating-kline .vfk-status{display:none!important}
@@ -54,10 +54,13 @@
   function setStatus(text){if(panel)$(panel,'.vfk-status').textContent=text;}
   function fitPanelToViewport(){
     if(!panel||!panel.classList.contains('vfk-open'))return;
-    if(panel.style.transform&&panel.style.transform!=='none')return;
+    const viewport=window.visualViewport;
+    const vw=Math.max(1,Math.floor(viewport?.width||document.documentElement.clientWidth||innerWidth));
+    const vh=Math.max(1,Math.floor(viewport?.height||document.documentElement.clientHeight||innerHeight));
+    panel.style.width=Math.min(900,Math.max(1,vw-16))+'px';
+    panel.style.height=Math.min(620,Math.max(1,vh-16))+'px';
     const r=panel.getBoundingClientRect();
-    const vw=Math.max(1,document.documentElement.clientWidth||innerWidth);
-    const vh=Math.max(1,document.documentElement.clientHeight||innerHeight);
+    if(panel.style.transform&&panel.style.transform!=='none')return;
     const left=clamp(r.left,0,Math.max(0,vw-r.width));
     const top=clamp(r.top,0,Math.max(0,vh-r.height));
     panel.style.left=left+'px';panel.style.top=top+'px';
