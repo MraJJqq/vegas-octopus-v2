@@ -113,7 +113,7 @@ function smoothWheelStep(now){
 left.addEventListener('wheel',e=>{
  const wheelNow=performance.now();
  autoResumeAt=wheelNow+180;
- autoEngage=0;
+ /* 保留自动滚动的当前介入比例；手动滚动结束后直接平滑交接，不再从 0 重新缓慢加速。 */
  if(Math.abs(e.deltaY)<.1)return;
  e.preventDefault();
  e.stopPropagation();
