@@ -5,6 +5,9 @@
   const STOCK_ORDER=["AAPL","MSFT","GOOGL","AMZN","NVDA","TSLA","META","INTC","QCOM","AMD","TSM","AVGO","ORCL","ARM","MU","ASML","SNDK","SKHYNIX","MRVL","GLW","HOOD","CBRS","SPCX"];
   const ALLOWED=new Set(CORE_ORDER.concat(STOCK_ORDER));
   const $=id=>document.getElementById(id);
+  let refreshInProgress=false;
+  let hasSuccessfulState=false;
+
   function symbolName(raw){
     let s=String(raw||"").trim().toUpperCase();
     if(s.endsWith("USDT"))s=s.slice(0,-4);
@@ -56,10 +59,13 @@
     }
   }
   async function refreshV9State(){
+    if(refreshInProgress)return;
+    refreshInProgress=true;
     try{
       const state=await fetchStateJson();
       const daily=state&&state.__daily_formal_signals__;
       if(!daily||!Array.isArray(daily.signals))throw new Error("状态格式无效");
+      hasSuccessfulState=true;
       if(daily.date!==todayBeijing()){
         window.VegasFormalSignalSymbols=[];
         if(typeof window.VegasApplyFormalSignals==="function")window.VegasApplyFormalSignals();
@@ -79,12 +85,11 @@
       renderSymbols("v9Stocks",STOCK_ORDER.filter(s=>seen.has(s)));
       renderSymbols("v9Core",CORE_ORDER.filter(s=>seen.has(s)));
     }catch(error){
-      window.VegasFormalSignalSymbols=[];
-      if(typeof window.VegasApplyFormalSignals==="function")window.VegasApplyFormalSignals();
-      syncDataStreamSignals([]);
       const detail=String(error&&error.message||error).slice(0,70);
-      renderMessage("读取失败："+detail);
-      console.warn("V9 latest-events state unavailable:",error);
+      if(!hasSuccessfulState)renderMessage("读取失败："+detail);
+      console.warn("V9 latest-events refresh failed; retaining last valid state:",error);
+    }finally{
+      refreshInProgress=false;
     }
   }
   refreshV9State();
