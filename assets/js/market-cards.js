@@ -297,8 +297,6 @@ if('IntersectionObserver' in window){
  },{root:left,threshold:0.01});
  focusSlots.forEach(slot=>cardMotionObserver.observe(slot));
 }
-/* 页面不可见时不保留滚动动画循环；回到前台后恢复。 */
-let autoWaveFrame=0;
 const API='https://api.bitget.com';
 const CANDLE_REFRESH_MS=5*60*1000;
 async function bitgetJson(path){
