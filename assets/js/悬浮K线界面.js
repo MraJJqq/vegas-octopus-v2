@@ -304,7 +304,7 @@ ctx.clearRect(0,0,canvas.width,canvas.height);
     try{
       const fastState=await logic.loadHistory(requestedSymbol,{isReality:isReality(requestedSymbol),fast:true});
       if(requestId!==openRequestId||activeSymbol!==requestedSymbol||!panel.classList.contains('vfk-open'))return;
-      if(state&&state.candles?.length){const prior=state.candles;fastState.candles=logic.mergeCandles(fastState.candles,prior).slice(-logic.constants.maxCandles);if(!savedView)preserveRightEdge(prior,fastState.candles);}
+      if(state&&state.candles?.length){const prior=state.candles;fastState.candles=logic.mergeCandles(prior,fastState.candles).slice(-logic.constants.maxCandles);if(!savedView)preserveRightEdge(prior,fastState.candles);}
       if(savedView)restoreSavedView(fastState.candles,savedView);
       state=fastState;
       state.series=logic.buildEmaSeries(state.candles);
