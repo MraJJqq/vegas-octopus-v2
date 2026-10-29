@@ -99,11 +99,20 @@
     return readFastCache(name,REALITY_STOCKS.has(name));
   }
   async function getJson(url){
-    const response=await fetch(API+url,{cache:'no-store'});
-    if(!response.ok)throw new Error('Bitget HTTP '+response.status+' · '+url);
-    const json=await response.json();
-    if(json.code!=='00000'||!Array.isArray(json.data))throw new Error((json.msg||'Bitget response invalid')+' · '+url);
-    return json.data;
+    const controller=typeof AbortController==='function'?new AbortController():null;
+    const timeout=controller?setTimeout(()=>controller.abort(),15000):0;
+    try{
+      const response=await fetch(API+url,{cache:'no-store',...(controller?{signal:controller.signal}:{})});
+      if(!response.ok)throw new Error('Bitget HTTP '+response.status+' · '+url);
+      const json=await response.json();
+      if(json.code!=='00000'||!Array.isArray(json.data))throw new Error((json.msg||'Bitget response invalid')+' · '+url);
+      return json.data;
+    }catch(error){
+      if(error&&error.name==='AbortError')throw new Error('Bitget 请求超时（15秒） · '+url);
+      throw error;
+    }finally{
+      if(timeout)clearTimeout(timeout);
+    }
   }
   // 同一交易对的最新K线请求共享进行中的 Promise，避免快速加载与完整加载重复打接口。
   function loadLatestCandles(symbol,isReality){
