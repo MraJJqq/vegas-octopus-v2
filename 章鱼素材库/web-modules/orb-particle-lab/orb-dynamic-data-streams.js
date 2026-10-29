@@ -6,6 +6,7 @@
   const $ = id => document.getElementById(id);
   const R = Math.random, PI = Math.PI;
   const P = [], F = [];
+  const SYMBOL_HUES = new Map(Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-symbol]')).map((card, index) => [String(card.dataset.symbol || '').toUpperCase(), (190 + index * 137.508) % 360]));
   let canvas, ctx, width = 1, height = 1, dpr = 1;
   let rotA = 0, lastT = 0, frameId = 0, resizeObserver = null;
 
@@ -180,9 +181,7 @@
 
   /* 每个可见卡片组分配唯一色相；黄金角间隔让相邻组颜色尽量易于区分。 */
   function getGroupColor(symbol) {
-    let hash = 0;
-    for (let i = 0; i < symbol.length; i++) hash = (hash * 31 + symbol.charCodeAt(i)) >>> 0;
-    const hue = (190 + (hash % 360)) % 360;
+    const hue = SYMBOL_HUES.get(symbol) ?? 190;
     return 'hsl(' + hue.toFixed(2) + ',100%,68%)';
   }
 
