@@ -174,9 +174,13 @@
     while(!options.fast&&combined.length<target&&pages<maxPages&&cursor>0){
       let raw;try{raw=await getJson(historyCandlePath(apiSymbol,cursor,isReality));}catch(_){break;}
       pages++;const page=normalize(raw);if(!page.length)break;
-      const old=combined.length?combined[0].t:Infinity,next=mergeCandles(page,combined);
-      if(next.length<=combined.length||(Number.isFinite(old)&&next[0].t>=old))break;
-      combined=next;cursor=combined[0].t-1;if(page.length<100)break;await delay(120);
+      const old=combined.length?combined[0].t:Infinity;
+      // 历史分页只接纳当前最早K线之前的数据，过滤边界重复或接口意外返回的较新K线。
+      const olderPage=page.filter(c=>c.t<old);
+      if(!olderPage.length)break;
+      const next=mergeCandles(olderPage,combined);
+      if(next.length<=combined.length||next[0].t>=old)break;
+      combined=next;cursor=combined[0].t-1;if(olderPage.length<100)break;await delay(120);
     }
     if(combined.length<2)throw new Error('Bitget 未返回足够的有效 4H K 线：'+name);
     combined=combined.slice(-MAX_CANDLE_BARS);writeFastCache(name,apiSymbol,isReality,combined);await writePersistentCandles(apiSymbol,isReality,combined);
