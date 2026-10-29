@@ -276,7 +276,7 @@ window.setInterval(()=>{
  }
 },250);
 
-window.addEventListener('resize',queueFocusScale,{passive:true});
+/* resize 主监听器已统一负责缓存失效、K线重绘与焦点缩放刷新。 */
 left.style.scrollBehavior='auto';
 /* 容器/卡片尺寸变化时使步长缓存失效，兼顾旋转屏幕和响应式布局。 */
 if('ResizeObserver' in window){
