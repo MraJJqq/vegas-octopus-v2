@@ -135,7 +135,9 @@ left.addEventListener('touchmove',e=>{
 },{passive:false});
 left.addEventListener('touchend',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;autoResumeAt=performance.now()+1400},{passive:true});
 left.addEventListener('touchcancel',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;autoResumeAt=performance.now()+1400},{passive:true});
+let autoScrollRemainder=0,autoFrameTicks=0,autoDeltaRequested=0;
 function autoWaveScroll(now){
+ autoFrameTicks++;
  if(!autoLastTime)autoLastTime=now;
  const dt=Math.min(40,Math.max(0,now-autoLastTime))/1000;
  autoLastTime=now;
@@ -148,11 +150,18 @@ function autoWaveScroll(now){
   const speed=autoWaveScroll.speed??Math.max(1,cardStep()*focusSlots.length/120);
   autoWaveScroll.speed=speed+(autoWaveScroll.targetSpeed-speed)*(1-Math.exp(-dt/2.2));
   if(focusSlots.length>1&&cardStep()>0){
-   left.scrollTop=left.scrollTop+autoWaveScroll.speed*dt;
-   loopDirection=1;
-   normalizeLoopPosition();
-   wheelTarget=left.scrollTop;
-   queueFocusScale();
+   /* 累积小数位移，再按整像素写入，避免低速时每帧小于 1px 被浏览器舍入后永远停在原位。 */
+   autoScrollRemainder+=autoWaveScroll.speed*dt;
+   const wholePixels=Math.floor(autoScrollRemainder);
+   if(wholePixels>0){
+    autoScrollRemainder-=wholePixels;
+    autoDeltaRequested=wholePixels;
+    left.scrollTop=left.scrollTop+wholePixels;
+    loopDirection=1;
+    normalizeLoopPosition();
+    wheelTarget=left.scrollTop;
+    queueFocusScale();
+   }
   }
  }
  autoFrame=requestAnimationFrame(autoWaveScroll);
@@ -191,6 +200,10 @@ if (new URLSearchParams(location.search).get('debugScroll') === '1') {
    overflowY: cs.overflowY,
    position: cs.position,
    autoFrame: autoFrame,
+   autoFrameTicks: autoFrameTicks,
+   autoDeltaRequested: autoDeltaRequested,
+   maxScrollTop: Math.max(0,left.scrollHeight-left.clientHeight),
+   autoScrollRemainder: Number(autoScrollRemainder.toFixed(3)),
    wheelFrame: wheelFrame,
    autoPaused: now < autoResumeAt,
    autoResumeInMs: Math.max(0, Math.round(autoResumeAt - now)),
