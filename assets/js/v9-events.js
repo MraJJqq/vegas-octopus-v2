@@ -50,6 +50,11 @@
     if(!response.ok)throw new Error("公开信号镜像 HTTP "+response.status);
     return await response.json();
   }
+  function syncDataStreamSignals(symbols){
+    if(window.VegasDataStreamLayer&&typeof window.VegasDataStreamLayer.setFormalSignals==="function"){
+      window.VegasDataStreamLayer.setFormalSignals(symbols);
+    }
+  }
   async function refreshV9State(){
     try{
       const state=await fetchStateJson();
@@ -58,6 +63,7 @@
       if(daily.date!==todayBeijing()){
         window.VegasFormalSignalSymbols=[];
         if(typeof window.VegasApplyFormalSignals==="function")window.VegasApplyFormalSignals();
+        syncDataStreamSignals([]);
         renderMessage("等待今日扫描");
         return;
       }
@@ -69,11 +75,13 @@
       }
       window.VegasFormalSignalSymbols=Array.from(seen);
       if(typeof window.VegasApplyFormalSignals==="function")window.VegasApplyFormalSignals();
+      syncDataStreamSignals(window.VegasFormalSignalSymbols);
       renderSymbols("v9Stocks",STOCK_ORDER.filter(s=>seen.has(s)));
       renderSymbols("v9Core",CORE_ORDER.filter(s=>seen.has(s)));
     }catch(error){
       window.VegasFormalSignalSymbols=[];
       if(typeof window.VegasApplyFormalSignals==="function")window.VegasApplyFormalSignals();
+      syncDataStreamSignals([]);
       const detail=String(error&&error.message||error).slice(0,70);
       renderMessage("读取失败："+detail);
       console.warn("V9 latest-events state unavailable:",error);
