@@ -183,3 +183,24 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
   .v9-group-title{font-size:clamp(9px,2.5vw,10px)}
   .v9-symbol,.v9-nochange{font-size:clamp(8px,2.3vw,10px)}
 }
+
+
+/* 最新事件最终定位：限定在右上角独立区域，不沿屏幕右侧铺开。 */
+.topbar{
+  position:absolute!important;
+  top:max(12px,env(safe-area-inset-top))!important;
+  right:max(12px,env(safe-area-inset-right))!important;
+  bottom:auto!important;
+  left:auto!important;
+  width:clamp(150px,18vw,240px)!important;
+  max-width:calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right))!important;
+  max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;
+}
+@media(max-width:700px){
+  .topbar{
+    top:max(10px,env(safe-area-inset-top))!important;
+    right:max(10px,env(safe-area-inset-right))!important;
+    width:clamp(128px,38vw,205px)!important;
+    max-width:calc(100vw - 20px - env(safe-area-inset-left) - env(safe-area-inset-right))!important;
+  }
+}
