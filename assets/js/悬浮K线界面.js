@@ -298,8 +298,9 @@
   }
   document.addEventListener('click',e=>{
     if(!panel||!panel.classList.contains('vfk-open'))return;
-    // 拖动/缩放结束后浏览器可能合成 click；只屏蔽图表上的这次合成点击。
-    if(e.target===canvas&&Date.now()<view.suppressChartClickUntil)return;
+    // 指针捕获可能使合成 click 的目标落在图表容器而非 canvas；
+    // 拖动/缩放结束后的短暂窗口内，屏蔽悬浮窗口内部的合成点击。
+    if(Date.now()<view.suppressChartClickUntil&&e.target.closest('#vegas-floating-kline'))return;
     if(clickedOnKline(e))return;
     closePanel();
   },true);
