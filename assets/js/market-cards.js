@@ -361,10 +361,13 @@ function pumpSparkJobs(){
  }
 }
 document.addEventListener('visibilitychange',()=>{
- if(!document.hidden)pumpSparkJobs();
+ if(!document.hidden){
+  pumpSparkJobs();
+  loadMarketData();
+ }
 },{passive:true});
 async function loadMarketData(){
- if(marketLoadInFlight)return;marketLoadInFlight=true;
+ if(document.hidden||marketLoadInFlight)return;marketLoadInFlight=true;
  try{
   const needRealityDirectory=!realitySymbolCache||Date.now()-realitySymbolCacheAt>5*60*1000;
   const requests=[bitgetJson('/api/v2/mix/market/tickers?productType=USDT-FUTURES'),bitgetJson('/api/v3/market/tickers?category=SPOT')];
