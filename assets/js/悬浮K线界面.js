@@ -323,14 +323,20 @@ ctx.clearRect(0,0,canvas.width,canvas.height);
         if(savedView)restoreSavedView(fullState.candles,savedView);else preserveRightEdge(prior,fullState.candles);
         fullState.series=logic.buildEmaSeries(fullState.candles);state=fullState;scheduleDraw();
       }).catch(err=>console.warn('[悬浮K线] 后台补齐历史失败，继续显示已有行情：',err));
-    }catch(err){console.error('[悬浮K线]',err);}
+    }catch(err){
+      // 已切换品种或关闭窗口的旧请求不再输出误导性错误。
+      if(requestId===openRequestId&&activeSymbol===requestedSymbol&&panel.classList.contains('vfk-open'))console.error('[悬浮K线]',err);
+    }
   }
   function closeLiveOnly(){if(stopLive){try{stopLive()}catch(_){}stopLive=null;}}
   function closePanel(){
+    // 先使所有未完成的历史请求与实时回调失效，再释放当前订阅和图表数据。
     saveCurrentView();openRequestId++;closeLiveOnly();
     view.pointers.clear();view.drag=null;view.chartPan=null;view.pinch=null;view.gestureMoved=false;
     if(panel)panel.classList.remove('vfk-open');
     if(drawFrame){cancelAnimationFrame(drawFrame);drawFrame=0;}
+    state=null;activeSymbol='';
+    if(ctx&&canvas){ctx.clearRect(0,0,canvas.width,canvas.height);}
   }
   document.addEventListener('click',e=>{
     const card=e.target.closest('#market-cards-layer .mc-card[data-symbol]');
