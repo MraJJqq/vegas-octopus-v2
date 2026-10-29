@@ -63,12 +63,12 @@
     return [cx + x1 * rr * f, cy + y2 * rr * f, z2];
   }
 
-  function getOrbPoints(t) {
+  function getOrbPoints(t, frameAppRect) {
     const orbCanvas = $('orb-core-canvas');
     const projected = window.VegasOrbProjectedPoints;
     if (orbCanvas && Array.isArray(projected) && projected.length) {
       const r = orbCanvas.getBoundingClientRect();
-      const appRect = app.getBoundingClientRect();
+      const appRect = frameAppRect || app.getBoundingClientRect();
       return {
         points: projected,
         sx: r.width / Math.max(1, orbCanvas.clientWidth),
@@ -122,10 +122,10 @@
     refreshFormalCards();
   }
 
-  function getFormalSignalCardStarts() {
+  function getFormalSignalCardStarts(frameAppRect) {
     /* 每张正式信号卡片各自发出独立数据流组；复用缓存列表和起点数组。 */
     cardStarts.length = 0;
-    const appRect = app.getBoundingClientRect();
+    const appRect = frameAppRect || app.getBoundingClientRect();
     const scroller = $('mc-left');
     const view = scroller ? scroller.getBoundingClientRect() : appRect;
     const clipTop = Math.max(view.top, appRect.top, 0);
@@ -237,9 +237,11 @@
     lastT = t;
     rotA += dt * .2;
     ctx.clearRect(0, 0, width, height);
-    const projection = getOrbPoints(t);
+    /* 同一动画帧共用 app 的几何快照，避免球体投影与卡片锚点重复读取。 */
+    const appRect = app.getBoundingClientRect();
+    const projection = getOrbPoints(t, appRect);
     const pr = projection.points;
-    const starts = getFormalSignalCardStarts();
+    const starts = getFormalSignalCardStarts(appRect);
     /* 每帧只计算一次 36 个球体投影端点，供所有独立卡片组复用。 */
     for (let i = 0; i < F.length; i++) {
       const f = F[i], q = pr[f.t];
