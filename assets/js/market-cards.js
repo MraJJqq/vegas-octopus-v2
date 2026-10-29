@@ -434,6 +434,19 @@ async function loadMarketData(){
   marketLoadInFlight=false;
  }
 }
+/* 禁止全页面双击触发浏览器放大；只拦截短时间内、相近位置的第二次触摸，不影响正常单击。 */
+let lastTapAt=0,lastTapX=0,lastTapY=0;
+document.addEventListener('touchend',event=>{
+ if(!event.changedTouches||event.changedTouches.length!==1)return;
+ const touch=event.changedTouches[0],now=performance.now();
+ const dx=touch.clientX-lastTapX,dy=touch.clientY-lastTapY;
+ if(now-lastTapAt>0&&now-lastTapAt<350&&dx*dx+dy*dy<625){
+  event.preventDefault();
+  lastTapAt=0;lastTapX=lastTapY=0;
+  return;
+ }
+ lastTapAt=now;lastTapX=touch.clientX;lastTapY=touch.clientY;
+},{passive:false});
 window.VegasApplyFormalSignals=function(){
  const formal=new Set(window.VegasFormalSignalSymbols||[]);
  document.querySelectorAll('#market-cards-layer .mc-card[data-symbol]').forEach(card=>{
