@@ -187,19 +187,49 @@
     const key=(isReality?'SPOT:':'USDT-FUTURES:')+apiSymbol;
     unsubscribeLive(key);
     let stopped=false,socket=null,reconnectTimer=0,heartbeat=0;
+    function scheduleReconnect(){
+      if(stopped||reconnectTimer)return;
+      reconnectTimer=setTimeout(()=>{reconnectTimer=0;connect();},3000);
+    }
+    const entry={stop:()=>{
+      stopped=true;
+      clearTimeout(reconnectTimer);reconnectTimer=0;
+      clearInterval(heartbeat);heartbeat=0;
+      const current=socket;socket=null;
+      if(current){current.onclose=null;current.onopen=null;current.onmessage=null;current.onerror=null;try{current.close();}catch(_){}}
+      if(sockets.get(key)===entry)sockets.delete(key);
+    }};
+    // 先登记订阅生命周期；即使 WebSocket 构造失败，也能通过 unsubscribe 清掉重连定时器。
+    sockets.set(key,entry);
     function connect(){
       if(stopped||!('WebSocket'in window))return;
-      try{socket=new WebSocket('wss://ws.bitget.com/v2/ws/public');}catch(_){reconnectTimer=setTimeout(connect,3000);return;}
-      sockets.set(key,{stop:()=>{stopped=true;clearTimeout(reconnectTimer);clearInterval(heartbeat);try{socket.onclose=null;socket.close();}catch(_){}sockets.delete(key);}});
-      socket.onopen=()=>{if(stopped)return;socket.send(JSON.stringify({op:'subscribe',args:[{instType:isReality?'SPOT':'USDT-FUTURES',channel:'candle4H',instId:apiSymbol}]}));heartbeat=setInterval(()=>{if(socket&&socket.readyState===WebSocket.OPEN)socket.send('ping');},25000);};
-      socket.onmessage=event=>{
-        if(stopped||event.data==='pong')return;let msg;try{msg=JSON.parse(event.data);}catch(_){return;}
+      try{socket=new WebSocket('wss://ws.bitget.com/v2/ws/public');}
+      catch(_){scheduleReconnect();return;}
+      const current=socket;
+      current.onopen=()=>{
+        if(stopped||socket!==current){try{current.close();}catch(_){}return;}
+        try{
+          current.send(JSON.stringify({op:'subscribe',args:[{instType:isReality?'SPOT':'USDT-FUTURES',channel:'candle4H',instId:apiSymbol}]}));
+        }catch(_){try{current.close();}catch(__){}return;}
+        clearInterval(heartbeat);
+        heartbeat=setInterval(()=>{
+          if(stopped||socket!==current)return;
+          if(current.readyState===WebSocket.OPEN){try{current.send('ping');}catch(_){try{current.close();}catch(__){}}}
+        },25000);
+      };
+      current.onmessage=event=>{
+        if(stopped||socket!==current||event.data==='pong')return;
+        let msg;try{msg=JSON.parse(event.data);}catch(_){return;}
         if(msg.arg&&msg.arg.instId===apiSymbol&&msg.arg.channel==='candle4H'&&Array.isArray(msg.data)){
-          for(const row of msg.data){const candle=normalize([row])[0];if(candle){onCandle(candle);}}
+          for(const row of msg.data){const candle=normalize([row])[0];if(candle&&!stopped&&socket===current)onCandle(candle);}
         }
       };
-      socket.onerror=()=>{try{socket.close();}catch(_){}};
-      socket.onclose=()=>{clearInterval(heartbeat);if(!stopped)reconnectTimer=setTimeout(connect,3000);};
+      current.onerror=()=>{try{current.close();}catch(_){}};
+      current.onclose=()=>{
+        clearInterval(heartbeat);heartbeat=0;
+        if(socket===current)socket=null;
+        scheduleReconnect();
+      };
     }
     connect();return ()=>unsubscribeLive(key);
   }
