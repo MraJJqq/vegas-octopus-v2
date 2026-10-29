@@ -179,6 +179,12 @@
     ctx.globalCompositeOperation = 'lighter';
   }
 
+  /* 每个可见卡片组分配唯一色相；黄金角间隔让相邻组颜色尽量易于区分。 */
+  function getGroupColor(groupIndex) {
+    const hue = (190 + groupIndex * 137.508) % 360;
+    return 'hsl(' + hue.toFixed(2) + ',100%,68%)';
+  }
+
   function flowDraw(t) {
     const dt = Math.max(0, Math.min(.05, t - lastT));
     lastT = t;
@@ -195,7 +201,8 @@
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineWidth = .8;
     starts.forEach((start, groupIndex) => {
-      /* 同一组只连接当前卡片；滚动容器裁切比例控制整组渐入/渐出。 */
+      /* 同一组只连接当前卡片；每组独立配色，当前可见组之间不重复。 */
+      const groupColor = getGroupColor(groupIndex);
       F.forEach(f => {
         const q = pr[f.t];
         if (!q) return;
@@ -203,7 +210,7 @@
         if (fa < .05) return;
         const c1x = start.x + (q[0] - start.x) * .42;
         const c1y = start.y;
-        ctx.strokeStyle = COL;
+        ctx.strokeStyle = groupColor;
         ctx.globalAlpha = .22 * fa * start.visibleRatio;
         ctx.beginPath();
         ctx.moveTo(start.x, start.y);
@@ -214,8 +221,8 @@
         const px = v * v * start.x + 2 * v * u * c1x + u * u * q[0];
         const py = v * v * start.y + 2 * v * u * c1y + u * u * q[1];
         ctx.globalAlpha = .95 * fa * start.visibleRatio;
-        ctx.fillStyle = COL;
-        ctx.shadowColor = COL;
+        ctx.fillStyle = groupColor;
+        ctx.shadowColor = groupColor;
         ctx.shadowBlur = 8;
         ctx.beginPath();
         ctx.arc(px, py, 1.6, 0, PI * 2);
