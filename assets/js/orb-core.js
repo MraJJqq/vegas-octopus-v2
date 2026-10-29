@@ -27,7 +27,7 @@ var projectedPoints=Array.from({length:N},function(){return[0,0,0,0,0]});
 var last=0,orbFrame=0,frameTimer=0;
 var FRAME_INTERVAL=1000/30;
 /* 按目标帧率调度 RAF，避免每个显示器刷新周期都执行无效回调。 */
-function scheduleOrbFrame(){if(document.hidden||orbFrame||frameTimer)return;frameTimer=window.setTimeout(function(){frameTimer=0;if(!document.hidden)orbFrame=requestAnimationFrame(frame)},FRAME_INTERVAL)}
+function scheduleOrbFrame(){if(document.hidden||orbFrame||frameTimer)return;frameTimer=window.setTimeout(function(){frameTimer=0;if(!document.hidden)orbFrame=requestAnimationFrame(frame)},Math.max(0,FRAME_INTERVAL-1000/60))}
 function frame(ms){orbFrame=0;if(document.hidden)return;var t=ms/1000,dt=Math.max(0,Math.min(.05,t-last));last=t;if(!dn)rot+=dt*V.spd;
 var cx=W*.66,cy=H*.5,roomX=Math.min(cx-8,W-cx-8),roomY=Math.max(1,H*.46),Rr=Math.max(1,Math.min(roomX,roomY)*V.zm),pit=pitB+.1*Math.sin(t*.17),cp=Math.cos(pit),spp=Math.sin(pit);
 x.clearRect(0,0,W,H);
