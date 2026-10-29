@@ -201,11 +201,12 @@
     const onStatus=typeof options.onStatus==='function'?options.onStatus:()=>{};
     const key=(isReality?'SPOT:':'USDT-FUTURES:')+apiSymbol;
     unsubscribeLive(key);
-    let stopped=false,socket=null,reconnectTimer=0,heartbeat=0,subscribeTimer=0,pongTimer=0;
+    let stopped=false,socket=null,reconnectTimer=0,heartbeat=0,connectTimer=0,subscribeTimer=0,pongTimer=0,lastStatus='';
     const ACK_TIMEOUT_MS=12000,PONG_TIMEOUT_MS=12000,HEARTBEAT_INTERVAL_MS=25000;
-    function status(value,detail){try{onStatus({status:value,detail:detail||null,symbol:apiSymbol});}catch(_){}}
+    function status(value,detail){if(lastStatus===value&&!detail)return;lastStatus=value;try{onStatus({status:value,detail:detail||null,symbol:apiSymbol});}catch(_){}}
     function clearConnectionTimers(){
       clearInterval(heartbeat);heartbeat=0;
+      clearTimeout(connectTimer);connectTimer=0;
       clearTimeout(subscribeTimer);subscribeTimer=0;
       clearTimeout(pongTimer);pongTimer=0;
     }
@@ -232,7 +233,9 @@
       try{socket=new WebSocket('wss://ws.bitget.com/v2/ws/public');}
       catch(error){status('error',String(error&&error.message||error));scheduleReconnect();return;}
       const current=socket;
+      connectTimer=setTimeout(()=>{if(!stopped&&socket===current){status('error','12秒内未建立 WebSocket 连接');try{current.close();}catch(_){}}},ACK_TIMEOUT_MS);
       current.onopen=()=>{
+        clearTimeout(connectTimer);connectTimer=0;
         if(stopped||socket!==current){try{current.close();}catch(_){}return;}
         try{
           current.send(JSON.stringify({op:'subscribe',args:[{instType:isReality?'SPOT':'USDT-FUTURES',channel:'candle4H',instId:apiSymbol}]}));
