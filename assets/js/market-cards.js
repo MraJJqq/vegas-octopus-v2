@@ -202,6 +202,7 @@ const finishTouch=()=>{
 left.addEventListener('touchend',finishTouch,{passive:true});
 left.addEventListener('touchcancel',finishTouch,{passive:true});
 let autoEngageLastTime=0,autoLoopErrorReported=false,autoScrollRemainder=0;
+let autoWaveFrame=0;
 function autoWaveScroll(now){
  try{
   if(!autoLastTime)autoLastTime=now;
@@ -238,17 +239,21 @@ function autoWaveScroll(now){
    console.warn('[Vegas Octopus] auto-scroll frame recovered:',error);
   }
  }finally{
-  requestAnimationFrame(autoWaveScroll);
+  if(!document.hidden)autoWaveFrame=requestAnimationFrame(autoWaveScroll);
  }
 }
 document.addEventListener('visibilitychange',()=>{
- if(!document.hidden){
+ if(document.hidden){
+  if(autoWaveFrame)cancelAnimationFrame(autoWaveFrame);
+  autoWaveFrame=0;
+ }else{
   autoLastTime=0;
   autoEngageLastTime=0;
   autoResumeAt=performance.now()+250;
+  if(!autoWaveFrame)autoWaveFrame=requestAnimationFrame(autoWaveScroll);
  }
 },{passive:true});
-requestAnimationFrame(autoWaveScroll);
+autoWaveFrame=requestAnimationFrame(autoWaveScroll);
 
 /* 自动滚动看门狗：若动画帧运行但滚动位置连续停滞，使用独立定时器恢复位移。 */
 let autoWatchPosition=left.scrollTop,autoWatchChangedAt=performance.now();
