@@ -189,7 +189,7 @@ function autoWaveScroll(now){
    /* 手动操作后逐步恢复自动滚动；以实际容器布局计算速度。 */
    autoEngage=Math.min(1,autoEngage+engageDt/1000);
    const step=cardStep();
-   if(focusSlots.length>1&&step>0&&left.scrollHeight>left.clientHeight+1){
+   if(focusSlots.length>1&&step>0){
     /* 固定按容器实际单轮位移计算速度：约 120 秒完成一轮。 */
     const baseSpeed=Math.max(.1,step*focusSlots.length/120);
     autoWaveScroll.speed=baseSpeed;
