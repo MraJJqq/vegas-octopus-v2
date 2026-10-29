@@ -43,6 +43,7 @@ const chart=LWC.createChart(chartHost,{
 });
 const candleSeries=chart.addSeries(LWC.CandlestickSeries,{upColor:'#2ee6a6',downColor:'#ff5c7c',borderVisible:false,wickUpColor:'#2ee6a6',wickDownColor:'#ff5c7c',lastValueVisible:false,priceLineVisible:false});
 const emaSeries=EMA_LINES.map(line=>chart.addSeries(LWC.LineSeries,{color:line.color,lineWidth:Math.max(1,Math.min(4,Math.round(line.width))),lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false}));
+let renderedSnapshot=null;
 let suppressRangeSaveUntil=0;
 function currentSaved(){if(!state.saved[state.symbol])state.saved[state.symbol]={};return state.saved[state.symbol]}
 chart.timeScale().subscribeVisibleTimeRangeChange(range=>{
@@ -143,13 +144,33 @@ function draw(view={}){
   prepared={...(prepared||{}),candles:state.candles,chartCandles:candles,emaData};
   state.candleCache.delete(cacheKey);state.candleCache.set(cacheKey,prepared);
  }
- suppressRangeSaveUntil=Date.now()+250;
- candleSeries.setData(prepared.chartCandles);
- prepared.emaData.forEach((data,index)=>emaSeries[index].setData(data));
+ const previous=renderedSnapshot;
+ const sameView=previous&&previous.symbol===state.symbol&&previous.period===state.period;
+ const oldData=sameView?previous.chartCandles:null,newData=prepared.chartCandles;
+ let incremental=!!(oldData&&oldData.length>0&&(newData.length===oldData.length||newData.length===oldData.length+1));
+ if(incremental){
+  const compareUntil=newData.length===oldData.length?oldData.length-1:oldData.length;
+  for(let i=0;i<compareUntil;i++){
+   const a=oldData[i],b=newData[i];
+   if(!b||a.time!==b.time||a.open!==b.open||a.high!==b.high||a.low!==b.low||a.close!==b.close){incremental=false;break;}
+  }
+ }
+ if(incremental){
+  const last=newData[newData.length-1];
+  candleSeries.update(last);
+  prepared.emaData.forEach((data,index)=>{if(data.length)emaSeries[index].update(data[data.length-1]);});
+ }else{
+  suppressRangeSaveUntil=Date.now()+250;
+  candleSeries.setData(newData);
+  prepared.emaData.forEach((data,index)=>emaSeries[index].setData(data));
+ }
+ renderedSnapshot={symbol:state.symbol,period:state.period,chartCandles:newData};
  const ts=chart.timeScale();
- if(view.range){try{ts.setVisibleRange(view.range)}catch{ts.setVisibleLogicalRange({from:Math.max(0,candles.length-120),to:candles.length})}}
- else if(view.follow)ts.scrollToRealTime();
- else if(view.initial)ts.setVisibleLogicalRange({from:Math.max(0,prepared.chartCandles.length-120),to:prepared.chartCandles.length});
+ if(!incremental){
+  if(view.range){try{ts.setVisibleRange(view.range)}catch{ts.setVisibleLogicalRange({from:Math.max(0,newData.length-120),to:newData.length})}}
+  else if(view.follow)ts.scrollToRealTime();
+  else if(view.initial)ts.setVisibleLogicalRange({from:Math.max(0,newData.length-120),to:newData.length});
+ }
  const last=state.candles[state.candles.length-1];
  title.textContent=state.symbol+' · '+state.period+' · VEGAS';
  status.textContent=last.close.toLocaleString('en-US',{maximumFractionDigits:6})+'  '+new Date(last.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
