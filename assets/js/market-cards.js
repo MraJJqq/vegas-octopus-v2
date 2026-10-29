@@ -280,7 +280,12 @@ window.setInterval(()=>{
 left.style.scrollBehavior='auto';
 /* 容器/卡片尺寸变化时使步长缓存失效，兼顾旋转屏幕和响应式布局。 */
 if('ResizeObserver' in window){
- const stepObserver=new ResizeObserver(()=>{cachedCardStep=0;queueFocusScale()});
+ const stepObserver=new ResizeObserver(()=>{
+  cachedCardStep=0;
+  /* 视口/断点改变时同步重绘迷你 K 线，避免沿用旧尺寸的 canvas 缓冲区。 */
+  S.forEach(d=>drawKline(d,document.querySelector('#mc-c'+d.i+' .mc-kline')));
+  queueFocusScale();
+});
  stepObserver.observe(left);
  if(left.firstElementChild)stepObserver.observe(left.firstElementChild);
 }
