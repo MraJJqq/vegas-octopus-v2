@@ -71,8 +71,9 @@ async function getStockSymbol(symbol){
 }
 async function loadCandles(force=false){
  if(!state.open||!state.symbol)return;
- if(state.loading){if(!force)return;requestVersion++}
+ if(state.loading&&!force)return;
  if(!force&&Date.now()-state.fetchAt<25000)return;
+ if(force&&state.requestController){state.requestController.abort();state.requestController=null;}
  state.loading=true;const requestId=++requestVersion;const symbolAtRequest=state.symbol;message.hidden=false;message.textContent=state.candles.length?'更新行情…':'读取历史行情…';
  try{
   const stock=STOCKS.has(symbolAtRequest),period=state.period;
@@ -97,7 +98,7 @@ async function loadCandles(force=false){
   while(state.candleCache.size>12)state.candleCache.delete(state.candleCache.keys().next().value);
   message.hidden=true;
   let range=previousRange,follow=wasFollowing,initial=false;
-  if(!sameView){range=(saved.period===period&&saved.visibleRange)?saved.visibleRange:null;follow=false;initial=!range}
+  if(!sameView){const saved=state.saved[symbolAtRequest]||{};range=(saved.period===period&&saved.visibleRange)?saved.visibleRange:null;follow=false;initial=!range}
   draw({range,follow,initial});
   state.loadedSymbol=symbolAtRequest;state.loadedPeriod=period;
  }catch(e){if(requestId===requestVersion){message.hidden=false;message.textContent='行情读取失败 · '+String(e.message||e).slice(0,48);status.textContent='数据异常';console.warn('[Vegas Layer 5] candle load failed',e)}}
