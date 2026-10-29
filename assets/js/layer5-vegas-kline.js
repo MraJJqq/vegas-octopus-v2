@@ -174,6 +174,19 @@ function stepFormalSymbol(direction){
 root.querySelector('#vegas-layer5-prev').addEventListener('click',()=>stepFormalSymbol(-1));
 root.querySelector('#vegas-layer5-next').addEventListener('click',()=>stepFormalSymbol(1));
 function close(){state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];if(state.rotateTimer)clearTimeout(state.rotateTimer);state.rotateTimer=0;win.classList.remove('is-open');}
+/* 触屏退出：顶部非控件区域双击；K线画布双指同步下滑。 */
+let lastHeadTap=0;
+function isHeadControl(target){return !!(target&&target.closest&&target.closest('button,select,input,textarea,a'))}
+head.addEventListener('touchend',e=>{
+ if(!state.open||isHeadControl(e.target))return;
+ const now=Date.now();
+ if(now-lastHeadTap<360){e.preventDefault();lastHeadTap=0;close()}
+ else lastHeadTap=now;
+},{passive:false});
+head.addEventListener('dblclick',e=>{
+ if(state.open&&!isHeadControl(e.target)){e.preventDefault();close()}
+});
+
 periodSelect.addEventListener('change',()=>{if(!state.symbol)return;state.period=periodSelect.value;state.view.end=0;state.fetchAt=0;state.candles=[];saveView();loadCandles(true)});
 document.addEventListener('click',e=>{
  const card=e.target.closest&&e.target.closest('#market-cards-layer .mc-card[data-symbol]');
@@ -186,13 +199,30 @@ document.addEventListener('click',e=>{
  /* 全屏画布覆盖整个可视屏幕，无法再定义窗口外区域；使用 Escape 退出。 */
 },true);
 const pointers=new Map();
-canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1)state.drag={kind:'pan',x:e.clientX,y:e.clientY,count:state.view.count,end:state.view.end||state.candles.length,id:e.pointerId};else if(pointers.size===2){state.drag={kind:'pinch',distance:distancePointers(),count:state.view.count,end:state.view.end||state.candles.length}}});
+canvas.addEventListener('pointerdown',e=>{
+ canvas.setPointerCapture(e.pointerId);
+ pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY});
+ if(pointers.size===1)state.drag={kind:'pan',x:e.clientX,y:e.clientY,count:state.view.count,end:state.view.end||state.candles.length,id:e.pointerId};
+ else if(pointers.size===2){
+  const pts=[...pointers.values()];
+  state.drag={kind:'pinch',distance:distancePointers(),startDistance:distancePointers(),startCenterY:(pts[0].y+pts[1].y)/2,count:state.view.count,end:state.view.end||state.candles.length};
+ }
+});
 function distancePointers(){const a=[...pointers.values()];return a.length<2?0:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}
 canvas.addEventListener('pointermove',e=>{
- if(!pointers.has(e.pointerId))return;
- pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ const previous=pointers.get(e.pointerId);
+ if(!previous)return;
+ pointers.set(e.pointerId,{...previous,x:e.clientX,y:e.clientY});
  if(pointers.size>=2&&state.drag?.kind==='pinch'){
-  const dist=distancePointers();if(state.drag.distance>0){const ratio=state.drag.distance/Math.max(1,dist);state.view.count=Math.max(20,Math.min(600,Math.round(state.drag.count*ratio)));draw()}return;
+  const pts=[...pointers.values()];
+  const downA=pts[0].y-pts[0].startY,downB=pts[1].y-pts[1].startY;
+  const dist=distancePointers();
+  /* 两指同步向下滑动退出；普通双指捏合仍然缩放K线。 */
+  if(downA>105&&downB>105&&Math.abs(downA-downB)<65&&dist>=state.drag.startDistance*0.72&&dist<=state.drag.startDistance*1.35){
+   close();pointers.clear();state.drag=null;return;
+  }
+  if(state.drag.distance>0){const ratio=state.drag.distance/Math.max(1,dist);state.view.count=Math.max(20,Math.min(600,Math.round(state.drag.count*ratio)));draw()}
+  return;
  }
  if(state.drag?.kind==='pan'&&state.drag.id===e.pointerId){
   const dx=e.clientX-state.drag.x,step=canvas.clientWidth/Math.max(1,state.view.count);
