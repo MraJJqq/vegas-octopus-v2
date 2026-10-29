@@ -24,9 +24,9 @@ function drawKline(d,canvas){
  for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke()}
  rows.forEach((c,i)=>{
   const up=c.close>=c.open,col=up?'#2ee6a6':'#ff5c7c',x=i*step+step/2,top=y(Math.max(c.open,c.close)),bottom=y(Math.min(c.open,c.close));
-  ctx.strokeStyle=col;ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=2;
+  ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=1.2;ctx.shadowColor=col;ctx.shadowBlur=3;
   ctx.beginPath();ctx.moveTo(x,y(c.high));ctx.lineTo(x,y(c.low));ctx.stroke();
-  ctx.fillRect(x-bw/2,top,bw,Math.max(1,bottom-top));
+  ctx.fillRect(x-bw/2,top,bw,Math.max(2,bottom-top));
  });
  if(d.ready&&Number.isFinite(d.p)&&d.p>0){const col=d.p>=d.o?'#2ee6a6':'#ff5c7c';ctx.shadowBlur=0;ctx.setLineDash([3,4]);ctx.strokeStyle=col;ctx.globalAlpha=.5;ctx.beginPath();ctx.moveTo(0,y(d.p));ctx.lineTo(w,y(d.p));ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1}
  ctx.shadowBlur=0;
