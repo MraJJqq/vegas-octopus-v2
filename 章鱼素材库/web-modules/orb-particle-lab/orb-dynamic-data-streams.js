@@ -32,7 +32,7 @@
     P.push({ x: s * Math.cos(a), y: u, z: s * Math.sin(a), k: R() });
   }
 
-  /* 整组数据流共用一个起点；起点绑定当前正式信号通知对应的单张小卡片。 */
+  /* 每张正式信号卡片拥有独立数据流组，起点绑定该卡片，终点连接发光球。 */
   const STREAM_COUNT = 36;
   function syncCardLines() {
     F.length = 0;
