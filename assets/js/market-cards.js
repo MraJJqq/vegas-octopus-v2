@@ -11,7 +11,7 @@ S.forEach(d=>{
  left.insertAdjacentHTML('beforeend',`<div class="mc-slot"><div class="mc-float" style="--d:${-d.i*.9}s"><div class="mc-card" id="mc-c${d.i}" data-symbol="${d.s}"><div class="mc-bg"></div><i class="mc-g1"></i><i class="mc-g2"></i><i class="mc-gl"></i><div class="mc-row mc-l2"><span class="mc-coin">${d.s[0]}</span><b class="mc-sym">${d.s}</b></div><div class="mc-price mc-l4">加载中</div><div class="mc-l3"><span class="mc-pct">--</span></div><canvas class="mc-kline mc-l1" aria-label="${d.s} K线图"></canvas><div class="mc-hl mc-l2">高<span class="mc-hi">--</span>低<span class="mc-lo">--</span></div></div></div><div class="mc-gshadow" style="--d:${-d.i*.9}s"></div></div>`);
 });
 function drawKline(d,canvas){
- const rect=canvas.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),ratio=window.devicePixelRatio||1;
+ const rect=canvas.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),ratio=Math.min(1.5,Math.max(1,window.devicePixelRatio||1));
  const renderKey=[w,h,ratio,d.candleUpdatedAt,d.ready?1:0,d.p,d.o,d.candles.length].join('|');
  if(canvas.__mcRenderKey===renderKey)return;
  canvas.__mcRenderKey=renderKey;
@@ -279,7 +279,7 @@ window.setInterval(()=>{
  }catch(error){
   console.warn('[Vegas Octopus] auto-scroll watchdog recovered:',error);
  }
-},250);
+},1000);
 
 /* resize 主监听器已统一负责缓存失效、K线重绘与焦点缩放刷新。 */
 left.style.scrollBehavior='auto';
