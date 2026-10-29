@@ -367,43 +367,72 @@ document.addEventListener('visibilitychange',()=>{
  }
 },{passive:true});
 async function loadMarketData(){
- if(document.hidden||marketLoadInFlight)return;marketLoadInFlight=true;
- try{
-  const needRealityDirectory=!realitySymbolCache||Date.now()-realitySymbolCacheAt>5*60*1000;
-  const requests=[bitgetJson('/api/v2/mix/market/tickers?productType=USDT-FUTURES'),bitgetJson('/api/v3/market/tickers?category=SPOT')];
-  if(needRealityDirectory)requests.push(bitgetJson('/api/v3/reality/market/stock-info'));
-  const results=await Promise.allSettled(requests);
-  const [futureResult,spotResult]=results;
-  const stockResult=needRealityDirectory?results[2]:null;
-  const futures=futureResult.status==='fulfilled'?new Map(futureResult.value.map(t=>[String(t.symbol).toUpperCase(),t])):null;
-  const spots=spotResult.status==='fulfilled'?new Map(spotResult.value.map(t=>[String(t.symbol).toUpperCase(),t])):null;
-  let realitySymbols=realitySymbolCache;
-  if(needRealityDirectory&&stockResult&&stockResult.status==='fulfilled'){
-   realitySymbols=new Map(stockResult.value.filter(s=>s&&s.code&&s.symbol).map(s=>[String(s.code).toUpperCase(),String(s.symbol)]));
-   const sk=stockResult.value.find(s=>s&&s.symbol&&(String(s.code||'').toUpperCase().replace(/[^A-Z0-9]/g,'')==='SKHY'||/SK\s*HYNIX/i.test(String(s.name||''))||/RSKHYUSDT/i.test(String(s.symbol||''))));
-   if(sk)realitySymbols.set('SKHYNIX',String(sk.symbol));
-   realitySymbolCache=realitySymbols;realitySymbolCacheAt=Date.now();
-  }
-  const sparkJobs=[];
+ if(document.hidden||marketLoadInFlight)return;
+ marketLoadInFlight=true;
+ const needRealityDirectory=!realitySymbolCache||Date.now()-realitySymbolCacheAt>5*60*1000;
+ let futures=null,spots=null,realitySymbols=realitySymbolCache;
+ let futuresDone=false,spotsDone=false,directoryDone=!needRealityDirectory,stocksProcessed=false;
+ const futureSparkJobs=[],stockSparkJobs=[];
+ function processFutures(){
+  if(!futuresDone)return;
   S.forEach(d=>{
-   if(REALITY_STOCKS.has(d.s)){
-    if(!spots||!realitySymbols){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='行情暂不可用';return}
-    const symbol=realitySymbols.get(d.s),ticker=symbol&&spots.get(symbol.toUpperCase());
-    if(!ticker){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='暂无行情';return}
-    const last=Number(ticker.lastPrice),open=Number(ticker.openPrice24h);
-    if(!(last>0&&open>0)){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='数据无效';return}
-    d.api=symbol;d.p=last;d.o=open;d.ready=true;paint(d);if(Date.now()-d.candleUpdatedAt>=CANDLE_REFRESH_MS)sparkJobs.push({key:d.i,d,run:()=>loadSparkline(d,symbol,true)});
-   }else{
-    if(!futures){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='行情暂不可用';return}
-    const ticker=futures.get(d.api.toUpperCase());
-    if(!ticker){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='暂无行情';return}
-    const last=Number(ticker.lastPr),open=Number(ticker.open24h);
-    if(!(last>0&&open>0)){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='数据无效';return}
-    d.p=last;d.o=open;d.ready=true;paint(d);if(Date.now()-d.candleUpdatedAt>=CANDLE_REFRESH_MS)sparkJobs.push({key:d.i,d,run:()=>loadSparkline(d,d.api,false)});
-   }
+   if(REALITY_STOCKS.has(d.s))return;
+   if(!futures){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='行情暂不可用';return}
+   const ticker=futures.get(d.api.toUpperCase());
+   if(!ticker){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='暂无行情';return}
+   const last=Number(ticker.lastPr),open=Number(ticker.open24h);
+   if(!(last>0&&open>0)){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='数据无效';return}
+   d.p=last;d.o=open;d.ready=true;paint(d);
+   if(Date.now()-d.candleUpdatedAt>=CANDLE_REFRESH_MS)futureSparkJobs.push({key:d.i,d,run:()=>loadSparkline(d,d.api,false)});
   });
-  if(sparkJobs.length)enqueueSparkJobs(sparkJobs);
- }catch(error){console.warn('[Vegas Octopus] market feed failed:',error)}finally{marketLoadInFlight=false}
+  if(futureSparkJobs.length)enqueueSparkJobs(futureSparkJobs.splice(0));
+ }
+ function processStocks(){
+  if(stocksProcessed||!spotsDone||!directoryDone)return;
+  stocksProcessed=true;
+  S.forEach(d=>{
+   if(!REALITY_STOCKS.has(d.s))return;
+   if(!spots||!realitySymbols){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='行情暂不可用';return}
+   const symbol=realitySymbols.get(d.s),ticker=symbol&&spots.get(symbol.toUpperCase());
+   if(!ticker){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='暂无行情';return}
+   const last=Number(ticker.lastPrice),open=Number(ticker.openPrice24h);
+   if(!(last>0&&open>0)){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='数据无效';return}
+   d.api=symbol;d.p=last;d.o=open;d.ready=true;paint(d);
+   if(Date.now()-d.candleUpdatedAt>=CANDLE_REFRESH_MS)stockSparkJobs.push({key:d.i,d,run:()=>loadSparkline(d,symbol,true)});
+  });
+  if(stockSparkJobs.length)enqueueSparkJobs(stockSparkJobs.splice(0));
+ }
+ try{
+  const tasks=[
+   bitgetJson('/api/v2/mix/market/tickers?productType=USDT-FUTURES').then(data=>{
+    futures=new Map(data.map(t=>[String(t.symbol).toUpperCase(),t]));futuresDone=true;processFutures();
+   }).catch(error=>{
+    futuresDone=true;processFutures();console.warn('[Vegas Octopus] futures feed failed:',error);
+   }),
+   bitgetJson('/api/v3/market/tickers?category=SPOT').then(data=>{
+    spots=new Map(data.map(t=>[String(t.symbol).toUpperCase(),t]));spotsDone=true;processStocks();
+   }).catch(error=>{
+    spotsDone=true;processStocks();console.warn('[Vegas Octopus] spot feed failed:',error);
+   })
+  ];
+  if(needRealityDirectory){
+   tasks.push(bitgetJson('/api/v3/reality/market/stock-info').then(data=>{
+    realitySymbols=new Map(data.filter(s=>s&&s.code&&s.symbol).map(s=>[String(s.code).toUpperCase(),String(s.symbol)]));
+    const sk=data.find(s=>s&&s.symbol&&(String(s.code||'').toUpperCase().replace(/[^A-Z0-9]/g,'')==='SKHY'||/SK\s*HYNIX/i.test(String(s.name||''))||/RSKHYUSDT/i.test(String(s.symbol||''))));
+    if(sk)realitySymbols.set('SKHYNIX',String(sk.symbol));
+    realitySymbolCache=realitySymbols;realitySymbolCacheAt=Date.now();
+   }).catch(error=>{
+    console.warn('[Vegas Octopus] stock directory failed:',error);
+   }).finally(()=>{
+    directoryDone=true;processStocks();
+   }));
+  }else{
+   directoryDone=true;processStocks();
+  }
+  await Promise.allSettled(tasks);
+ }finally{
+  marketLoadInFlight=false;
+ }
 }
 window.VegasApplyFormalSignals=function(){
  const formal=new Set(window.VegasFormalSignalSymbols||[]);
