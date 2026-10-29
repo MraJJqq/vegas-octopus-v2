@@ -227,7 +227,7 @@ canvas.addEventListener('pointermove',e=>{
  if(state.drag?.kind==='pan'&&state.drag.id===e.pointerId){
   const dx=e.clientX-state.drag.x,step=canvas.clientWidth/Math.max(1,state.view.count);
   const delta=Math.round(dx/Math.max(1,step));
-  state.view.end=Math.max(Math.max(20,state.view.count),Math.min(state.candles.length,state.drag.end-delta));draw();
+  state.view.end=Math.max(Math.max(20,state.view.count),Math.min(state.candles.length,state.drag.end+delta));draw();
  }
 });
 function releasePointer(e){pointers.delete(e.pointerId);if(!pointers.size){if(state.drag?.kind==='pan'||state.drag?.kind==='pinch'){state.drag=null;saveView()}}else if(pointers.size===1){const p=[...pointers.entries()][0];state.drag={kind:'pan',x:p[1].x,y:p[1].y,count:state.view.count,end:state.view.end||state.candles.length,id:p[0]}}}
