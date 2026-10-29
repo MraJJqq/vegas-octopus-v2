@@ -14,6 +14,7 @@
   const MAX_CANDLE_BARS=5000, EMA_WARMUP_BARS=3000;
   const CANDLE_DB_NAME='vegas-octopus-market-cache', CANDLE_DB_VERSION=1, CANDLE_STORE_NAME='candles';
   const FAST_CACHE_PREFIX='vegas-octopus-fast-kline:', FAST_CACHE_BARS=1000;
+  const FAST_CACHE_MAX_AGE_MS=24*60*60*1000, PERSISTENT_CACHE_MAX_AGE_MS=7*24*60*60*1000;
   let candleDbPromise=null, contractInfoPromise=null, legacyContractInfoPromise=null, realityInfoPromise=null;
   const latestCandleRequests=new Map();
   const sockets=new Map();
@@ -54,7 +55,13 @@
     const db=await openCandleDb();if(!db)return null;
     return new Promise(resolve=>{try{
       const req=db.transaction(CANDLE_STORE_NAME,'readonly').objectStore(CANDLE_STORE_NAME).get(candleCacheKey(symbol,isReality));
-      req.onsuccess=()=>{const v=req.result;resolve(v&&Array.isArray(v.rows)?(v.rows.length&&!Array.isArray(v.rows[0])?mergeCandles(v.rows):normalize(v.rows)):null);};
+      req.onsuccess=()=>{
+        const v=req.result;
+        if(!v||!Array.isArray(v.rows)){resolve(null);return;}
+        const rows=v.rows.length&&!Array.isArray(v.rows[0])?mergeCandles(v.rows):normalize(v.rows);
+        rows.cacheUpdatedAt=Number(v.updatedAt)||0;
+        resolve(rows);
+      };
       req.onerror=()=>resolve(null);
     }catch(_){resolve(null);}});
   }
@@ -72,9 +79,11 @@
     try{
       const raw=localStorage.getItem(fastCacheKey(symbol,isReality));if(!raw)return null;
       const saved=JSON.parse(raw);if(!saved||!saved.apiSymbol||!Array.isArray(saved.rows)||saved.rows.length<2)return null;
+      const updatedAt=Number(saved.updatedAt)||0;
+      if(!updatedAt||Date.now()-updatedAt>FAST_CACHE_MAX_AGE_MS){localStorage.removeItem(fastCacheKey(symbol,isReality));return null;}
       const candles=normalize(saved.rows);
       if(candles.length<2)return null;
-      return {symbol:String(symbol||'').toUpperCase(),apiSymbol:saved.apiSymbol,isReality,candles,series:buildEmaSeries(candles),source:'local-cache',pagesLoaded:0};
+      return {symbol:String(symbol||'').toUpperCase(),apiSymbol:saved.apiSymbol,isReality,candles,series:buildEmaSeries(candles),source:'local-cache',cacheUpdatedAt:updatedAt,pagesLoaded:0};
     }catch(_){return null;}
   }
   function writeFastCache(symbol,apiSymbol,isReality,rows){
@@ -158,8 +167,9 @@
     let mappedApiSymbol=null;try{mappedApiSymbol=localStorage.getItem(apiSymbolKey(name,isReality));}catch(_){}
     // 常规合约直接请求标准交易对，跳过首屏前的合约目录查询；失败时再走完整校验与别名解析。
     let apiSymbol=options.apiSymbol||mappedApiSymbol||(isReality?await resolveRealitySymbol(name):(CONTRACT_ALIASES[name]?.[0]||(name.endsWith('USDT')?name:name+'USDT')));
-    const stored=await readPersistentCandles(apiSymbol,isReality);
-    if(options.fast&&stored&&stored.length>=2){const cached=stored.slice(-MAX_CANDLE_BARS);writeFastCache(name,apiSymbol,isReality,cached);return {symbol:name,apiSymbol,isReality,candles:cached,series:buildEmaSeries(cached),source:'cache',pagesLoaded:0};}
+    let stored=await readPersistentCandles(apiSymbol,isReality);
+    if(stored&&(!stored.cacheUpdatedAt||Date.now()-stored.cacheUpdatedAt>PERSISTENT_CACHE_MAX_AGE_MS))stored=null;
+    if(options.fast&&stored&&stored.length>=2){const cached=stored.slice(-MAX_CANDLE_BARS);writeFastCache(name,apiSymbol,isReality,cached);return {symbol:name,apiSymbol,isReality,candles:cached,series:buildEmaSeries(cached),source:'cache',cacheUpdatedAt:stored.cacheUpdatedAt,pagesLoaded:0};}
     let latest=[];
     try{latest=await loadLatestCandles(apiSymbol,isReality);}
     catch(error){
