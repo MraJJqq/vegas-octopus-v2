@@ -49,6 +49,10 @@ let suppressRangeSaveUntil=0;
 periodSelect.innerHTML=PERIODS.map(p=>`<option value="${p}">${p}</option>`).join('');
 function key(symbol){return symbol+'|'+(state.saved[symbol]?.period|| (STOCKS.has(symbol)?'1H':'2H'))}
 function currentSaved(){if(!state.saved[state.symbol])state.saved[state.symbol]={};return state.saved[state.symbol]}
+chart.timeScale().subscribeVisibleTimeRangeChange(range=>{
+ if(!range||!state.open||!state.candles.length||Date.now()<suppressRangeSaveUntil)return;
+ const saved=currentSaved();saved.visibleRange=range;saved.period=state.period;save();
+});
 function currentPeriod(){return state.period}
 function symbolFor(symbol){return symbol+'USDT'}
 async function getJson(path){
@@ -181,7 +185,7 @@ function stepFormalSymbol(direction){
 }
 root.querySelector('#vegas-layer5-prev').addEventListener('click',()=>stepFormalSymbol(-1));
 root.querySelector('#vegas-layer5-next').addEventListener('click',()=>stepFormalSymbol(1));
-function close(){state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];if(state.rotateTimer)clearTimeout(state.rotateTimer);state.rotateTimer=0;win.classList.remove('is-open');}
+function close(){if(state.open&&state.candles.length)saveView();state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];if(state.rotateTimer)clearTimeout(state.rotateTimer);state.rotateTimer=0;win.classList.remove('is-open');}
 /* 触屏退出：顶部非控件区域双击；K线画布双指同步下滑。 */
 let lastHeadTap=0;
 function isHeadControl(target){return !!(target&&target.closest&&target.closest('button,select,input,textarea,a'))}
