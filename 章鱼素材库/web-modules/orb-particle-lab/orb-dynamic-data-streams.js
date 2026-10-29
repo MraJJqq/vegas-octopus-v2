@@ -95,11 +95,8 @@
     const cards = Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]'));
     if (!cards.length) return null;
     const appRect = app.getBoundingClientRect();
-    const visibleCards = cards.map(card => ({ card, r: card.getBoundingClientRect() }))
-      .filter(({ r }) => r.bottom > Math.max(appRect.top, 0) && r.top < Math.min(appRect.bottom, window.innerHeight)
-        && r.right > appRect.left && r.left < appRect.right);
-    /* 优先选择当前可见的第一张正式信号卡片；若信号卡片暂时滚出视口，则选第一条正式信号卡片并在其出现时自动跟随。 */
-    const selected = visibleCards[0] || (cards[0] ? { card: cards[0], r: cards[0].getBoundingClientRect() } : null);
+    /* 固定选择通知顺序中的第一张正式信号卡片，避免滚动时在多张信号卡之间跳转。 */
+    const selected = cards[0] ? { card: cards[0], r: cards[0].getBoundingClientRect() } : null;
     if (!selected) return null;
     const { r } = selected;
     const visibleTop = Math.max(r.top, appRect.top, 0);
