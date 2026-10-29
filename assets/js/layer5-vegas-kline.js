@@ -1,4 +1,4 @@
-/* 第五层：Vegas K线悬浮图。独立模块，不修改其他层级逻辑。 */
+/* 第五层：Vegas 全屏 K线画布。独立模块，不修改其他层级逻辑。 */
 (()=> {
 'use strict';
 const API='https://api.bitget.com';
@@ -23,10 +23,10 @@ function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({geometry:st
 const oldSave=state.saved;state.saved=oldSave.perSymbol||oldSave;
 const savedGeometry=oldSave.geometry||null;
 const root=document.createElement('div');root.id='vegas-layer5-root';
-root.innerHTML=`<section id="vegas-layer5-window" aria-label="Vegas K线悬浮图">
+root.innerHTML=`<section id="vegas-layer5-window" aria-label="Vegas 全屏 K线图">
 <header id="vegas-layer5-head"><span id="vegas-layer5-title">VEGAS · KLINE</span><button id="vegas-layer5-prev" class="vegas-l5-nav" type="button" aria-label="上一个正式信号">‹</button><button id="vegas-layer5-next" class="vegas-l5-nav" type="button" aria-label="下一个正式信号">›</button><span id="vegas-layer5-status" aria-live="polite"></span><select id="vegas-layer5-period" aria-label="K线周期"></select></header>
 <div id="vegas-layer5-chart-wrap"><canvas id="vegas-layer5-canvas" aria-label="K线与Vegas均线图"></canvas><div id="vegas-layer5-message">等待行情</div></div>
-<div id="vegas-layer5-resize" aria-label="调整窗口大小"></div><i class="vegas-l5-edge" data-edge="n"></i><i class="vegas-l5-edge" data-edge="s"></i><i class="vegas-l5-edge" data-edge="e"></i><i class="vegas-l5-edge" data-edge="w"></i><i class="vegas-l5-edge" data-edge="ne"></i><i class="vegas-l5-edge" data-edge="nw"></i><i class="vegas-l5-edge" data-edge="se"></i><i class="vegas-l5-edge" data-edge="sw"></i>
+
 </section>`;
 document.body.appendChild(root);
 const win=root.querySelector('#vegas-layer5-window'),head=root.querySelector('#vegas-layer5-head'),canvas=root.querySelector('#vegas-layer5-canvas'),ctx=canvas.getContext('2d'),title=root.querySelector('#vegas-layer5-title'),status=root.querySelector('#vegas-layer5-status'),periodSelect=root.querySelector('#vegas-layer5-period'),message=root.querySelector('#vegas-layer5-message');
@@ -122,20 +122,9 @@ function draw(){
  status.textContent=last.close.toLocaleString('en-US',{maximumFractionDigits:6})+'  '+new Date(last.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
 }
 function saveView(){const s=currentSaved();s.period=state.period;s.count=state.view.count;s.end=state.view.end;save()}
-function clampGeometry(){
- const pad=8,vw=window.innerWidth,vh=window.innerHeight,r=win.getBoundingClientRect();
- const width=Math.min(Math.max(220,r.width),vw-pad*2),height=Math.min(Math.max(160,r.height),vh-pad*2);
- let left=parseFloat(win.style.left)||Math.max(pad,(vw-width)/2),top=parseFloat(win.style.top)||Math.max(pad,(vh-height)/2);
- left=Math.min(Math.max(pad,left),Math.max(pad,vw-width-pad));top=Math.min(Math.max(pad,top),Math.max(pad,vh-height-pad));
- win.style.width=width+'px';win.style.height=height+'px';win.style.left=left+'px';win.style.top=top+'px';
-}
 function applyGeometry(){
- const g=state.geometry||savedGeometry;
- if(g){win.style.left=g.left+'px';win.style.top=g.top+'px';win.style.width=g.width+'px';win.style.height=g.height+'px'}
- else{win.style.width=Math.min(900,Math.max(300,window.innerWidth*.72))+'px';win.style.height=Math.min(560,Math.max(260,window.innerHeight*.62))+'px';win.style.left=Math.max(8,(window.innerWidth-Math.min(900,Math.max(300,window.innerWidth*.72)))/2)+'px';win.style.top=Math.max(8,(window.innerHeight-Math.min(560,Math.max(260,window.innerHeight*.62)))/2)+'px'}
- clampGeometry();
+ win.style.left='0px';win.style.top='0px';win.style.width='100vw';win.style.height='100dvh';
 }
-function persistGeometry(){const r=win.getBoundingClientRect();state.geometry={left:r.left,top:r.top,width:r.width,height:r.height};save()}
 function openSymbol(symbol){
  if(!symbol)return;
  if(state.rotateTimer)clearTimeout(state.rotateTimer);
@@ -194,30 +183,8 @@ document.addEventListener('click',e=>{
   e.preventDefault();e.stopPropagation();openSymbol(symbol);
   return;
  }
- /* 点击悬浮图以外任意区域退出；图内周期/信号控制不触发关闭。 */
- if(state.open&&!win.contains(e.target))close();
+ /* 全屏画布覆盖整个可视屏幕，无法再定义窗口外区域；使用 Escape 退出。 */
 },true);
-head.addEventListener('pointerdown',e=>{
- if(e.target.closest('button,select'))return;
- if(e.pointerType==='touch'&&e.isPrimary===false)return;
- state.drag={x:e.clientX,y:e.clientY,left:win.offsetLeft,top:win.offsetTop,id:e.pointerId};
- try{head.setPointerCapture(e.pointerId)}catch{}
-});
-head.addEventListener('pointermove',e=>{if(!state.drag||state.drag.id!==e.pointerId)return;win.style.left=(state.drag.left+e.clientX-state.drag.x)+'px';win.style.top=(state.drag.top+e.clientY-state.drag.y)+'px';clampGeometry()});
-function endDrag(e){if(state.drag&&state.drag.id===e.pointerId){state.drag=null;persistGeometry()}}
-head.addEventListener('pointerup',endDrag);head.addEventListener('pointercancel',endDrag);
-const resizeHandles=[...root.querySelectorAll('#vegas-layer5-resize,.vegas-l5-edge')];
-resizeHandles.forEach(handle=>{
- const edge=handle.dataset.edge||'se';
- handle.addEventListener('pointerdown',e=>{const r=win.getBoundingClientRect();state.resize={edge,x:e.clientX,y:e.clientY,left:r.left,top:r.top,width:r.width,height:r.height,id:e.pointerId};e.preventDefault();try{handle.setPointerCapture(e.pointerId)}catch{}});
- handle.addEventListener('pointermove',e=>{const z=state.resize;if(!z||z.id!==e.pointerId)return;const dx=e.clientX-z.x,dy=e.clientY-z.y;let left=z.left,top=z.top,width=z.width,height=z.height;
-  if(z.edge.includes('e'))width=z.width+dx;if(z.edge.includes('s'))height=z.height+dy;
-  if(z.edge.includes('w')){width=z.width-dx;left=z.left+dx}if(z.edge.includes('n')){height=z.height-dy;top=z.top+dy}
-  win.style.left=left+'px';win.style.top=top+'px';win.style.width=width+'px';win.style.height=height+'px';clampGeometry();draw();
- });
- function done(e){if(state.resize&&state.resize.id===e.pointerId){state.resize=null;persistGeometry();draw()}}
- handle.addEventListener('pointerup',done);handle.addEventListener('pointercancel',done);
-});
 const pointers=new Map();
 canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1)state.drag={kind:'pan',x:e.clientX,y:e.clientY,count:state.view.count,end:state.view.end||state.candles.length,id:e.pointerId};else if(pointers.size===2){state.drag={kind:'pinch',distance:distancePointers(),count:state.view.count,end:state.view.end||state.candles.length}}});
 function distancePointers(){const a=[...pointers.values()];return a.length<2?0:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}
@@ -236,7 +203,8 @@ canvas.addEventListener('pointermove',e=>{
 function releasePointer(e){pointers.delete(e.pointerId);if(!pointers.size){if(state.drag?.kind==='pan'||state.drag?.kind==='pinch'){state.drag=null;saveView()}}else if(pointers.size===1){const p=[...pointers.entries()][0];state.drag={kind:'pan',x:p[1].x,y:p[1].y,count:state.view.count,end:state.view.end||state.candles.length,id:p[0]}}}
 canvas.addEventListener('pointerup',releasePointer);canvas.addEventListener('pointercancel',releasePointer);
 canvas.addEventListener('wheel',e=>{e.preventDefault();const factor=e.deltaY>0?1.12:.89;state.view.count=Math.max(20,Math.min(600,Math.round(state.view.count*factor)));draw();saveView()},{passive:false});
-window.addEventListener('resize',()=>{if(state.open){clampGeometry();draw();persistGeometry()}},{passive:true});
+window.addEventListener('resize',()=>{if(state.open){applyGeometry();draw()}},{passive:true});
+document.addEventListener('keydown',e=>{if(state.open&&e.key==='Escape')close()});
 setInterval(()=>{if(state.open&&!document.hidden)loadCandles(false)},30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.open)loadCandles(true)});
 })();
