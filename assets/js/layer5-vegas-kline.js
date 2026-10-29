@@ -41,7 +41,7 @@ const chart=LWC.createChart(chartHost,{
  handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:false,axisDoubleClickReset:false},
  kineticScroll:{touch:true,mouse:true}
 });
-const candleSeries=chart.addSeries(LWC.CandlestickSeries,{upColor:'#2ee6a6',downColor:'#ff5c7c',borderVisible:false,wickUpColor:'#2ee6a6',wickDownColor:'#ff5c7c',lastValueVisible:false,priceLineVisible:false});
+const candleSeries=chart.addSeries(LWC.CandlestickSeries,{upColor:'rgba(0,0,0,0)',downColor:'#ff5c7c',borderUpColor:'#2ee6a6',borderDownColor:'#ff5c7c',wickUpColor:'#2ee6a6',wickDownColor:'#ff5c7c',borderVisible:true,lastValueVisible:false,priceLineVisible:false});
 const emaSeries=EMA_LINES.map(line=>chart.addSeries(LWC.LineSeries,{color:line.color,lineWidth:Math.max(1,Math.min(4,Math.round(line.width))),lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false}));
 let renderedSnapshot=null;
 let suppressRangeSaveUntil=0;
