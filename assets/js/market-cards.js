@@ -66,6 +66,7 @@ function cardStep(){
  /* 直接读取相邻卡片的实际布局间距，避免用高度+小数 gap 计算导致循环重排时 scrollTop 累积误差。 */
  return Math.max(0,second.offsetTop-first.offsetTop);
 }
+let lastObservedScrollTop=left.scrollTop;
 function normalizeLoopPosition(){
  if(focusSlots.length<2)return;
  const step=cardStep();
@@ -90,6 +91,8 @@ function normalizeLoopPosition(){
   }
  }
  if(Math.abs(top-left.scrollTop)>.1)left.scrollTop=top;
+ /* 记录校正后的实际位置，避免重排引发的 scroll 事件误判为反向滚动。 */
+ lastObservedScrollTop=left.scrollTop;
 }
 function smoothWheelStep(now){
  if(!wheelLastTime)wheelLastTime=now;
@@ -139,7 +142,16 @@ left.addEventListener('wheel',e=>{
  if(!wheelFrame)wheelFrame=requestAnimationFrame(smoothWheelStep);
 },{passive:false});
 left.addEventListener('scroll',()=>{
- if(!wheelFrame){wheelTarget=left.scrollTop;wheelVelocity=0}
+ const current=left.scrollTop;
+ if(!wheelFrame){
+  const delta=current-lastObservedScrollTop;
+  /* 触屏滑动或拖动滚动条时，也使用同一套无限循环校正。 */
+  if(Math.abs(delta)>.5)loopDirection=delta<0?-1:1;
+  normalizeLoopPosition();
+  wheelTarget=left.scrollTop;
+  wheelVelocity=0;
+ }
+ lastObservedScrollTop=left.scrollTop;
  queueFocusScale();
 },{passive:true});
 let touchStartY=0,autoResumeAt=0,autoLastTime=0;
