@@ -202,7 +202,11 @@ const finishTouch=()=>{
 left.addEventListener('touchend',finishTouch,{passive:true});
 left.addEventListener('touchcancel',finishTouch,{passive:true});
 let autoEngageLastTime=0,autoLoopErrorReported=false,autoScrollRemainder=0;
-let autoWaveFrame=0;
+let autoWaveFrame=0,autoWaveTimer=0;
+function scheduleAutoWave(){
+ if(document.hidden||autoWaveFrame||autoWaveTimer)return;
+ autoWaveTimer=window.setTimeout(()=>{autoWaveTimer=0;if(!document.hidden)autoWaveFrame=requestAnimationFrame(autoWaveScroll)},33);
+}
 function autoWaveScroll(now){
  try{
   if(!autoLastTime)autoLastTime=now;
@@ -239,21 +243,22 @@ function autoWaveScroll(now){
    console.warn('[Vegas Octopus] auto-scroll frame recovered:',error);
   }
  }finally{
-  if(!document.hidden)autoWaveFrame=requestAnimationFrame(autoWaveScroll);
+  scheduleAutoWave();
  }
 }
 document.addEventListener('visibilitychange',()=>{
  if(document.hidden){
   if(autoWaveFrame)cancelAnimationFrame(autoWaveFrame);
-  autoWaveFrame=0;
+  if(autoWaveTimer)clearTimeout(autoWaveTimer);
+  autoWaveFrame=0;autoWaveTimer=0;
  }else{
   autoLastTime=0;
   autoEngageLastTime=0;
   autoResumeAt=performance.now()+250;
-  if(!autoWaveFrame)autoWaveFrame=requestAnimationFrame(autoWaveScroll);
+  scheduleAutoWave();
  }
 },{passive:true});
-autoWaveFrame=requestAnimationFrame(autoWaveScroll);
+scheduleAutoWave();
 
 /* 自动滚动看门狗：若动画帧运行但滚动位置连续停滞，使用独立定时器恢复位移。 */
 let autoWatchPosition=left.scrollTop,autoWatchChangedAt=performance.now();
