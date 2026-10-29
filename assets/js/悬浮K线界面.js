@@ -160,7 +160,7 @@
     // 双指结束后若剩余一指，重新建立图表平移起点，避免位置跳跃。
     if(view.pointers.size===1){
       const [id,p]=[...view.pointers.entries()][0];
-      view.chartPan={id,startX:p.x,startOffset:Math.floor(view.offset),visible:visibleCount()};
+      view.chartPan={id,startX:p.x,startOffset:view.offset,visible:visibleCount()};
     }else view.chartPan=null;
   }
   function getScaleLimits(total){const bars=Math.max(1,Math.min(MAX_VISIBLE_BARS,total||1));return {min:Math.min(1,BASE_VISIBLE_BARS/bars),max:BASE_VISIBLE_BARS/MIN_VISIBLE_BARS};}
