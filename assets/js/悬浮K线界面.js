@@ -112,14 +112,14 @@
     else view.gestureMoved=true;
     if(view.pointers.size===1){
       // 图表内单指/鼠标拖动只平移行情，不移动整个悬浮窗口或左上角代码标签。
-      view.chartPan={id:e.pointerId,startX:e.clientX,startOffset:Math.floor(view.offset),visible:visibleCount()};
+      view.chartPan={id:e.pointerId,startX:e.clientX,startOffset:view.offset,visible:visibleCount()};
       view.drag=null;
       view.pinch=null;
     }else if(view.pointers.size===2){
       view.chartPan=null;view.drag=null;
       const p=[...view.pointers.values()];
       const rect=canvas.getBoundingClientRect(),midX=(p[0].x+p[1].x)/2;
-      view.pinch={distance:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),scale:view.scale,midX,anchor:clamp((midX-rect.left)/Math.max(1,rect.width),0,1),offset:Math.floor(view.offset),visible:visibleCount()};
+      view.pinch={distance:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),scale:view.scale,midX,anchor:clamp((midX-rect.left)/Math.max(1,rect.width),0,1),offset:view.offset,visible:visibleCount()};
     }
   }
   function chartPointerMove(e){
@@ -176,6 +176,19 @@
     scheduleDraw();
   }
   function scheduleDraw(){if(drawFrame)return;drawFrame=requestAnimationFrame(()=>{drawFrame=0;draw();});}
+  // 绘图与点击命中共用同一价格范围算法，避免显示坐标与点击判定不一致。
+  function getVisiblePriceRange(rows,ema,start,end){
+    let min=Infinity,max=-Infinity;
+    const include=value=>{if(Number.isFinite(value)){if(value<min)min=value;if(value>max)max=value;}};
+    for(const candle of rows){include(candle.h);include(candle.l);}
+    for(const series of ema){
+      const values=series.values;
+      for(let i=start;i<end;i++)include(values[i]);
+    }
+    if(!Number.isFinite(min)||!Number.isFinite(max))return null;
+    const pad=(max-min)*.08||Math.abs(max)*.005||1;
+    return {min,max,lo:min-pad,hi:max+pad};
+  }
   function preserveRightEdge(oldCandles,newCandles){
     if(!Array.isArray(oldCandles)||!oldCandles.length||!Array.isArray(newCandles)||!newCandles.length)return;
     const oldEnd=oldCandles.length-Math.floor(view.offset),anchor=oldCandles[Math.max(0,Math.min(oldCandles.length-1,oldEnd-1))];if(!anchor)return;
@@ -207,10 +220,8 @@
     const all=state.candles||[];if(!all.length)return;
     const count=visibleCount(),end=clamp(all.length-Math.floor(view.offset),1,all.length),start=Math.max(0,end-count),rows=all.slice(start,end);
     if(!rows.length)return;
-    const ema=state.series||[],values=[];
-    rows.forEach(c=>values.push(c.h,c.l));
-    ema.forEach(s=>s.values.slice(start,end).forEach(v=>{if(Number.isFinite(v))values.push(v)}));
-    let min=Infinity,max=-Infinity;for(const value of values){if(value<min)min=value;if(value>max)max=value;}if(!Number.isFinite(min)||!Number.isFinite(max))return;const pad=(max-min)*.08||Math.abs(max)*.005||1,lo=min-pad,hi=max+pad;
+    const ema=state.series||[],range=getVisiblePriceRange(rows,ema,start,end);if(!range)return;
+    const {lo,hi}=range;
     const left=2,right=2,top=2,bottom=2,pw=Math.max(1,w-left-right),ph=Math.max(1,h-top-bottom),y=v=>top+(hi-v)/(hi-lo)*ph,step=pw/rows.length,bw=Math.max(1,step*.62);
     ctx.lineWidth=1;
     rows.forEach((c,i)=>{
@@ -264,7 +275,12 @@
     }catch(err){if(requestId===openRequestId&&activeSymbol===requestedSymbol&&panel.classList.contains('vfk-open'))setStatus('行情加载失败：'+(err?.message||String(err)));console.error('[悬浮K线]',err);}
   }
   function closeLiveOnly(){if(stopLive){try{stopLive()}catch(_){}stopLive=null;}}
-  function closePanel(){openRequestId++;closeLiveOnly();if(panel)panel.classList.remove('vfk-open');if(drawFrame){cancelAnimationFrame(drawFrame);drawFrame=0;}}
+  function closePanel(){
+    openRequestId++;closeLiveOnly();
+    view.pointers.clear();view.drag=null;view.chartPan=null;view.pinch=null;view.gestureMoved=false;
+    if(panel)panel.classList.remove('vfk-open');
+    if(drawFrame){cancelAnimationFrame(drawFrame);drawFrame=0;}
+  }
   document.addEventListener('click',e=>{
     const card=e.target.closest('#market-cards-layer .mc-card[data-symbol]');
     if(!card||e.target.closest('button'))return;
@@ -279,12 +295,9 @@
     const end=clamp(all.length-Math.floor(view.offset),1,all.length);
     const start=Math.max(0,end-count),rows=all.slice(start,end);
     if(!rows.length)return false;
-    const ema=state.series||[],values=[];
-    rows.forEach(c=>values.push(c.h,c.l));
-    ema.forEach(s=>s.values.slice(start,end).forEach(v=>{if(Number.isFinite(v))values.push(v)}));
-    if(!values.length)return false;
-    const min=Math.min(...values),max=Math.max(...values);
-    const pad=(max-min)*.08||Math.abs(max)*.005||1,lo=min-pad,hi=max+pad;
+    const ema=state.series||[],range=getVisiblePriceRange(rows,ema,start,end);
+    if(!range)return false;
+    const {lo,hi}=range;
     const w=rect.width,h=rect.height,pw=Math.max(1,w-4),ph=Math.max(1,h-4);
     const y=v=>2+(hi-v)/(hi-lo)*ph,step=pw/rows.length,bw=Math.max(1,step*.62);
     // 只将实际蜡烛（实体与影线）附近视为K线本身。
