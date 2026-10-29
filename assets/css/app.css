@@ -200,3 +200,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
   .topbar{max-height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important}
   .v9-notification{max-height:calc(100dvh - 58px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important}
 }
+
+/* 性能优化：视口外卡片暂停装饰动画，进入视口后自动恢复。 */
+#market-cards-layer .mc-slot:not(.mc-in-view) .mc-float,
+#market-cards-layer .mc-slot:not(.mc-in-view) .mc-gshadow{animation-play-state:paused!important}
