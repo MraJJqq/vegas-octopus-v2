@@ -16,7 +16,7 @@ const EMA_LINES=[
  {n:576,color:'#ff4e5e',width:1.8},
  {n:676,color:'#ff4e5e',width:1.8}
 ];
-const state={open:false,symbol:'',period:'2H',candles:[],loading:false,fetchAt:0,rotateTimer:0,loadedSymbol:'',loadedPeriod:'',saved:{},candleCache:new Map()};
+const state={open:false,symbol:'',period:'2H',candles:[],loading:false,fetchAt:0,rotateTimer:0,loadedSymbol:'',loadedPeriod:'',saved:{},candleCache:new Map(),refreshTimer:0};
 const readSaved=()=>{try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}catch{return {}}};
 state.saved=readSaved();
 const storedState=state.saved;state.saved=storedState.perSymbol||storedState;
@@ -148,6 +148,7 @@ function openSymbol(symbol){
  if(cached)draw({range:saved.period===state.period?saved.visibleRange:null,initial:!(saved.period===state.period&&saved.visibleRange)});
  loadCandles(false);
  scheduleAutoRotate();
+ scheduleRefresh();
 }
 function formalSymbols(){
  const fromGlobal=Array.isArray(window.VegasFormalSignalSymbols)?window.VegasFormalSignalSymbols:[];
@@ -181,7 +182,7 @@ function stepFormalSymbol(direction){
 }
 root.querySelector('#vegas-layer5-prev').addEventListener('click',()=>stepFormalSymbol(-1));
 root.querySelector('#vegas-layer5-next').addEventListener('click',()=>stepFormalSymbol(1));
-function close(){if(state.open&&state.candles.length)saveView();state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];if(state.rotateTimer)clearTimeout(state.rotateTimer);state.rotateTimer=0;win.classList.remove('is-open');}
+function close(){if(state.open&&state.candles.length)saveView();state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];if(state.rotateTimer)clearTimeout(state.rotateTimer);state.rotateTimer=0;if(state.refreshTimer)clearTimeout(state.refreshTimer);state.refreshTimer=0;win.classList.remove('is-open');}
 /* 触屏退出：顶部非控件区域双击；图表缩放和平移交由 Lightweight Charts 处理。 */
 let lastHeadTap=0;
 function isHeadControl(target){return !!(target&&target.closest&&target.closest('button,select,input,textarea,a'))}
@@ -209,6 +210,18 @@ document.addEventListener('click',e=>{
 /* Chart pan, pinch zoom and touch kinetic scrolling are owned by TradingView Lightweight Charts.
    Full-screen exit remains available via header double-tap and Escape to avoid gesture conflicts. */
 document.addEventListener('keydown',e=>{if(state.open&&e.key==='Escape')close()});
-setInterval(()=>{if(state.open&&!document.hidden)loadCandles(false)},30000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.open)loadCandles(true)});
+function scheduleRefresh(){
+ if(state.refreshTimer)clearTimeout(state.refreshTimer);
+ state.refreshTimer=0;
+ if(!state.open||document.hidden)return;
+ state.refreshTimer=setTimeout(()=>{
+  state.refreshTimer=0;
+  if(state.open&&!document.hidden)loadCandles(false);
+  scheduleRefresh();
+ },30000);
+}
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden){if(state.refreshTimer)clearTimeout(state.refreshTimer);state.refreshTimer=0;return;}
+ if(state.open){loadCandles(true);scheduleRefresh();}
+});
 })();
