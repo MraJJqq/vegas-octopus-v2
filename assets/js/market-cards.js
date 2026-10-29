@@ -163,7 +163,8 @@ function autoWaveScroll(now){
  const engageDt=Math.min(40,Math.max(0,now-autoEngageLastTime));
  autoEngageLastTime=now;
  if(!wheelFrame&&now>=autoResumeAt){
-  autoEngage=Math.min(1,autoEngage+engageDt/900);
+  /* 自动滚动在约 1 秒内恢复到完整介入比例。 */
+  autoEngage=Math.min(1,autoEngage+engageDt/1000);
   if(!autoWaveScroll.nextChange||now>=autoWaveScroll.nextChange){
    const cycleSpeed=Math.max(1,cardStep()*focusSlots.length/120);
    autoWaveScroll.targetSpeed=cycleSpeed*(.72+Math.random()*.56);
