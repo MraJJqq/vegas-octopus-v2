@@ -94,13 +94,20 @@
     }
   }
   function chartPointerDown(e){
-    e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    try{e.currentTarget.setPointerCapture(e.pointerId)}catch(_){}
     view.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(view.pointers.size===1)view.panStart={id:e.pointerId,x:e.clientX,offset:view.offset};
-    if(view.pointers.size===2){
+    if(view.pointers.size===1){
+      const r=panel.getBoundingClientRect();
+      // K线区域任意位置单指拖动，移动整个悬浮窗口。
+      panel.style.transform='none';panel.style.left=r.left+'px';panel.style.top=r.top+'px';
+      view.drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top};
+      view.pinch=null;
+    }else if(view.pointers.size===2){
+      // 双指操作优先用于缩放；停止窗口拖动，避免与缩放冲突。
+      view.drag=null;
       const p=[...view.pointers.values()];
       view.pinch={distance:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),scale:view.scale,midX:(p[0].x+p[1].x)/2};
-      view.panStart=null;
     }
   }
   function chartPointerMove(e){
@@ -114,17 +121,24 @@
       const oldVisible=visibleCount(),newVisible=Math.max(8,Math.floor((state?.candles.length||0)/next));
       view.offset=clamp(view.offset+(newVisible-oldVisible)*anchor,0,Math.max(0,(state?.candles.length||1)-newVisible));
       view.scale=next;draw();
-    }else if(view.panStart&&view.panStart.id===e.pointerId){
-      const width=Math.max(1,canvas.getBoundingClientRect().width);
-      const count=visibleCount(),delta=(e.clientX-view.panStart.x)/width*count;
-      view.offset=clamp(view.panStart.offset+delta,0,Math.max(0,(state?.candles.length||1)-count));draw();
+    }else if(view.drag&&view.drag.id===e.pointerId){
+      const r=panel.getBoundingClientRect(),w=r.width,h=r.height;
+      const viewport=window.visualViewport;
+      const vw=Math.max(1,Math.floor(viewport?.width||document.documentElement.clientWidth||innerWidth));
+      const vh=Math.max(1,Math.floor(viewport?.height||document.documentElement.clientHeight||innerHeight));
+      panel.style.left=clamp(view.drag.left+e.clientX-view.drag.x,0,Math.max(0,vw-w))+'px';
+      panel.style.top=clamp(view.drag.top+e.clientY-view.drag.y,0,Math.max(0,vh-h))+'px';
     }
   }
   function chartPointerEnd(e){
     view.pointers.delete(e.pointerId);
+    if(view.drag&&view.drag.id===e.pointerId)view.drag=null;
     if(view.pointers.size<2)view.pinch=null;
-    if(view.pointers.size===1){const [id,p]=[...view.pointers.entries()][0];view.panStart={id,x:p.x,offset:view.offset};}
-    else view.panStart=null;
+    // 双指结束后剩余单指重新开始窗口拖动，避免位置跳跃。
+    if(view.pointers.size===1){
+      const [id,p]=[...view.pointers.entries()][0],r=panel.getBoundingClientRect();
+      view.drag={id,x:p.x,y:p.y,left:r.left,top:r.top};
+    }else view.drag=null;
   }
   function chartWheel(e){
     e.preventDefault();
