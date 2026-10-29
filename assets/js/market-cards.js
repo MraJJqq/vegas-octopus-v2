@@ -46,10 +46,10 @@ let focusSlots=Array.from(left.querySelectorAll('.mc-slot'));
 let focusFrame=0;
 function updateFocusScale(){
  focusFrame=0;
- const view=left.getBoundingClientRect(),center=view.top+view.height/2,range=Math.max(1,view.height*.52),fadeRange=Math.max(1,view.height*.46),available=Math.max(1,left.clientWidth-8);
+ const height=left.clientHeight,center=left.scrollTop+height/2,range=Math.max(1,height*.52),fadeRange=Math.max(1,height*.46),available=Math.max(1,left.clientWidth-8);
  const metrics=focusSlots.map(slot=>{
-  const r=slot.getBoundingClientRect(),distance=Math.abs((r.top+r.height/2)-center),t=Math.min(1,distance/range),ease=t*t*(3-2*t),fadeT=Math.min(1,distance/fadeRange),fadeEase=fadeT*fadeT*(3-2*fadeT);
-  const visible=Math.max(0,Math.min(r.bottom,view.bottom)-Math.max(r.top,view.top)),ratio=Math.min(1,visible/Math.max(1,r.height)),focused=distance<view.height*.23&&ratio>=.98;
+  const top=slot.offsetTop,bottom=top+slot.offsetHeight,distance=Math.abs((top+slot.offsetHeight/2)-center),t=Math.min(1,distance/range),ease=t*t*(3-2*t),fadeT=Math.min(1,distance/fadeRange),fadeEase=fadeT*fadeT*(3-2*fadeT);
+  const visible=Math.max(0,Math.min(bottom,left.scrollTop+height)-Math.max(top,left.scrollTop)),ratio=Math.min(1,visible/Math.max(1,slot.offsetHeight)),focused=distance<height*.23&&ratio>=.98;
   return {slot,scale:1+(Math.min(1.34,available/Math.max(1,slot.offsetWidth))-1)*(1-ease),opacity:focused?1:(1-.72*fadeEase)*Math.min(1,ratio*1.8)};
  });
  metrics.forEach(({slot,scale,opacity})=>{
@@ -170,7 +170,6 @@ function autoWaveScroll(now){
    /* 固定按容器实际单轮位移计算速度：约 120 秒完成一轮；不设置过高的像素速度下限。 */
    const baseSpeed=Math.max(.1,step*focusSlots.length/120);
    /* 不再随机改变速度，避免一轮滚动时快慢不一致。 */
-   autoWaveScroll.targetSpeed=baseSpeed;
    autoWaveScroll.speed=baseSpeed;
    autoScrollRemainder+=autoWaveScroll.speed*autoEngage*dt;
    const wholePixels=Math.floor(autoScrollRemainder);
@@ -187,7 +186,6 @@ function autoWaveScroll(now){
  requestAnimationFrame(autoWaveScroll);
 }
 autoWaveScroll.speed=Math.max(.1,cardStep()*focusSlots.length/120);
-autoWaveScroll.targetSpeed=autoWaveScroll.speed;
 requestAnimationFrame(autoWaveScroll);
 
 window.addEventListener('resize',queueFocusScale,{passive:true});
