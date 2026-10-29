@@ -16,7 +16,7 @@ const EMA_LINES=[
  {n:576,color:'#ff4e5e',width:1.8},
  {n:676,color:'#ff4e5e',width:1.8}
 ];
-const state={open:false,symbol:'',period:'2H',candles:[],loading:false,fetchAt:0,rotateTimer:0,loadedSymbol:'',loadedPeriod:'',saved:{},candleCache:new Map(),refreshTimer:0};
+const state={open:false,symbol:'',period:'2H',candles:[],loading:false,fetchAt:0,rotateTimer:0,loadedSymbol:'',loadedPeriod:'',saved:{},candleCache:new Map(),refreshTimer:0,requestController:null};
 const readSaved=()=>{try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}catch{return {}}};
 state.saved=readSaved();
 const storedState=state.saved;state.saved=storedState.perSymbol||storedState;
@@ -52,9 +52,9 @@ chart.timeScale().subscribeVisibleTimeRangeChange(range=>{
 function symbolFor(symbol){return symbol+'USDT'}
 function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({perSymbol:state.saved}))}catch{}}
 async function getJson(path){
- const c=new AbortController(),t=setTimeout(()=>c.abort(),10000);
+ const c=new AbortController(),t=setTimeout(()=>c.abort(),10000);state.requestController=c;
  try{const r=await fetch(API+path,{cache:'no-store',signal:c.signal});if(!r.ok)throw Error('HTTP '+r.status);const j=await r.json();if(j.code!=='00000'||!Array.isArray(j.data))throw Error(j.msg||'行情响应无效');return j.data}
- finally{clearTimeout(t)}
+ finally{clearTimeout(t);if(state.requestController===c)state.requestController=null}
 }
 let stockDirectory=null,stockDirectoryAt=0;
 async function getStockSymbol(symbol){
@@ -133,6 +133,7 @@ function openSymbol(symbol){
  if(!symbol)return;
  if(state.rotateTimer)clearTimeout(state.rotateTimer);
  state.rotateTimer=0;
+ if(state.requestController){state.requestController.abort();state.requestController=null;}
  state.open=true;state.symbol=symbol;
  const saved=state.saved[symbol]||{};
  state.period=saved.period||(STOCKS.has(symbol)?'1H':'2H');
@@ -182,7 +183,7 @@ function stepFormalSymbol(direction){
 }
 root.querySelector('#vegas-layer5-prev').addEventListener('click',()=>stepFormalSymbol(-1));
 root.querySelector('#vegas-layer5-next').addEventListener('click',()=>stepFormalSymbol(1));
-function close(){if(state.open&&state.candles.length)saveView();state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];if(state.rotateTimer)clearTimeout(state.rotateTimer);state.rotateTimer=0;if(state.refreshTimer)clearTimeout(state.refreshTimer);state.refreshTimer=0;win.classList.remove('is-open');}
+function close(){if(state.open&&state.candles.length)saveView();if(state.requestController){state.requestController.abort();state.requestController=null;}state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];if(state.rotateTimer)clearTimeout(state.rotateTimer);state.rotateTimer=0;if(state.refreshTimer)clearTimeout(state.refreshTimer);state.refreshTimer=0;win.classList.remove('is-open');}
 /* 触屏退出：顶部非控件区域双击；图表缩放和平移交由 Lightweight Charts 处理。 */
 let lastHeadTap=0;
 function isHeadControl(target){return !!(target&&target.closest&&target.closest('button,select,input,textarea,a'))}
