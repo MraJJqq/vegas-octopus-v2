@@ -181,28 +181,34 @@ left.addEventListener('scroll',()=>{
  lastObservedScrollTop=left.scrollTop;
  queueFocusScale();
 },{passive:true});
-let touchStartY=0,autoResumeAt=0,autoLastTime=0;
-left.addEventListener('touchstart',e=>{wheelVelocity=0;wheelTarget=left.scrollTop;touchStartY=e.touches[0]?.clientY??0;autoResumeAt=performance.now()+1800;autoEngage=0},{passive:true});
-left.addEventListener('touchmove',e=>{
+let touchStartY=0,touchLastY=0,touchStartScrollTop=0,touchActive=false,touchDragging=false,autoResumeAt=0,autoLastTime=0;
+left.addEventListener('touchstart',e=>{
  const touch=e.touches[0];if(!touch)return;
- const dy=touch.clientY-touchStartY;
+ wheelVelocity=0;wheelFrame&&cancelAnimationFrame(wheelFrame);wheelFrame=0;
+ touchStartY=touchLastY=touch.clientY;touchStartScrollTop=left.scrollTop;
+ touchActive=true;touchDragging=false;wheelTarget=left.scrollTop;
+ autoResumeAt=performance.now()+1800;autoEngage=0;
+},{passive:true});
+left.addEventListener('touchmove',e=>{
+ const touch=e.touches[0];if(!touch||!touchActive)return;
+ const y=touch.clientY,dy=y-touchStartY,stepDelta=touchLastY-y;
  autoResumeAt=performance.now()+1800;
- const atTop=left.scrollTop<=0;
- const atBottom=left.scrollTop+left.clientHeight>=left.scrollHeight-1;
- if(atTop&&dy>0){
-  e.preventDefault();
-  loopDirection=-1;
-  normalizeLoopPosition();
-  wheelTarget=left.scrollTop;
- }else if(atBottom&&dy<0){
-  e.preventDefault();
-  loopDirection=1;
-  normalizeLoopPosition();
-  wheelTarget=left.scrollTop;
- }
+ if(!touchDragging&&Math.abs(dy)<3)return;
+ touchDragging=true;
+ /* 接管竖向手指拖动，避免浏览器原生滚动与无限循环重排互相抢控制权。 */
+ e.preventDefault();
+ if(Math.abs(stepDelta)>.1)loopDirection=stepDelta>0?-1:1;
+ left.scrollTop=touchStartScrollTop-dy;
+ normalizeLoopPosition();
+ wheelTarget=left.scrollTop;wheelVelocity=0;touchLastY=y;
+ queueFocusScale();
 },{passive:false});
-left.addEventListener('touchend',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;autoResumeAt=performance.now()+1400},{passive:true});
-left.addEventListener('touchcancel',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;autoResumeAt=performance.now()+1400},{passive:true});
+const finishTouch=()=>{
+ touchActive=false;touchDragging=false;touchStartY=touchLastY=0;
+ wheelTarget=left.scrollTop;wheelVelocity=0;autoResumeAt=performance.now()+1400;
+};
+left.addEventListener('touchend',finishTouch,{passive:true});
+left.addEventListener('touchcancel',finishTouch,{passive:true});
 let autoEngageLastTime=0,autoLoopErrorReported=false,autoScrollRemainder=0;
 function autoWaveScroll(now){
  try{
@@ -212,7 +218,7 @@ function autoWaveScroll(now){
   if(!autoEngageLastTime)autoEngageLastTime=now;
   const engageDt=Math.min(40,Math.max(0,now-autoEngageLastTime));
   autoEngageLastTime=now;
-  if(!wheelFrame&&now>=autoResumeAt){
+  if(!wheelFrame&&!touchActive&&now>=autoResumeAt){
    autoEngage=Math.min(1,autoEngage+engageDt/1000);
    /* 每帧重新读取真实卡片数与布局，避免初始化/屏幕尺寸变化时沿用失效参数。 */
    if(focusSlots.length!==left.children.length)focusSlots=Array.from(left.querySelectorAll('.mc-slot'));
