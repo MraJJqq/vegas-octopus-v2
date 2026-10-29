@@ -30,7 +30,7 @@
     P.push({ x: s * Math.cos(a), y: u, z: s * Math.sin(a), k: R() });
   }
 
-  /* 整组数据流共用一个起点；小卡片组滚动或布局变化时，仅同步组锚点，不按卡片拆线。 */
+  /* 整组数据流共用一个起点；起点绑定当前正式信号通知对应的单张小卡片。 */
   const STREAM_COUNT = 36;
   function syncCardLines() {
     F.length = 0;
@@ -90,27 +90,26 @@
     });
   }
 
-  function getCardGroupStart() {
-    const group = $('mc-left');
-    if (!group || !group.isConnected) return null;
-    const r = group.getBoundingClientRect();
+  function getFormalSignalCardStart() {
+    /* 与最新事件模块共用 data-formal-signal 标记；只选一张卡片作为整组数据流起点。 */
+    const cards = Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]'));
+    if (!cards.length) return null;
     const appRect = app.getBoundingClientRect();
+    const visibleCards = cards.map(card => ({ card, r: card.getBoundingClientRect() }))
+      .filter(({ r }) => r.bottom > Math.max(appRect.top, 0) && r.top < Math.min(appRect.bottom, window.innerHeight)
+        && r.right > appRect.left && r.left < appRect.right);
+    /* 优先选择当前可见的第一张正式信号卡片；若信号卡片暂时滚出视口，则选第一条正式信号卡片并在其出现时自动跟随。 */
+    const selected = visibleCards[0] || (cards[0] ? { card: cards[0], r: cards[0].getBoundingClientRect() } : null);
+    if (!selected) return null;
+    const { r } = selected;
     const visibleTop = Math.max(r.top, appRect.top, 0);
     const visibleBottom = Math.min(r.bottom, appRect.bottom, window.innerHeight);
     if (visibleBottom <= visibleTop || r.right <= appRect.left || r.left >= appRect.right) return null;
-    /* 以可见卡片中最靠右的边缘作为整组数据流的共同起点，避免锚定到空白容器边缘。 */
-    const cards = group.querySelectorAll('.mc-card');
-    let right = -Infinity;
-    cards.forEach(card => {
-      const cr = card.getBoundingClientRect();
-      if (cr.bottom > visibleTop && cr.top < visibleBottom && cr.right > appRect.left && cr.left < appRect.right) {
-        right = Math.max(right, Math.min(cr.right, appRect.right, window.innerWidth));
-      }
-    });
-    if (!Number.isFinite(right)) return null;
     return {
-      x: right - appRect.left,
-      y: (visibleTop + visibleBottom) * .5 - appRect.top,
+      card: selected.card,
+      symbol: String(selected.card.dataset.symbol || '').toUpperCase(),
+      x: Math.min(r.right, appRect.right, window.innerWidth) - appRect.left,
+      y: Math.max(visibleTop, Math.min(visibleBottom, r.top + r.height * .5)) - appRect.top,
       visibleRatio: Math.min(1, (visibleBottom - visibleTop) / Math.max(1, r.height))
     };
   }
@@ -121,12 +120,15 @@
     rotA += dt * .2;
     ctx.clearRect(0, 0, width, height);
     const pr = getOrbPoints(t);
-    const fallbackCx = ORB.cx ?? width * .66;
 
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineWidth = .8;
-    const start = getCardGroupStart();
-    if (!start) return;
+    const start = getFormalSignalCardStart();
+    if (!start) {
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      return;
+    }
     F.forEach(f => {
       const q = pr[f.t];
       if (!q) return;
@@ -195,7 +197,9 @@
       connectedToOrb: !!(window.VegasOrbProjectedPoints && window.VegasOrbProjectedPoints.length),
       connectedToSmallCards: !!$('mc-left'),
       streamCount: F.length,
-      anchorMode: 'single-group-anchor',
+      anchorMode: 'one-stream-group-to-one-formal-signal-card',
+      activeSignalSymbol: (getFormalSignalCardStart() || {}).symbol || null,
+      formalSignalCardCount: document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]').length,
       canvasWidth: width,
       canvasHeight: height
     })
