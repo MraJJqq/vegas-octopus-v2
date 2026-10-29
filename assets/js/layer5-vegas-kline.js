@@ -19,7 +19,7 @@ const EMA_LINES=[
 const state={open:false,symbol:'',period:'2H',candles:[],loading:false,frame:0,raf:0,fetchAt:0,scrollTimer:0,followTimer:0,pointers:new Map(),drag:null,resize:null,view:{count:120,end:0},saved:{}};
 const readSaved=()=>{try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}catch{return {}}};
 state.saved=readSaved();
-function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({geometry:state.geometry||null,perSymbol:state.saved}))}catch{}}
+function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({geometry:state.geometry||savedGeometry||null,perSymbol:state.saved}))}catch{}}
 const oldSave=state.saved;state.saved=oldSave.perSymbol||oldSave;
 const savedGeometry=oldSave.geometry||null;
 const root=document.createElement('div');root.id='vegas-layer5-root';
