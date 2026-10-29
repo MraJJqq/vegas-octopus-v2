@@ -180,7 +180,7 @@
       const len = 9 + drift * 24;
       const bend = spread * len * .8;
       ctx.globalAlpha = (.18 + (1 - drift) * .42) * alpha;
-      ctx.strokeStyle = 'hsl(' + (184 + i * 19) + ',100%,' + (68 + (i % 3) * 7) + '%)';
+      ctx.strokeStyle = EMISSION_COLORS[i];
       ctx.lineWidth = .65 + (1 - drift) * .55;
       ctx.beginPath();
       ctx.moveTo(x, y);
@@ -207,6 +207,7 @@
   }
 
   /* 每个可见卡片组分配唯一色相；黄金角间隔让相邻组颜色尽量易于区分。 */
+  const EMISSION_COLORS = Array.from({ length: 7 }, (_, i) => 'hsl(' + (184 + i * 19) + ',100%,' + (68 + (i % 3) * 7) + '%)');
   const SYMBOL_COLORS = new Map();
   function getGroupColor(symbol) {
     const cached = SYMBOL_COLORS.get(symbol);
@@ -250,6 +251,9 @@
     starts.forEach((start, groupIndex) => {
       /* 同一组只连接当前卡片；每组独立配色，当前可见组之间不重复。 */
       const groupColor = getGroupColor(start.symbol);
+      /* 每组统一设置粒子辉光状态，避免每个粒子反复写入相同 Canvas 属性。 */
+      ctx.shadowColor = groupColor;
+      ctx.shadowBlur = 8;
       F.forEach(f => {
         if (!f.valid || f.fa < .05) return;
         const fa = f.fa, qx = f.qx, qy = f.qy;
@@ -267,13 +271,11 @@
         const py = v * v * start.y + 2 * v * u * c1y + u * u * qy;
         ctx.globalAlpha = .95 * fa * start.visibleRatio;
         ctx.fillStyle = groupColor;
-        ctx.shadowColor = groupColor;
-        ctx.shadowBlur = 8;
         ctx.beginPath();
         ctx.arc(px, py, 1.6, 0, PI * 2);
         ctx.fill();
-        ctx.shadowBlur = 0;
       });
+      ctx.shadowBlur = 0;
       drawCardEmission(start, t + groupIndex * .17);
     });
     ctx.globalAlpha = 1;
