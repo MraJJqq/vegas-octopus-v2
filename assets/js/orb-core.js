@@ -14,7 +14,7 @@ function hrgb(h){h/=360;var q=.62+1-.62,p2=2*.62-q;function f(t){t=((t%1)+1)%1;r
 /* 发光球粒子与颜色模型 */
 var PAL=[0,28,52,150,190,245,320,280,170],PR=PAL.map(hrgb),N=900,P=[];
 for(i=0;i<N;i++){var y=1-2*(i+.5)/N,r=Math.sqrt(1-y*y),th=i*2.399963,k=R(),c=Math.floor(R()*PAL.length);P.push({x:r*Math.cos(th),y:y,z:r*Math.sin(th),k:k,rotFactor:.8+.4*k,c:c,pc:PR[c],m:R()<.2?0:.5+R()*.4})}
-var TRIG_N=16384,TRIG_MASK=TRIG_N-1,TRIG_SCALE=TRIG_N/(PI*2),TRIG_SIN=new Float32Array(TRIG_N),TRIG_COS=new Float32Array(TRIG_N);for(i=0;i<TRIG_N;i++){var ta=i*PI*2/TRIG_N;TRIG_SIN[i]=Math.sin(ta);TRIG_COS[i]=Math.cos(ta)}\nfunction trigPair(a){var u=((a%(PI*2))+(PI*2))%(PI*2)*TRIG_SCALE,j=u|0,f=u-j,j1=(j+1)&TRIG_MASK;return[TRIG_COS[j]+(TRIG_COS[j1]-TRIG_COS[j])*f,TRIG_SIN[j]+(TRIG_SIN[j1]-TRIG_SIN[j])*f]}\nfunction pj(v,cs,sn,cp,spp,cx,cy,Rr,out){var x1=v.x*cs+v.z*sn,z1=-v.x*sn+v.z*cs,y2=v.y*cp-z1*spp,z2=v.y*spp+z1*cp,f=1+z2*.12,q=out||[0,0,0];q[0]=cx+x1*Rr*f;q[1]=cy+y2*Rr*f;q[2]=z2;return q}
+var TRIG_N=16384,TRIG_MASK=TRIG_N-1,TRIG_SCALE=TRIG_N/(PI*2),TRIG_SIN=new Float32Array(TRIG_N),TRIG_COS=new Float32Array(TRIG_N);for(i=0;i<TRIG_N;i++){var ta=i*PI*2/TRIG_N;TRIG_SIN[i]=Math.sin(ta);TRIG_COS[i]=Math.cos(ta)}\nvar trigOut=[0,0];function trigPair(a,out){var u=((a%(PI*2))+(PI*2))%(PI*2)*TRIG_SCALE,j=u|0,f=u-j,j1=(j+1)&TRIG_MASK;out[0]=TRIG_COS[j]+(TRIG_COS[j1]-TRIG_COS[j])*f;out[1]=TRIG_SIN[j]+(TRIG_SIN[j1]-TRIG_SIN[j])*f;return out}\nfunction pj(v,cs,sn,cp,spp,cx,cy,Rr,out){var x1=v.x*cs+v.z*sn,z1=-v.x*sn+v.z*cs,y2=v.y*cp-z1*spp,z2=v.y*spp+z1*cp,f=1+z2*.12,q=out||[0,0,0];q[0]=cx+x1*Rr*f;q[1]=cy+y2*Rr*f;q[2]=z2;return q}
 
 /* drag */
 var rot=0,pitB=.32,dn=false,lx=0,ly=0;
@@ -30,7 +30,7 @@ function frame(ms){orbFrame=0;if(document.hidden)return;var t=ms/1000,dt=Math.ma
 var cx=W*.66,cy=H*.5,roomX=Math.min(cx-8,W-cx-8),roomY=Math.max(1,H*.46),Rr=Math.max(1,Math.min(roomX,roomY)*V.zm),pit=pitB+.1*Math.sin(t*.17),cp=Math.cos(pit),spp=Math.sin(pit);
 x.clearRect(0,0,W,H);
 var pr=projectedPoints;
-for(var n=0;n<N;n++){var p=P[n],tc=trigPair(rot*p.rotFactor),q=pj(p,tc[0],tc[1],cp,spp,cx,cy,Rr,pr[n]),u=(q[0]-(cx-Rr))/(2*Rr);q[3]=Math.max(0,Math.min(1,(.6-u)/.22));q[4]=(q[2]+1)/2}
+for(var n=0;n<N;n++){var p=P[n],tc=trigPair(rot*p.rotFactor,trigOut),q=pj(p,tc[0],tc[1],cp,spp,cx,cy,Rr,pr[n]),u=(q[0]-(cx-Rr))/(2*Rr);q[3]=Math.max(0,Math.min(1,(.6-u)/.22));q[4]=(q[2]+1)/2}
 window.VegasOrbProjectedPoints=pr;
 x.globalCompositeOperation="lighter";x.globalAlpha=1;
 var g=x.createRadialGradient(cx,cy,0,cx,cy,Rr*.22);g.addColorStop(0,"rgba(255,225,160,.45)");g.addColorStop(1,"rgba(255,200,100,0)");x.fillStyle=g;x.fillRect(cx-Rr*.22,cy-Rr*.22,Rr*.44,Rr*.44);
