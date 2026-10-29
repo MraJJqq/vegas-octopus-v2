@@ -1,4 +1,4 @@
-/* 第四层：数据流（单组）。保留原版流光线效果，并同步第二层真实发光球的投影点。 */
+/* 第四层：数据流（单组）。流光线起点动态绑定第三层小卡片，终点同步第二层发光球投影点。 */
 (function () {
   'use strict';
   if (window.__VEGAS_DATA_STREAM_LAYER_READY__) return;
@@ -6,18 +6,17 @@
   const $ = id => document.getElementById(id);
   const R = Math.random, PI = Math.PI;
   const COL = '#3fc8ff';
-  let Y0 = null;
   const ORB = {};
   const P = [], F = [];
   let canvas, ctx, width = 1, height = 1, dpr = 1;
   let rotA = 0, lastT = 0, frameId = 0, resizeObserver = null;
 
-  /* 以透明独立画布叠加，不创建背景层，也不接管鼠标/触摸事件。 */
+  /* 透明叠加层：不创建背景，不接管鼠标/触摸事件。 */
+  const app = document.querySelector('.app') || document.body;
   const layer = document.createElement('div');
   layer.id = 'vegas-data-stream-layer';
   layer.setAttribute('aria-hidden', 'true');
   layer.style.cssText = 'position:absolute;inset:0;z-index:2.5;pointer-events:none;overflow:hidden;background:transparent;';
-  const app = document.querySelector('.app') || document.body;
   if (getComputedStyle(app).position === 'static') app.style.position = 'relative';
   canvas = document.createElement('canvas');
   canvas.id = 'vegas-data-stream-canvas';
@@ -30,9 +29,16 @@
     const u = R() * 2 - 1, a = R() * 2 * PI, s = Math.sqrt(1 - u * u);
     P.push({ x: s * Math.cos(a), y: u, z: s * Math.sin(a), k: R() });
   }
-  for (let n = 0; n < 150; n++) {
-    if (n % 7 === 0) F.push({ s: n % 7, t: Math.floor(R() * 560), o: R(), v: .18 + R() * .25 });
+
+  /* 每张小卡片分配一条流光线；卡片滚动时每帧重新读取其屏幕位置。 */
+  function syncCardLines() {
+    const cards = Array.from(document.querySelectorAll('#market-cards-layer .mc-card'));
+    F.length = 0;
+    cards.forEach((card, index) => {
+      F.push({ card, t: Math.floor(R() * P.length), o: R(), v: .18 + R() * .25, index });
+    });
   }
+  syncCardLines();
 
   function resize() {
     const r = layer.getBoundingClientRect();
@@ -59,24 +65,22 @@
     const projected = window.VegasOrbProjectedPoints;
     if (orbCanvas && Array.isArray(projected) && projected.length) {
       const r = orbCanvas.getBoundingClientRect();
+      const appRect = app.getBoundingClientRect();
       const sx = r.width / Math.max(1, orbCanvas.clientWidth);
       const sy = r.height / Math.max(1, orbCanvas.clientHeight);
-      return projected.map(q => [
-        r.left + q[0] * sx,
-        r.top + q[1] * sy,
-        q[2],
-        q[3],
-        q[4]
-      ]);
+      return projected.map(q => {
+        const x = r.left + q[0] * sx - appRect.left;
+        const y = r.top + q[1] * sy - appRect.top;
+        return [x, y, q[2], q[3], q[4]];
+      });
     }
 
-    /* 发光球投影尚未就绪时，沿用模块原版的虚拟球面位置作为回退。 */
-    const cx = ORB.cx ?? width * .56;
+    /* 球体投影尚未就绪时，使用原版虚拟球面作为回退。 */
+    const cx = ORB.cx ?? width * .66;
     const cy = ORB.cy ?? height * .5;
     const rr = ORB.R ?? Math.min(width * .36, height * .4);
     const pit = .32 + .1 * Math.sin(t * .17);
     const cp = Math.cos(pit), sp = Math.sin(pit);
-    const cs = Math.cos(rotA), sn = Math.sin(rotA);
     return P.map(p => {
       const yw = rotA * (.8 + .4 * p.k);
       const q = pj([p.x, p.y, p.z], Math.cos(yw), Math.sin(yw), cp, sp, cx, cy, rr);
@@ -86,37 +90,52 @@
     });
   }
 
+  function getCardStart(card) {
+    if (!card || !card.isConnected) return null;
+    const r = card.getBoundingClientRect();
+    const appRect = app.getBoundingClientRect();
+    const visibleTop = Math.max(r.top, appRect.top, 0);
+    const visibleBottom = Math.min(r.bottom, appRect.bottom, window.innerHeight);
+    const visibleRight = Math.min(r.right, appRect.right, window.innerWidth);
+    if (visibleBottom <= visibleTop || r.right <= appRect.left || r.left >= appRect.right) return null;
+    return {
+      x: visibleRight - appRect.left,
+      y: (Math.max(visibleTop, Math.min(visibleBottom, r.top + r.height * .5))) - appRect.top,
+      visibleRatio: Math.min(1, (visibleBottom - visibleTop) / Math.max(1, r.height))
+    };
+  }
+
   function flowDraw(t) {
     const dt = Math.max(0, Math.min(.05, t - lastT));
     lastT = t;
     rotA += dt * .2;
     ctx.clearRect(0, 0, width, height);
-
     const pr = getOrbPoints(t);
-    const y0 = Y0 ?? 88 * height / 580;
-    const fallbackCx = ORB.cx ?? width * .56;
-    const cx = fallbackCx;
-    const startControlX = cx * .5;
+    const fallbackCx = ORB.cx ?? width * .66;
 
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineWidth = .8;
     F.forEach(f => {
+      const start = getCardStart(f.card);
+      if (!start) return;
       const q = pr[f.t];
       if (!q) return;
       const fa = q[3] == null ? 1 : q[3];
       if (fa < .05) return;
       const col = COL;
+      const c1x = start.x + (q[0] - start.x) * .42;
+      const c1y = start.y;
       ctx.strokeStyle = col;
-      ctx.globalAlpha = .26 * fa;
+      ctx.globalAlpha = .22 * fa * start.visibleRatio;
       ctx.beginPath();
-      ctx.moveTo(0, y0);
-      ctx.quadraticCurveTo(startControlX, y0, q[0], q[1]);
+      ctx.moveTo(start.x, start.y);
+      ctx.quadraticCurveTo(c1x, c1y, q[0], q[1]);
       ctx.stroke();
 
       const u = (t * f.v + f.o) % 1, v = 1 - u;
-      const px = 2 * v * u * startControlX + u * u * q[0];
-      const py = v * v * y0 + 2 * v * u * y0 + u * u * q[1];
-      ctx.globalAlpha = .95 * fa;
+      const px = v * v * start.x + 2 * v * u * c1x + u * u * q[0];
+      const py = v * v * start.y + 2 * v * u * c1y + u * u * q[1];
+      ctx.globalAlpha = .95 * fa * start.visibleRatio;
       ctx.fillStyle = col;
       ctx.shadowColor = col;
       ctx.shadowBlur = 8;
@@ -132,6 +151,9 @@
   function frame(ms) {
     frameId = 0;
     if (document.hidden) return;
+    /* 兼容卡片列表后续异步重建或数量变化。 */
+    const count = document.querySelectorAll('#market-cards-layer .mc-card').length;
+    if (count !== F.length) syncCardLines();
     flowDraw(ms / 1000);
     frameId = requestAnimationFrame(frame);
   }
@@ -159,8 +181,16 @@
   window.__VEGAS_DATA_STREAM_LAYER_READY__ = true;
   window.VegasDataStreamLayer = {
     resize,
-    getState: () => ({ layer: 4, ready: true, connectedToOrb: !!(window.VegasOrbProjectedPoints && window.VegasOrbProjectedPoints.length), canvasWidth: width, canvasHeight: height })
+    syncCardLines,
+    getState: () => ({
+      layer: 4,
+      ready: true,
+      connectedToOrb: !!(window.VegasOrbProjectedPoints && window.VegasOrbProjectedPoints.length),
+      connectedToSmallCards: F.length,
+      canvasWidth: width,
+      canvasHeight: height
+    })
   };
   start();
-  console.info('[Vegas Fourth Layer] data stream initialized');
+  console.info('[Vegas Fourth Layer] data stream linked to small cards');
 })();
