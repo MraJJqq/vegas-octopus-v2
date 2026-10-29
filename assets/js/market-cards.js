@@ -193,11 +193,11 @@ function autoWaveScroll(now){
    /* 不依赖 scrollHeight/clientHeight 判断是否启动；该测量在部分布局时不可靠。 */
    if(focusSlots.length>1&&step>0){
     const speed=Math.max(.1,step*focusSlots.length/120);
+    /* 累积到整像素再写入，避免移动端对小数 scrollTop 取整后每帧都丢失位移。 */
     autoScrollRemainder+=speed*autoEngage*dt;
-    /* 保留小数余量，兼容移动端低帧率与 scrollTop 精度差异。 */
-    if(autoScrollRemainder>=.1){
-     const movement=autoScrollRemainder;
-     autoScrollRemainder=0;
+    const movement=Math.floor(autoScrollRemainder);
+    if(movement>=1){
+     autoScrollRemainder-=movement;
      loopDirection=1;
      const before=left.scrollTop;
      left.scrollTop=before+movement;
