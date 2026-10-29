@@ -61,9 +61,10 @@ function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(updat
 let wheelTarget=left.scrollTop,wheelFrame=0,wheelVelocity=0,wheelLastTime=0,loopDirection=1,autoEngage=1;
 function cardStep(){
  const first=left.firstElementChild;
- const style=getComputedStyle(left);
- const gap=parseFloat(style.rowGap)||parseFloat(style.gap)||0;
- return first?first.offsetHeight+gap:0;
+ const second=first?.nextElementSibling;
+ if(!first||!second)return 0;
+ /* 直接读取相邻卡片的实际布局间距，避免用高度+小数 gap 计算导致循环重排时 scrollTop 累积误差。 */
+ return Math.max(0,second.offsetTop-first.offsetTop);
 }
 function normalizeLoopPosition(){
  if(focusSlots.length<2)return;
