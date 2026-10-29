@@ -207,14 +207,19 @@
   }
 
   /* 每个可见卡片组分配唯一色相；黄金角间隔让相邻组颜色尽量易于区分。 */
+  const SYMBOL_COLORS = new Map();
   function getGroupColor(symbol) {
+    const cached = SYMBOL_COLORS.get(symbol);
+    if (cached) return cached;
     let hue = SYMBOL_HUES.get(symbol);
     if (hue == null) {
       /* 新增/延迟出现的品种只分配一次颜色，后续滚动或信号变化不会改色。 */
       hue = (190 + SYMBOL_HUES.size * 137.508) % 360;
       SYMBOL_HUES.set(symbol, hue);
     }
-    return 'hsl(' + hue.toFixed(2) + ',100%,68%)';
+    const color = 'hsl(' + hue.toFixed(2) + ',100%,68%)';
+    SYMBOL_COLORS.set(symbol, color);
+    return color;
   }
 
   function flowDraw(t) {
