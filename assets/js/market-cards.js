@@ -190,8 +190,8 @@ function autoWaveScroll(now){
    /* 每帧重新读取真实卡片数与布局，避免初始化/屏幕尺寸变化时沿用失效参数。 */
    if(focusSlots.length!==left.children.length)focusSlots=Array.from(left.querySelectorAll('.mc-slot'));
    const step=cardStep();
-   const overflow=left.scrollHeight-left.clientHeight;
-   if(focusSlots.length>1&&step>0&&left.clientHeight>0&&overflow>0){
+   /* 不依赖 scrollHeight/clientHeight 判断是否启动；该测量在部分布局时不可靠。 */
+   if(focusSlots.length>1&&step>0){
     const speed=Math.max(.1,step*focusSlots.length/120);
     autoScrollRemainder+=speed*autoEngage*dt;
     /* 保留小数余量，兼容移动端低帧率与 scrollTop 精度差异。 */
