@@ -113,14 +113,18 @@ function ema(values,n){
 }
 function draw(view={}){
  if(!state.open||!state.candles.length)return;
- const candles=state.candles.map(c=>({time:Math.floor(c.time/1000),open:c.open,high:c.high,low:c.low,close:c.close}));
- const closes=state.candles.map(c=>c.close);
+ const cacheKey=state.symbol+'|'+state.period;
+ let prepared=state.candleCache.get(cacheKey);
+ if(!prepared||prepared.candles!==state.candles||!prepared.chartCandles||!prepared.emaData){
+  const candles=state.candles.map(c=>({time:Math.floor(c.time/1000),open:c.open,high:c.high,low:c.low,close:c.close}));
+  const closes=state.candles.map(c=>c.close);
+  const emaData=EMA_LINES.map(line=>ema(closes,line.n).map((value,i)=>value==null?null:{time:candles[i].time,value}).filter(point=>point&&Number.isFinite(point.value)));
+  prepared={...(prepared||{}),candles:state.candles,chartCandles:candles,emaData};
+  state.candleCache.delete(cacheKey);state.candleCache.set(cacheKey,prepared);
+ }
  suppressRangeSaveUntil=Date.now()+250;
- candleSeries.setData(candles);
- EMA_LINES.forEach((line,index)=>{
-  const values=ema(closes,line.n);
-  emaSeries[index].setData(values.map((value,i)=>value==null?null:{time:candles[i].time,value}).filter(point=>point&&Number.isFinite(point.value)));
- });
+ candleSeries.setData(prepared.chartCandles);
+ prepared.emaData.forEach((data,index)=>emaSeries[index].setData(data));
  const ts=chart.timeScale();
  if(view.range){try{ts.setVisibleRange(view.range)}catch{ts.setVisibleLogicalRange({from:Math.max(0,candles.length-120),to:candles.length})}}
  else if(view.follow)ts.scrollToRealTime();
