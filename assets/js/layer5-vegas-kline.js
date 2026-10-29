@@ -103,7 +103,7 @@ function draw(){
  emas.forEach(line=>line.values.forEach(v=>{if(Number.isFinite(v)){lo=Math.min(lo,v);hi=Math.max(hi,v)}}));
  if(!Number.isFinite(lo)||!Number.isFinite(hi))return;
  const pad=(hi-lo||hi*.01)*.06;lo-=pad;hi+=pad;
- const y=v=>h-6-(v-lo)/(hi-lo)*(h-12),step=w/rows.length,bw=Math.max(1,Math.min(12,step*.64));
+ const y=v=>h-6-(v-lo)/(hi-lo)*(h-12),plotW=w*.85,step=plotW/rows.length,bw=Math.max(1,Math.min(12,step*.64));
  rows.forEach((c,i)=>{
   const x=i*step+step/2,up=c.close>=c.open,col=up?'#2ee6a6':'#ff5c7c';
   ctx.globalAlpha=.96;ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=Math.max(1,Math.min(1.4,step*.14));
@@ -225,7 +225,7 @@ canvas.addEventListener('pointermove',e=>{
   return;
  }
  if(state.drag?.kind==='pan'&&state.drag.id===e.pointerId){
-  const dx=e.clientX-state.drag.x,step=canvas.clientWidth/Math.max(1,state.view.count);
+  const dx=e.clientX-state.drag.x,step=canvas.clientWidth*.85/Math.max(1,state.view.count);
   const delta=Math.round(dx/Math.max(1,step));
   state.view.end=Math.max(Math.max(20,state.view.count),Math.min(state.candles.length,state.drag.end-delta));draw();
  }
