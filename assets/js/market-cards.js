@@ -208,6 +208,8 @@ function scheduleAutoWave(){
  autoWaveTimer=window.setTimeout(()=>{autoWaveTimer=0;if(!document.hidden)autoWaveFrame=requestAnimationFrame(autoWaveScroll)},33);
 }
 function autoWaveScroll(now){
+ /* 回调已开始执行，释放上一帧 ID，否则 finally 中的调度会被误拦截。 */
+ autoWaveFrame=0;
  try{
   if(!autoLastTime)autoLastTime=now;
   const dt=Math.min(40,Math.max(0,now-autoLastTime))/1000;
