@@ -147,7 +147,7 @@ function draw(view={}){
  const previous=renderedSnapshot;
  const sameView=previous&&previous.symbol===state.symbol&&previous.period===state.period;
  const oldData=sameView?previous.chartCandles:null,newData=prepared.chartCandles;
- let incremental=!!(oldData&&oldData.length>0&&(newData.length===oldData.length||newData.length===oldData.length+1));
+ let incremental=!!(!view.restore&&oldData&&oldData.length>0&&(newData.length===oldData.length||newData.length===oldData.length+1));
  if(incremental){
   const compareUntil=newData.length===oldData.length?oldData.length-1:oldData.length;
   for(let i=0;i<compareUntil;i++){
@@ -193,7 +193,7 @@ function openSymbol(symbol){
  periodSelect.replaceChildren(...(STOCKS.has(symbol)?STOCK_PERIODS:PERIODS).map(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;return o}));
  periodSelect.value=state.period;win.classList.add('is-open');
  message.hidden=!cached;message.textContent='读取历史行情…';
- if(cached)draw({range:saved.period===state.period?saved.visibleRange:null,initial:!(saved.period===state.period&&saved.visibleRange)});
+ if(cached)draw({range:saved.period===state.period?saved.visibleRange:null,initial:!(saved.period===state.period&&saved.visibleRange),restore:true});
  loadCandles(false);
  scheduleAutoRotate();
  scheduleRefresh();
