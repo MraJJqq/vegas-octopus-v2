@@ -2,6 +2,12 @@
 (function () {
   'use strict';
   if (window.__VEGAS_FIFTH_LAYER_READY__) return;
+  window.__VEGAS_FIFTH_LAYER_READY__ = true;
+
+  // 第五层重设计暂停开关：保留原有行情、历史数据、实时更新与交互逻辑源码，但暂不初始化任何第五层显示模块。
+  // 第三层 27 个小行情卡片由 market-cards.js 独立负责，本文件不修改第三层。
+  const FIFTH_LAYER_VISUALS_DISABLED = true;
+  if (FIFTH_LAYER_VISUALS_DISABLED) return;
 
   const CARD_SELECTOR = '#market-cards-layer .mc-card[data-symbol]';
   // 先使用与卡片名称完全对应的合约；别名仅作为交易所实际代码不一致时的后备。
