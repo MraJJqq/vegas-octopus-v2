@@ -102,7 +102,7 @@ function smoothWheelStep(now){
  if(Math.abs(wheelVelocity)>.008)wheelTarget+=wheelVelocity*dt;
  else wheelVelocity=0;
  queueFocusScale();
- if(Math.abs(wheelTarget-left.scrollTop)<.8&&Math.abs(wheelVelocity)<.025){
+ if(Math.abs(wheelVelocity)<.025){
   wheelTarget=left.scrollTop;wheelVelocity=0;wheelFrame=0;wheelLastTime=0;wheelLastInputAt=0;
   autoResumeAt=Math.min(autoResumeAt,now+60);
   return;
