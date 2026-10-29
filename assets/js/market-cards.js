@@ -176,36 +176,50 @@ left.addEventListener('touchmove',e=>{
 },{passive:false});
 left.addEventListener('touchend',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;autoResumeAt=performance.now()+1400},{passive:true});
 left.addEventListener('touchcancel',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;autoResumeAt=performance.now()+1400},{passive:true});
-let autoEngageLastTime=0;
+let autoEngageLastTime=0,autoLoopErrorReported=false;
 function autoWaveScroll(now){
- if(!autoLastTime)autoLastTime=now;
- const dt=Math.min(40,Math.max(0,now-autoLastTime))/1000;
- autoLastTime=now;
- if(!autoEngageLastTime)autoEngageLastTime=now;
- const engageDt=Math.min(40,Math.max(0,now-autoEngageLastTime));
- autoEngageLastTime=now;
- if(!wheelFrame&&now>=autoResumeAt){
-  /* 手动操作后约 1 秒恢复自动滚动；以实际容器布局计算速度。 */
-  autoEngage=Math.min(1,autoEngage+engageDt/1000);
-  const step=cardStep();
-  if(focusSlots.length>1&&step>0&&left.scrollHeight>left.clientHeight+1){
-   /* 固定按容器实际单轮位移计算速度：约 120 秒完成一轮；不设置过高的像素速度下限。 */
-   const baseSpeed=Math.max(.1,step*focusSlots.length/120);
-   /* 不再随机改变速度，避免一轮滚动时快慢不一致。 */
-   autoWaveScroll.speed=baseSpeed;
-   /* scrollTop 支持小数像素；每帧直接推进，避免攒够 1px 后跳动。 */
-   const movement=autoWaveScroll.speed*autoEngage*dt;
-   if(movement>0){
-    loopDirection=1;
-    left.scrollTop+=movement;
-    normalizeLoopPosition();
-    wheelTarget=left.scrollTop;
-    queueFocusScale();
+ try{
+  if(!autoLastTime)autoLastTime=now;
+  const dt=Math.min(40,Math.max(0,now-autoLastTime))/1000;
+  autoLastTime=now;
+  if(!autoEngageLastTime)autoEngageLastTime=now;
+  const engageDt=Math.min(40,Math.max(0,now-autoEngageLastTime));
+  autoEngageLastTime=now;
+  if(!wheelFrame&&now>=autoResumeAt){
+   /* 手动操作后逐步恢复自动滚动；以实际容器布局计算速度。 */
+   autoEngage=Math.min(1,autoEngage+engageDt/1000);
+   const step=cardStep();
+   if(focusSlots.length>1&&step>0&&left.scrollHeight>left.clientHeight+1){
+    /* 固定按容器实际单轮位移计算速度：约 120 秒完成一轮。 */
+    const baseSpeed=Math.max(.1,step*focusSlots.length/120);
+    autoWaveScroll.speed=baseSpeed;
+    const movement=autoWaveScroll.speed*autoEngage*dt;
+    if(movement>0){
+     loopDirection=1;
+     left.scrollTop+=movement;
+     normalizeLoopPosition();
+     wheelTarget=left.scrollTop;
+     queueFocusScale();
+    }
    }
   }
+ }catch(error){
+  /* 单帧异常不得终止自动滚动循环；避免重复刷屏，只报告首次异常。 */
+  if(!autoLoopErrorReported){
+   autoLoopErrorReported=true;
+   console.warn('[Vegas Octopus] auto-scroll frame recovered:',error);
+  }
+ }finally{
+  requestAnimationFrame(autoWaveScroll);
  }
- requestAnimationFrame(autoWaveScroll);
 }
+document.addEventListener('visibilitychange',()=>{
+ if(!document.hidden){
+  autoLastTime=0;
+  autoEngageLastTime=0;
+  autoResumeAt=performance.now()+250;
+ }
+},{passive:true});
 autoWaveScroll.speed=Math.max(.1,cardStep()*focusSlots.length/120);
 requestAnimationFrame(autoWaveScroll);
 
