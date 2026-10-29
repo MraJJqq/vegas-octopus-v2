@@ -173,11 +173,12 @@ function autoWaveScroll(now){
   const speed=autoWaveScroll.speed??Math.max(1,cardStep()*focusSlots.length/120);
   autoWaveScroll.speed=speed+(autoWaveScroll.targetSpeed-speed)*(1-Math.exp(-dt/2.2));
   if(focusSlots.length>1&&cardStep()>0){
-   /* 直接应用亚像素位移，避免低速自动滚动被整像素步进切成一顿一顿的感觉。 */
+   /* 用小数累积、整像素提交，兼容部分移动浏览器对 scrollTop 小数赋值不稳定的情况。 */
    autoScrollRemainder+=autoWaveScroll.speed*autoEngage*dt;
-   if(autoScrollRemainder>=.01){
-    left.scrollTop+=autoScrollRemainder;
-    autoScrollRemainder=0;
+   const wholePixels=Math.floor(autoScrollRemainder);
+   if(wholePixels>=1){
+    autoScrollRemainder-=wholePixels;
+    left.scrollTop+=wholePixels;
     loopDirection=1;
     normalizeLoopPosition();
     wheelTarget=left.scrollTop;
