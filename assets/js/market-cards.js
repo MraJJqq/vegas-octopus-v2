@@ -54,11 +54,16 @@ let focusSlots=Array.from(left.querySelectorAll('.mc-slot'));
 let focusFrame=0;
 function updateFocusScale(){
  focusFrame=0;
- const height=left.clientHeight,center=left.scrollTop+height/2,range=Math.max(1,height*.52),fadeRange=Math.max(1,height*.46),available=Math.max(1,left.clientWidth-8);
- const metrics=focusSlots.map(slot=>{
-  const top=slot.offsetTop,bottom=top+slot.offsetHeight,distance=Math.abs((top+slot.offsetHeight/2)-center),t=Math.min(1,distance/range),ease=t*t*(3-2*t),fadeT=Math.min(1,distance/fadeRange),fadeEase=fadeT*fadeT*(3-2*fadeT);
-  const visible=Math.max(0,Math.min(bottom,left.scrollTop+height)-Math.max(top,left.scrollTop)),ratio=Math.min(1,visible/Math.max(1,slot.offsetHeight)),focused=distance<height*.23&&ratio>=.98;
-  return {slot,scale:1+(Math.min(1.34,available/Math.max(1,slot.offsetWidth))-1)*(1-ease),opacity:focused?1:(1-.72*fadeEase)*Math.min(1,ratio*1.8)};
+ const height=left.clientHeight,scrollTop=left.scrollTop,center=scrollTop+height/2,range=Math.max(1,height*.52),fadeRange=Math.max(1,height*.46),available=Math.max(1,left.clientWidth-8);
+ const first=focusSlots[0],step=cardStep();
+ if(!first||!step){return}
+ /* 卡片统一尺寸且按固定 gap 排列：只读取首卡几何信息，后续位置用步长推算，减少逐卡布局读取。 */
+ const baseTop=first.offsetTop,slotHeight=first.offsetHeight,slotWidth=Math.max(1,first.offsetWidth),visibleBottom=scrollTop+height;
+ const scaleMax=Math.min(1.34,available/slotWidth);
+ const metrics=focusSlots.map((slot,index)=>{
+  const top=baseTop+index*step,bottom=top+slotHeight,distance=Math.abs((top+slotHeight/2)-center),t=Math.min(1,distance/range),ease=t*t*(3-2*t),fadeT=Math.min(1,distance/fadeRange),fadeEase=fadeT*fadeT*(3-2*fadeT);
+  const visible=Math.max(0,Math.min(bottom,visibleBottom)-Math.max(top,scrollTop)),ratio=Math.min(1,visible/Math.max(1,slotHeight)),focused=distance<height*.23&&ratio>=.98;
+  return {slot,scale:1+(scaleMax-1)*(1-ease),opacity:focused?1:(1-.72*fadeEase)*Math.min(1,ratio*1.8)};
  });
  metrics.forEach(({slot,scale,opacity})=>{
   slot.style.setProperty('--mc-focus-scale',scale.toFixed(3));
