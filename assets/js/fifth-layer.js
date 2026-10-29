@@ -64,7 +64,7 @@
   const PREWARM_CACHE = new Map();
   const PREWARM_MAX_AGE = 4 * 60 * 60 * 1000;
   const VIEW_STORAGE_KEY = 'vegas-octopus-kline-view-v1';
-  const INITIAL_HISTORY_MS = 90 * 24 * 60 * 60 * 1000;
+  const INITIAL_HISTORY_MS = 30 * 24 * 60 * 60 * 1000;
   const CANDLE_DB_NAME = 'vegas-octopus-market-cache';
   const CANDLE_DB_VERSION = 1;
   const CANDLE_STORE_NAME = 'candles';
@@ -438,6 +438,13 @@
     const xAt=i=>plotLeft+(i-start+.5)*step;
     const yAt=v=>plotTop+(max-v)/(max-min)*plotH;
 
+    // Clip every candle and EMA stroke to the actual plot rectangle. Without this,
+    // off-frame strokes can spill across previously dragged chart regions and look
+    // like parts of the chart are being covered or overwritten.
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(plotLeft,plotTop,plotW,plotH);
+    ctx.clip();
     rows.forEach((c,j)=>{
       const i=start+j,x=xAt(i),up=c.c>=c.o,color=up?'#2ee6a6':'#ff5c7c';
       ctx.strokeStyle=color;ctx.lineWidth=Math.max(1,Math.min(1.5,step*.18));
@@ -466,6 +473,7 @@
       }
       ctx.stroke();ctx.globalAlpha=1;
     });
+    ctx.restore();
   }
   async function loadData(isRefresh) {
     const generation=state.generation;
@@ -570,6 +578,10 @@
   function applyLiveCandle(row){
     const candle=normalize([row])[0];
     if(!candle||!state.candles.length)return;
+    const previousLast=state.candles[state.candles.length-1].t;
+    const previousRange=visibleIndices();
+    const previousCount=Math.max(1,previousRange.end-previousRange.start);
+    const followLatest=Number.isFinite(state.endTime)&&state.endTime>=previousLast-4*60*60*1000;
     const candles=state.candles;
     const index=candles.findIndex(item=>item.t===candle.t);
     const wasLast=index===candles.length-1;
@@ -577,6 +589,15 @@
     else{candles.push(candle);candles.sort((a,b)=>a.t-b.t);}
     const trimmed=candles.length>MAX_CANDLE_BARS;
     if(trimmed)candles.splice(0,candles.length-MAX_CANDLE_BARS);
+    // Keep the visible window attached to the newest candle only when the user
+    // was already following live data; preserve historical browsing otherwise.
+    if(followLatest&&candle.t>=previousLast){
+      const lastIndex=candles.length-1;
+      const firstIndex=Math.max(0,lastIndex-previousCount+1);
+      state.startTime=candles[firstIndex].t;
+      state.endTime=candles[lastIndex].t;
+      state.viewCount=lastIndex-firstIndex+1;
+    }
     state.lastLiveAt=Date.now();
     if(!trimmed && state.series.length && ((index>=0&&wasLast&&index===candles.length-1)||(index<0&&candle.t===candles[candles.length-1].t))){
       const closeValues=candles.map(item=>item.c),targetIndex=candles.length-1;
@@ -686,7 +707,9 @@
       let baseEndIndex=state.candles.findIndex(c=>c.t>d.baseEnd);
       if(baseEndIndex<0)baseEndIndex=state.candles.length;
       const count=Math.max(1,baseEndIndex-baseStartIndex);
-      const bars=Math.round(-dx/Math.max(1,state.width)*count);
+      const {frameW}=getFrameSize();
+      const plotW=Math.max(1,frameW-Math.min(8,frameW*.03)*2);
+      const bars=Math.round(-dx/plotW*count);
       const startIndex=Math.max(0,Math.min(state.candles.length-1,baseStartIndex+bars));
       const endIndex=Math.max(startIndex+1,Math.min(state.candles.length,baseEndIndex+bars));
       state.startTime=state.candles[startIndex].t;
