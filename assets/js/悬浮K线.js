@@ -234,7 +234,14 @@
       current.onmessage=event=>{
         if(stopped||socket!==current||event.data==='pong')return;
         let msg;try{msg=JSON.parse(event.data);}catch(_){return;}
-        if(msg.arg&&msg.arg.instId===apiSymbol&&msg.arg.channel==='candle4H'&&Array.isArray(msg.data)){
+        // 订阅失败或交易所返回错误时，关闭当前连接并走统一重连流程，不把错误响应当作行情。
+        if(msg.event==='error'||(msg.code&&msg.code!=='00000')){
+          console.error('[悬浮K线] Bitget WebSocket 返回错误：',msg.code||'',msg.msg||'');
+          try{current.close();}catch(_){}
+          return;
+        }
+        const expectedInstType=isReality?'SPOT':'USDT-FUTURES';
+        if(msg.arg&&msg.arg.instType===expectedInstType&&msg.arg.instId===apiSymbol&&msg.arg.channel==='candle4H'&&Array.isArray(msg.data)){
           for(const row of msg.data){const candle=normalize([row])[0];if(candle&&!stopped&&socket===current)onCandle(candle);}
         }
       };
