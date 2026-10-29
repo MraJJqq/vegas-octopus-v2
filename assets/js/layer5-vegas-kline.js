@@ -16,7 +16,7 @@ const EMA_LINES=[
  {n:576,color:'#ff4e5e',width:1.8},
  {n:676,color:'#ff4e5e',width:1.8}
 ];
-const state={open:false,symbol:'',period:'2H',candles:[],loading:false,fetchAt:0,rotateTimer:0,view:{count:120},saved:{}};
+const state={open:false,symbol:'',period:'2H',candles:[],loading:false,fetchAt:0,rotateTimer:0,loadedSymbol:'',loadedPeriod:'',saved:{}};
 const readSaved=()=>{try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}catch{return {}}};
 state.saved=readSaved();
 const storedState=state.saved;state.saved=storedState.perSymbol||storedState;
@@ -49,7 +49,6 @@ chart.timeScale().subscribeVisibleTimeRangeChange(range=>{
  if(!range||!state.open||!state.candles.length||Date.now()<suppressRangeSaveUntil)return;
  const saved=currentSaved();saved.visibleRange=range;saved.period=state.period;save();
 });
-function currentPeriod(){return state.period}
 function symbolFor(symbol){return symbol+'USDT'}
 function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({perSymbol:state.saved}))}catch{}}
 async function getJson(path){
@@ -76,7 +75,7 @@ async function loadCandles(force=false){
  if(!force&&Date.now()-state.fetchAt<25000)return;
  state.loading=true;const requestId=++requestVersion;const symbolAtRequest=state.symbol;message.hidden=false;message.textContent=state.candles.length?'更新行情…':'读取历史行情…';
  try{
-  const stock=STOCKS.has(symbolAtRequest),period=currentPeriod(),interval=period;
+  const stock=STOCKS.has(symbolAtRequest),period=state.period,interval=period;
   let rows;
   if(stock){
    const sym=await getStockSymbol(symbolAtRequest);
@@ -94,7 +93,6 @@ async function loadCandles(force=false){
   const previousRange=sameView?chart.timeScale().getVisibleRange():null;
   const wasFollowing=sameView&&chart.timeScale().scrollPosition()<=1.5;
   state.candles=unique;state.fetchAt=Date.now();message.hidden=true;
-  const saved=currentSaved();if(saved.count)state.view.count=saved.count;
   let range=previousRange,follow=wasFollowing,initial=false;
   if(!sameView){range=(saved.period===period&&saved.visibleRange)?saved.visibleRange:null;follow=false;initial=!range}
   draw({range,follow,initial});
@@ -120,14 +118,14 @@ function draw(view={}){
   emaSeries[index].setData(values.map((value,i)=>value==null?null:{time:candles[i].time,value}).filter(point=>point&&Number.isFinite(point.value)));
  });
  const ts=chart.timeScale();
- if(view.range){try{ts.setVisibleRange(view.range)}catch{ts.setVisibleLogicalRange({from:Math.max(0,candles.length-(state.view.count||120)),to:candles.length})}}
+ if(view.range){try{ts.setVisibleRange(view.range)}catch{ts.setVisibleLogicalRange({from:Math.max(0,candles.length-120),to:candles.length})}}
  else if(view.follow)ts.scrollToRealTime();
- else if(view.initial)ts.setVisibleLogicalRange({from:Math.max(0,candles.length-(state.view.count||120)),to:candles.length});
+ else if(view.initial)ts.setVisibleLogicalRange({from:Math.max(0,candles.length-120),to:candles.length});
  const last=state.candles[state.candles.length-1];
- title.textContent=state.symbol+' · '+currentPeriod()+' · VEGAS';
+ title.textContent=state.symbol+' · '+state.period+' · VEGAS';
  status.textContent=last.close.toLocaleString('en-US',{maximumFractionDigits:6})+'  '+new Date(last.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
 }
-function saveView(){const s=currentSaved();s.period=state.period;s.count=state.view.count;const range=chart.timeScale().getVisibleRange();if(range)s.visibleRange=range;save()}
+function saveView(){const s=currentSaved();s.period=state.period;const range=chart.timeScale().getVisibleRange();if(range)s.visibleRange=range;save()}
 function openSymbol(symbol){
  if(!symbol)return;
  if(state.rotateTimer)clearTimeout(state.rotateTimer);
@@ -135,7 +133,6 @@ function openSymbol(symbol){
  state.open=true;state.symbol=symbol;
  const saved=state.saved[symbol]||{};
  state.period=saved.period||(STOCKS.has(symbol)?'1H':'2H');
- state.view={count:saved.count||120};
  state.candles=[];state.fetchAt=0;state.loading=false;state.loadedSymbol='';state.loadedPeriod='';candleSeries.setData([]);emaSeries.forEach(s=>s.setData([]));requestVersion++;
  if(STOCKS.has(symbol)&&!STOCK_PERIODS.includes(state.period))state.period='1H';
  periodSelect.replaceChildren(...(STOCKS.has(symbol)?STOCK_PERIODS:PERIODS).map(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;return o}));
