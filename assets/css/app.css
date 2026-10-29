@@ -65,3 +65,31 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 #market-cards-layer .mc-hl span{color:var(--ink);margin:0 5px 0 2px}
 @media(max-width:700px){#market-cards-layer .mc-columns{width:48vw}#market-cards-layer .mc-side{gap:clamp(2px,.35vh,4px)}#market-cards-layer .mc-slot{width:min(100%,clamp(126px,43vw,190px));padding:1px 2px 3px}#market-cards-layer .mc-card{height:clamp(82px,calc((100dvh - 70px)/7),104px);padding:6px;border-radius:16px;min-height:0}#market-cards-layer .mc-coin{flex-basis:20px;width:20px;height:20px;font-size:9px}#market-cards-layer .mc-sym{font-size:10px}#market-cards-layer .mc-sym small{font-size:7px}#market-cards-layer .mc-price{font-size:clamp(13px,3.4vw,17px);margin:1px 0}#market-cards-layer .mc-pct{padding:1px 5px;font-size:9px}#market-cards-layer .mc-kline{height:18px;margin-top:1px}#market-cards-layer .mc-hl{font-size:7px;margin-top:2px}}
 @media(prefers-reduced-motion:reduce){#market-cards-layer .mc-float,#market-cards-layer .mc-gshadow{animation:none}}
+
+/* 最新事件：统一标题、分组和信号标签的对齐规则。 */
+.topbar{width:clamp(210px,26vw,340px);max-height:calc(100dvh - 32px);overflow:hidden}
+.event-top-card{gap:0}
+.panel-head{min-height:30px;align-items:center;gap:10px;padding:0 0 9px;border-bottom:1px solid rgba(92,166,220,.24);margin-bottom:10px}
+.panel-title{gap:8px;font-size:clamp(13px,.95vw,16px);line-height:1.2;white-space:nowrap}
+.panel-title .icon{width:22px;height:22px;flex:0 0 22px;font-size:18px}
+.panel-note{font-size:9px;letter-spacing:.1em;color:#7899b8;text-align:right}
+.v9-notification{gap:10px;max-height:calc(100dvh - 92px);padding:1px 2px 4px 0;overflow-x:hidden}
+.v9-group{padding:9px 10px 10px;border:1px solid rgba(83,151,207,.17);border-left:2px solid rgba(49,217,255,.62);border-radius:9px;background:linear-gradient(110deg,rgba(13,28,48,.42),rgba(5,11,22,.12))!important}
+.v9-group-title{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:11px;line-height:1.35;letter-spacing:.04em;color:#c0e5ff}
+.v9-symbols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;gap:5px;min-width:0}
+.v9-symbol,.v9-nochange{display:flex;align-items:center;justify-content:center;min-width:0;min-height:23px;padding:3px 5px;border:1px solid rgba(66,174,218,.18);border-radius:5px;background:rgba(24,65,91,.2);font-size:10px;line-height:1.2;text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
+.v9-symbol{color:#9cecff;text-shadow:0 0 9px rgba(49,217,255,.12)}
+.v9-nochange{grid-column:1/-1;color:#8ba4be;background:rgba(35,48,65,.2);border-color:rgba(112,139,170,.15)}
+@media(max-width:700px){
+  .topbar{top:12px;right:10px;width:clamp(158px,44vw,260px);max-height:calc(100dvh - 24px)}
+  .panel-head{gap:6px;padding-bottom:7px;margin-bottom:8px}
+  .panel-title{font-size:12px;gap:5px}
+  .panel-title .icon{width:18px;height:18px;flex-basis:18px;font-size:15px}
+  .panel-note{font-size:7px;letter-spacing:.06em}
+  .v9-notification{gap:7px;max-height:calc(100dvh - 76px)}
+  .v9-group{padding:7px 7px 8px;border-radius:7px}
+  .v9-group-title{font-size:10px;margin-bottom:6px}
+  .v9-symbols{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+  .v9-symbol,.v9-nochange{min-height:21px;padding:3px 4px;font-size:9px}
+}
+
