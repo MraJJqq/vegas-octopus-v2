@@ -176,7 +176,7 @@ left.addEventListener('touchmove',e=>{
 },{passive:false});
 left.addEventListener('touchend',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;autoResumeAt=performance.now()+1400},{passive:true});
 left.addEventListener('touchcancel',()=>{wheelTarget=left.scrollTop;wheelVelocity=0;touchStartY=0;autoResumeAt=performance.now()+1400},{passive:true});
-let autoScrollRemainder=0,autoEngageLastTime=0;
+let autoEngageLastTime=0;
 function autoWaveScroll(now){
  if(!autoLastTime)autoLastTime=now;
  const dt=Math.min(40,Math.max(0,now-autoLastTime))/1000;
@@ -193,12 +193,11 @@ function autoWaveScroll(now){
    const baseSpeed=Math.max(.1,step*focusSlots.length/120);
    /* 不再随机改变速度，避免一轮滚动时快慢不一致。 */
    autoWaveScroll.speed=baseSpeed;
-   autoScrollRemainder+=autoWaveScroll.speed*autoEngage*dt;
-   const wholePixels=Math.floor(autoScrollRemainder);
-   if(wholePixels>=1){
-    autoScrollRemainder-=wholePixels;
+   /* scrollTop 支持小数像素；每帧直接推进，避免攒够 1px 后跳动。 */
+   const movement=autoWaveScroll.speed*autoEngage*dt;
+   if(movement>0){
     loopDirection=1;
-    left.scrollTop=left.scrollTop+wholePixels;
+    left.scrollTop+=movement;
     normalizeLoopPosition();
     wheelTarget=left.scrollTop;
     queueFocusScale();
