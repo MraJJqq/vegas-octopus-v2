@@ -194,25 +194,7 @@
       series.values.slice(start,end).forEach((v,i)=>{if(!Number.isFinite(v)){begun=false;return}const x=left+(i+.5)*step,yy=y(v);if(!begun){ctx.moveTo(x,yy);begun=true}else ctx.lineTo(x,yy)});
       ctx.stroke();
     });
-    drawCardSummary(w);
     setStatus('');
-  }
-  function drawCardSummary(canvasWidth){
-    if(!ctx||!activeSymbol)return;
-    const cards=document.querySelectorAll('#market-cards-layer .mc-card[data-symbol]');
-    let card=null;
-    for(const item of cards){if(String(item.dataset.symbol||'').toUpperCase()===activeSymbol){card=item;break;}}
-    if(!card)return;
-    const name=card.querySelector('.mc-sym')?.childNodes?.[0]?.textContent?.trim()||activeSymbol;
-    ctx.save();
-    ctx.font='600 14px system-ui,-apple-system,"PingFang SC",sans-serif';
-    ctx.textAlign='left';
-    ctx.textBaseline='top';
-    ctx.fillStyle='#e8f5ff';
-    ctx.shadowColor='rgba(0,0,0,0.7)';
-    ctx.shadowBlur=3;
-    ctx.fillText(name,8,8,Math.max(40,canvasWidth-16));
-    ctx.restore();
   }
   function formatPrice(v){return v>=1000?v.toLocaleString('en-US',{maximumFractionDigits:2}):v>=1?v.toFixed(3):v.toPrecision(4);}
   async function openPanel(symbol){
@@ -220,6 +202,7 @@
     ensurePanel();closeLiveOnly();
     activeSymbol=String(symbol||'').toUpperCase();state=null;view.scale=1;view.offset=0;view.drag=null;view.pointers.clear();view.pinch=null;
     panel.classList.add('vfk-open');panel.style.left='50%';panel.style.top='50%';panel.style.transform='translate(-50%,-50%)';
+    $(panel,'.vfk-symbol-label').textContent=activeSymbol;
     $(panel,'.vfk-title').textContent=activeSymbol+' · 4H';
     setStatus('正在加载历史行情…');ctx.clearRect(0,0,canvas.width,canvas.height);
     const requestedSymbol=activeSymbol;
