@@ -185,12 +185,14 @@ left.addEventListener('touchstart',e=>{
 left.addEventListener('touchmove',e=>{
  const touch=e.touches[0];if(!touch||!touchActive)return;
  const y=touch.clientY,dy=touchLastY-y;
- if(!touchDragging&&Math.abs(y-touchStartY)<3)return;
+ if(!touchDragging&&Math.abs(y-touchStartY)<3){touchLastY=y;return}
  touchDragging=true;e.preventDefault();
  if(Math.abs(dy)>.1){
   touchLastY=y;
-  /* 触摸与鼠标进入同一 delta 处理器，速度、反向响应、目标距离完全共用。 */
-  applyManualScrollDelta(dy*1.32,'touch');
+  /* 触摸与鼠标进入同一 delta 处理器；缩放只在共用处理器中执行一次。 */
+  applyManualScrollDelta(dy,'touch');
+ }else{
+  touchLastY=y;
  }
 },{passive:false});
 const finishTouch=()=>{
@@ -272,7 +274,7 @@ window.setInterval(()=>{
  }catch(error){
   console.warn('[Vegas Octopus] auto-scroll watchdog recovered:',error);
  }
-},80);
+},250);
 
 window.addEventListener('resize',queueFocusScale,{passive:true});
 left.style.scrollBehavior='auto';
