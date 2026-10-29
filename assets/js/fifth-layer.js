@@ -369,14 +369,13 @@
   }
   function getViewportBounds() {
     const {frameW,frameH}=getFrameSize();
-    // Keep a 48px grip visible at each extreme, scaled down on very small screens.
-    const gripX=Math.min(48,Math.max(16,state.width*.08));
-    const gripY=Math.min(48,Math.max(16,state.height*.08));
+    // Keep the complete chart frame inside the full-screen canvas. Allowing most
+    // of the frame to move off-canvas made its edges look clipped by other panels.
     return {
-      minX:Math.min(0,-frameW+gripX),
-      maxX:Math.max(0,state.width-gripX),
-      minY:Math.min(0,-frameH+gripY),
-      maxY:Math.max(0,state.height-gripY)
+      minX:0,
+      maxX:Math.max(0,state.width-frameW),
+      minY:0,
+      maxY:Math.max(0,state.height-frameH)
     };
   }
   function clampViewportOffsets() {
@@ -705,8 +704,14 @@
       const {frameW}=getFrameSize();
       const plotW=Math.max(1,frameW-Math.min(8,frameW*.03)*2);
       const bars=Math.round(-dx/plotW*count);
-      const startIndex=Math.max(0,Math.min(state.candles.length-1,baseStartIndex+bars));
-      const endIndex=Math.max(startIndex+1,Math.min(state.candles.length,baseEndIndex+bars));
+      // Translate the viewport without shrinking it at either history boundary.
+      // The previous independent clamps could collapse a 100+ candle window to
+      // one candle after repeated drags, which looked like the chart was cropped.
+      const total=state.candles.length;
+      const maxStart=Math.max(0,total-count);
+      const startIndex=Math.max(0,Math.min(maxStart,baseStartIndex+bars));
+      const endIndex=Math.min(total,startIndex+count);
+      state.viewCount=endIndex-startIndex;
       state.startTime=state.candles[startIndex].t;
       state.endTime=state.candles[endIndex-1].t;
       if(startIndex<35)loadOlderHistory();
