@@ -7,7 +7,7 @@
   if(window.VegasFloatingKlineUI) return;
   const getLogic=()=>window.VegasFloatingKlineLogic;
   let panel=null,canvas=null,ctx=null,activeSymbol='',state=null,stopLive=null,resizeObserver=null;
-  const view={scale:1,offset:0,minScale:1,maxScale:Number.MAX_SAFE_INTEGER,drag:null,pointers:new Map(),pinch:null,baseWidth:0,baseHeight:0};
+  const view={scale:1,offset:0,minScale:1,maxScale:Number.MAX_SAFE_INTEGER,drag:null,pointers:new Map(),pinch:null,baseWidth:0,baseHeight:0,gestureMoved:false,suppressChartClickUntil:0};
   const $=(root,sel)=>root.querySelector(sel);
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const isReality=s=>!!(getLogic()&&getLogic().isRealitySymbol(s));
@@ -102,7 +102,9 @@
   function chartPointerDown(e){
     e.preventDefault();
     try{e.currentTarget.setPointerCapture(e.pointerId)}catch(_){}
-    view.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    view.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY});
+    if(view.pointers.size===1)view.gestureMoved=false;
+    else view.gestureMoved=true;
     if(view.pointers.size===1){
       const r=panel.getBoundingClientRect();
       // 使用合成层位移，避免每次触控都触发布局重算。
@@ -118,7 +120,10 @@
   }
   function chartPointerMove(e){
     if(!view.pointers.has(e.pointerId))return;
-    e.preventDefault();view.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    e.preventDefault();
+    const prior=view.pointers.get(e.pointerId);
+    if(prior&&Math.hypot(e.clientX-prior.startX,e.clientY-prior.startY)>5)view.gestureMoved=true;
+    view.pointers.set(e.pointerId,{...prior,x:e.clientX,y:e.clientY});
     if(view.pointers.size>=2&&view.pinch){
       const p=[...view.pointers.values()];
       const distance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);
@@ -138,6 +143,7 @@
     }
   }
   function chartPointerEnd(e){
+    if(view.gestureMoved)view.suppressChartClickUntil=Date.now()+800;
     view.pointers.delete(e.pointerId);
     if(view.drag&&view.drag.id===e.pointerId){
       const d=view.drag,viewport=window.visualViewport;
@@ -305,6 +311,8 @@
   }
   document.addEventListener('click',e=>{
     if(!panel||!panel.classList.contains('vfk-open'))return;
+    // 拖动/缩放结束后浏览器可能合成 click；只屏蔽图表上的这次合成点击。
+    if(e.target===canvas&&Date.now()<view.suppressChartClickUntil)return;
     if(clickedOnKline(e))return;
     closePanel();
   },true);
