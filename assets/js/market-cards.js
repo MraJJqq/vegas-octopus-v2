@@ -96,16 +96,17 @@ function smoothWheelStep(now){
  const dt=Math.min(32,Math.max(1,now-wheelLastTime));
  wheelLastTime=now;
  const current=left.scrollTop,diff=wheelTarget-current;
- const ease=1-Math.exp(-dt/92);
+ /* 较短的追随时间常数让滚轮更跟手，同时保留连续缓动，避免目标位置拖在鼠标后面。 */
+ const ease=1-Math.exp(-dt/72);
  left.scrollTop=current+diff*ease;
  normalizeLoopPosition();
- wheelVelocity*=Math.exp(-dt/220);
+ wheelVelocity*=Math.exp(-dt/180);
  if(Math.abs(wheelVelocity)>.008)wheelTarget+=wheelVelocity*dt;
  else wheelVelocity=0;
  queueFocusScale();
  if(Math.abs(wheelVelocity)<.025){
   wheelTarget=left.scrollTop;wheelVelocity=0;wheelFrame=0;wheelLastTime=0;
-  autoResumeAt=Math.min(autoResumeAt,now+60);
+  autoResumeAt=Math.min(autoResumeAt,now+80);
   return;
  }
  wheelFrame=requestAnimationFrame(smoothWheelStep);
@@ -113,7 +114,9 @@ function smoothWheelStep(now){
 left.addEventListener('wheel',e=>{
  const wheelNow=performance.now();
  autoResumeAt=wheelNow+180;
- /* 保留自动滚动的当前介入比例；手动滚动结束后直接平滑交接，不再从 0 重新缓慢加速。 */
+ /* 手动滚动期间轻柔降低自动滚动介入比例；交互结束后再逐步恢复，避免自动滚动突然抢回控制权。 */
+ autoEngage=Math.min(autoEngage,.28);
+ autoEngageLastTime=wheelNow;
  if(Math.abs(e.deltaY)<.1)return;
  e.preventDefault();
  e.stopPropagation();
