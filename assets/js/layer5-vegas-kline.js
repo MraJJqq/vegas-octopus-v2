@@ -5,6 +5,8 @@ const API='https://api.bitget.com';
 const STORAGE_KEY='vegas-octopus-layer5-kline-v1';
 const STOCKS=new Set(['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','QCOM','AMD','TSM','AVGO','ORCL','ARM','MU','ASML','SNDK','SKHYNIX','MRVL','GLW','HOOD','CBRS','SPCX']);
 const PERIODS=['15m','30m','1H','2H','4H','6H','12H','1D','1W'];
+const STOCK_PERIODS=['15m','30m','1H','4H','6H','12H','1D','1W'];
+let requestVersion=0;
 const EMA_LINES=[
  {n:12,color:'#f5d76e',width:1.2},
  {n:36,color:'#f5f7ff',width:1.5},
@@ -43,7 +45,7 @@ async function getStockSymbol(symbol){
  if(!stockDirectory||Date.now()-stockDirectoryAt>300000){
   const rows=await getJson('/api/v3/reality/market/stock-info');
   stockDirectory=new Map(rows.filter(x=>x&&x.code&&x.symbol).map(x=>[String(x.code).toUpperCase(),String(x.symbol)]));
-  const sk=rows.find(x=>x&&x.symbol&&(/SKHYNIX/i.test(String(x.code||''))||/SK\s*HYNIX/i.test(String(x.name||''))||/RSKHYUSDT/i.test(String(x.symbol||''))));
+  const sk=rows.find(x=>x&&x.symbol&&(/SKHYNIX/i.test(String(x.code||''))||/SK\\s*HYNIX/i.test(String(x.name||''))||/RSKHYUSDT/i.test(String(x.symbol||''))));
   if(sk)stockDirectory.set('SKHYNIX',String(sk.symbol));
   stockDirectoryAt=Date.now();
  }
@@ -52,22 +54,23 @@ async function getStockSymbol(symbol){
  return s;
 }
 function intervalFor(symbol,period){
- if(STOCKS.has(symbol)&&period==='2H')return '1H';
  return period;
 }
 async function loadCandles(force=false){
- if(!state.open||!state.symbol||state.loading)return;
+ if(!state.open||!state.symbol)return;
+ if(state.loading){if(!force)return;requestVersion++}
  if(!force&&Date.now()-state.fetchAt<25000)return;
- state.loading=true;message.hidden=false;message.textContent=state.candles.length?'更新行情…':'读取历史行情…';
+ state.loading=true;const requestId=++requestVersion;const symbolAtRequest=state.symbol;message.hidden=false;message.textContent=state.candles.length?'更新行情…':'读取历史行情…';
  try{
-  const stock=STOCKS.has(state.symbol),period=currentPeriod(),interval=intervalFor(state.symbol,period);
+  const stock=STOCKS.has(symbolAtRequest),period=currentPeriod(),interval=intervalFor(symbolAtRequest,period);
   let rows;
   if(stock){
-   const sym=await getStockSymbol(state.symbol);
+   const sym=await getStockSymbol(symbolAtRequest);
    rows=await getJson('/api/v3/market/candles?'+new URLSearchParams({category:'SPOT',symbol:sym,interval,limit:'1000'}));
   }else{
-   rows=await getJson('/api/v2/mix/market/candles?'+new URLSearchParams({symbol:symbolFor(state.symbol),productType:'USDT-FUTURES',granularity:interval,limit:'1000'}));
+   rows=await getJson('/api/v2/mix/market/candles?'+new URLSearchParams({symbol:symbolFor(symbolAtRequest),productType:'USDT-FUTURES',granularity:interval,limit:'1000'}));
   }
+  if(requestId!==requestVersion||symbolAtRequest!==state.symbol)return;
   const data=rows.filter(r=>Array.isArray(r)&&Number(r[0])>0&&Number(r[1])>0&&Number(r[2])>0&&Number(r[3])>0&&Number(r[4])>0)
    .map(r=>({time:Number(r[0]),open:Number(r[1]),high:Number(r[2]),low:Number(r[3]),close:Number(r[4]),volume:Number(r[5]||0)}))
    .sort((a,b)=>a.time-b.time);
@@ -76,8 +79,8 @@ async function loadCandles(force=false){
   state.candles=unique;state.fetchAt=Date.now();message.hidden=true;
   const saved=currentSaved();if(saved.count)state.view.count=saved.count;if(saved.end)state.view.end=saved.end;
   draw();
- }catch(e){message.hidden=false;message.textContent='行情读取失败 · '+String(e.message||e).slice(0,48);status.textContent='数据异常';console.warn('[Vegas Layer 5] candle load failed',e)}
- finally{state.loading=false}
+ }catch(e){if(requestId===requestVersion){message.hidden=false;message.textContent='行情读取失败 · '+String(e.message||e).slice(0,48);status.textContent='数据异常';console.warn('[Vegas Layer 5] candle load failed',e)}}
+ finally{if(requestId===requestVersion)state.loading=false}
 }
 function ema(values,n){
  const out=new Array(values.length).fill(null);if(values.length<n)return out;
@@ -139,8 +142,10 @@ function openSymbol(symbol){
  const saved=state.saved[symbol]||{};
  state.period=saved.period||(STOCKS.has(symbol)?'1H':'2H');
  state.view={count:saved.count||120,end:saved.end||0};
- state.candles=[];state.fetchAt=0;state.loading=false;
- periodSelect.value=state.period;win.classList.add('is-open');applyGeometry();
+ state.candles=[];state.fetchAt=0;state.loading=false;requestVersion++;
+ if(STOCKS.has(symbol)&&!STOCK_PERIODS.includes(state.period))state.period='1H';
+ periodSelect.replaceChildren(...(STOCKS.has(symbol)?STOCK_PERIODS:PERIODS).map(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;return o}));
+ periodSelect.value=state.period;win.classList.add('is-open');win.classList.remove('is-faded');applyGeometry();
  message.hidden=false;message.textContent='读取历史行情…';
  loadCandles(true);
 }
@@ -166,7 +171,6 @@ document.addEventListener('click',e=>{
  if(!card||card.getAttribute('data-formal-signal')!=='true')return;
  e.preventDefault();e.stopPropagation();openSymbol(String(card.dataset.symbol||'').toUpperCase());
 },true);
-if(scroller){scroller.addEventListener('scroll',()=>{if(state.open){win.classList.remove('is-faded');scheduleFollow()}},{passive:true})}
 head.addEventListener('pointerdown',e=>{
  if(e.target.closest('button,select'))return;
  if(e.pointerType==='touch'&&e.isPrimary===false)return;
