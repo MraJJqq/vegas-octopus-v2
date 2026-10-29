@@ -203,28 +203,15 @@
     let card=null;
     for(const item of cards){if(String(item.dataset.symbol||'').toUpperCase()===activeSymbol){card=item;break;}}
     if(!card)return;
-    const read=selector=>card.querySelector(selector)?.textContent?.trim()||'--';
-    const symbol=activeSymbol;
-    const kind=read('.mc-sym').replace(symbol,'').replace(/\\s+/g,' ').trim()|| (isReality(symbol)?'/USDT 现货':'/USDT 永续');
-    const price=read('.mc-price'),pct=read('.mc-pct'),high=read('.mc-hi'),low=read('.mc-lo');
-    const hasSignal=card.getAttribute('data-formal-signal')==='true';
-    const lines=[
-      {text:symbol+'  '+kind,size:14,color:'#e8f5ff',bold:true},
-      {text:'价格  '+price+'    涨跌  '+pct,size:12,color:/^-/.test(pct)?'#ff7b91':pct.startsWith('+')?'#35e6b0':'#d9e7f4'},
-      {text:'高  '+high+'    低  '+low+(hasSignal?'    正式信号':'') ,size:11,color:hasSignal?'#f4d35e':'#b7c8d9'}
-    ];
+    const name=card.querySelector('.mc-sym')?.childNodes?.[0]?.textContent?.trim()||activeSymbol;
     ctx.save();
-    ctx.font='12px system-ui,-apple-system,"PingFang SC",sans-serif';
-    const boxW=Math.min(Math.max(230,...lines.map(line=>{ctx.font=(line.bold?'600 ':'')+line.size+'px system-ui,-apple-system,"PingFang SC",sans-serif';return ctx.measureText(line.text).width+24;})),Math.max(180,canvasWidth-16));
-    const boxH=66,x=8,y=8;
-    ctx.fillStyle='rgba(5,12,25,0.78)';
-    ctx.fillRect(x,y,boxW,boxH);
-    ctx.strokeStyle='rgba(115,190,255,0.28)';ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,boxW-1,boxH-1);
-    let yy=y+19;
-    for(const line of lines){
-      ctx.font=(line.bold?'600 ':'')+line.size+'px system-ui,-apple-system,"PingFang SC",sans-serif';
-      ctx.fillStyle=line.color;ctx.textBaseline='middle';ctx.fillText(line.text,x+10,yy,boxW-20);yy+=line.size+6;
-    }
+    ctx.font='600 14px system-ui,-apple-system,"PingFang SC",sans-serif';
+    ctx.textAlign='left';
+    ctx.textBaseline='top';
+    ctx.fillStyle='#e8f5ff';
+    ctx.shadowColor='rgba(0,0,0,0.7)';
+    ctx.shadowBlur=3;
+    ctx.fillText(name,8,8,Math.max(40,canvasWidth-16));
     ctx.restore();
   }
   function formatPrice(v){return v>=1000?v.toLocaleString('en-US',{maximumFractionDigits:2}):v>=1?v.toFixed(3):v.toPrecision(4);}
