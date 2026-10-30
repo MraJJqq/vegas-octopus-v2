@@ -28,7 +28,7 @@ const layers=[0,1].map(index=>{
  return el;
 });
 
-let queue=[],currentIndex=0,period='4H',periodSettings={},manualSymbol='';
+let queue=[],currentIndex=0,period='4H',periodSettings={},manualSymbol='',queueInitialized=false;
 let manualTimer=0;
 let activeLayer=0,cycleTimer=0,transitioning=false,paused=false;
 let cycleToken=0,hidden=document.hidden,refreshTimer=0;
@@ -394,6 +394,9 @@ function showManualSymbol(value){
 }
 window.VegasLayer5ShowSymbol=showManualSymbol;
 function reconcile(symbols){
+ const next=[...new Set((symbols||[]).map(value=>String(value||'').trim().toUpperCase()).filter(value=>/^[A-Z0-9.]+$/.test(value)))];
+ if(queueInitialized&&next.length===queue.length&&next.every((symbol,index)=>symbol===queue[index]))return;
+ queueInitialized=true;
  ++cycleToken;clearTimeout(cycleTimer);transitioning=false;
  setTransitionHint(false);
  layers.forEach((layer,index)=>{
@@ -403,7 +406,6 @@ function reconcile(symbols){
   layer.classList.toggle('is-active',index===activeLayer);
   layer.getBoundingClientRect();layer.style.transition='';
  });
- const next=[...new Set((symbols||[]).map(value=>String(value||'').trim().toUpperCase()).filter(value=>/^[A-Z0-9.]+$/.test(value)))];
  const previous=currentSymbol();
  queue=next;
  if(!next.length&&!manualSymbol){
