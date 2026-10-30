@@ -1,5 +1,7 @@
 /* 第二层：最新事件模块，读取正式信号状态。 */
 (function(){
+  if(window.__VEGAS_V9_EVENTS_INIT__)return;
+  window.__VEGAS_V9_EVENTS_INIT__=true;
   const STATE_URL="https://raw.githubusercontent.com/MraJJqq/vegas-octopus-v2/main/v9-signals.json";
   const CORE_ORDER=["BTC","HYPE","XAU","CL"];
   const STOCK_ORDER=["AAPL","MSFT","GOOGL","AMZN","NVDA","TSLA","META","INTC","QCOM","AMD","TSM","AVGO","ORCL","ARM","MU","ASML","SNDK","SKHYNIX","MRVL","GLW","HOOD","CBRS","SPCX"];
