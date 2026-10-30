@@ -13,7 +13,7 @@
   let canvas, ctx, width = 1, height = 1, dpr = 1;
   let geometryAppRect = null, geometryOrbRect = null, geometryStartsDirty = true;
   let rotA = 0, lastT = 0, frameId = 0, frameTimer = 0, lastFrameAt = 0, resizeObserver = null;
-  const FRAME_INTERVAL = 1000 / 30;
+  const FRAME_INTERVAL = 1000 / ((window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ? 24 : 30);
 
   /* 透明叠加层：不创建背景，不接管鼠标/触摸事件。 */
   const app = document.querySelector('.app') || document.body;
@@ -51,7 +51,8 @@
     const orbCanvas = $('orb-core-canvas');
     geometryOrbRect = orbCanvas ? orbCanvas.getBoundingClientRect() : null;
     geometryStartsDirty = true;
-    dpr = Math.max(1, window.devicePixelRatio || 1);
+    /* 与发光球保持一致：限制高像素密度设备的离屏画布成本。 */
+    dpr = Math.min(1.5, Math.max(1, window.devicePixelRatio || 1));
     width = Math.max(1, r.width);
     height = Math.max(1, r.height);
     const pw = Math.round(width * dpr), ph = Math.round(height * dpr);
