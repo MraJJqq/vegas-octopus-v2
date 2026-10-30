@@ -30,7 +30,7 @@ const layers=[0,1].map(index=>{
 
 let queue=[],currentIndex=0,period='4H',periodSettings={},manualSymbol='',queueInitialized=false;
 let manualTimer=0;
-let activeLayer=0,cycleTimer=0,transitionTimer=0,transitionRaf=0,transitioning=false,paused=false;
+let activeLayer=0,cycleTimer=0,transitionTimer=0,transitionRaf=0,transitioning=false,paused=false,refreshDeferred=false;
 let cycleToken=0,hidden=document.hidden,refreshTimer=0,fadeState='idle',initialRevealDone=false,initialRevealTimer=0;
 let stockMap=null,stockMapAt=0,cache=new Map(),backfills=new Map(),candleRequests=new Map();
 
@@ -204,6 +204,11 @@ function createChart(layer){
 }
 const views=layers.map(createChart);
 function setData(view,rows,preserveRange=false){
+ /* 渐变期间不向正在显示的两个图层写入新K线；只保留每层最新一份数据，交接结束后统一应用。 */
+ if(fadeState==='transitioning'){
+  view.pendingData={rows,preserveRange};
+  return false;
+ }
  const timeScale=view.chart.timeScale();
  const visibleRange=preserveRange?timeScale.getVisibleRange():null;
  view.candle.setData(rows);
@@ -213,6 +218,17 @@ function setData(view,rows,preserveRange=false){
  }
  view.hasData=true;
  view.dataAt=Date.now();
+ view.pendingData=null;
+ return true;
+}
+function applyPendingLayerData(){
+ views.forEach((view,index)=>{
+  const pending=view.pendingData;
+  if(!pending)return;
+  view.pendingData=null;
+  setData(view,pending.rows,pending.preserveRange);
+  updateLayerStatus(index,view.symbol,pending.rows);
+ });
 }
 function resetDefaultVisibleRange(view,rows){
  if(!rows.length)return;
@@ -318,14 +334,16 @@ function clearTimers(){
  clearTimeout(cycleTimer);clearTimeout(refreshTimer);
  cycleTimer=refreshTimer=0;
 }
-function scheduleRefresh(){
+function scheduleRefresh(delay=15000){
  clearTimeout(refreshTimer);
  if(hidden||!currentSymbol())return;
  refreshTimer=setTimeout(async()=>{
+  /* 15秒刷新时刻若落在渐变中，延后到交接结束后立即执行，不在渐变帧中重绘K线。 */
+  if(transitioning){refreshDeferred=true;return;}
   const symbol=currentSymbol();
   if(symbol)await loadLayer(activeLayer,symbol,periodFor(symbol));
   scheduleRefresh();
- },15000);
+ },delay);
 }
 function preloadNext(){
  if(manualSymbol||queue.length<2||hidden)return;
@@ -353,6 +371,9 @@ function settleTransition(){
  setTransitionHint(false);
  transitioning=false;
  fadeState=paused?'paused':'idle';
+ /* 先结束渐变状态，再提交渐变期间积压的行情/历史补齐数据。 */
+ applyPendingLayerData();
+ if(refreshDeferred&&!paused&&!hidden){refreshDeferred=false;scheduleRefresh(0);}
 }
 function scheduleCycle(delay=CLEAR_MS){
  clearTimeout(cycleTimer);
