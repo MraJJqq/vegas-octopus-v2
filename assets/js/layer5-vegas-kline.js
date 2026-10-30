@@ -152,11 +152,9 @@ function draw(view={}){
  if(!state.open||!state.candles.length)return;
  const cacheKey=state.symbol+'|'+state.period;
  let prepared=state.candleCache.get(cacheKey);
- if(!prepared||prepared.candles!==state.candles||!prepared.chartCandles||!prepared.emaData){
+ if(!prepared||prepared.candles!==state.candles||!prepared.chartCandles){
   const candles=state.candles.map(c=>({time:Math.floor(c.time/1000),open:c.open,high:c.high,low:c.low,close:c.close}));
-  const closes=state.candles.map(c=>c.close);
-  const emaData=EMA_LINES.map(line=>ema(closes,line.n).map((value,i)=>value==null?null:{time:candles[i].time,value}).filter(point=>point&&Number.isFinite(point.value)));
-  prepared={...(prepared||{}),candles:state.candles,chartCandles:candles,emaData};
+  prepared={...(prepared||{}),candles:state.candles,chartCandles:candles};
   state.candleCache.delete(cacheKey);state.candleCache.set(cacheKey,prepared);
  }
  const previous=renderedSnapshot;
@@ -170,16 +168,36 @@ function draw(view={}){
    if(!b||a.time!==b.time||a.open!==b.open||a.high!==b.high||a.low!==b.low||a.close!==b.close){incremental=false;break;}
   }
  }
+ let emaData=null;
+ if(incremental&&previous.emaData&&newData.length>1){
+  const priorTime=newData[newData.length-2].time;
+  const close=newData[newData.length-1].close;
+  const next=[];
+  for(let index=0;index<EMA_LINES.length;index++){
+   const line=EMA_LINES[index],series=previous.emaData[index];
+   let prior=null;
+   for(let j=series.length-1;j>=0;j--){if(series[j].time===priorTime){prior=series[j];break;}}
+   if(!prior){emaData=null;break;}
+   const value=close*(2/(line.n+1))+prior.value*(1-2/(line.n+1));
+   next.push([...series.slice(0,-1),{time:newData[newData.length-1].time,value}]);
+  }
+  if(next.length===EMA_LINES.length)emaData=next;
+ }
+ if(!emaData){
+  const closes=state.candles.map(c=>c.close);
+  emaData=EMA_LINES.map(line=>ema(closes,line.n).map((value,i)=>value==null?null:{time:newData[i].time,value}).filter(point=>point&&Number.isFinite(point.value)));
+ }
+ prepared.emaData=emaData;
  if(incremental){
   const last=newData[newData.length-1];
   candleSeries.update(last);
-  prepared.emaData.forEach((data,index)=>{if(data.length)emaSeries[index].update(data[data.length-1]);});
+  emaData.forEach((data,index)=>{if(data.length)emaSeries[index].update(data[data.length-1]);});
  }else{
   suppressRangeSaveUntil=Date.now()+250;
   candleSeries.setData(newData);
-  prepared.emaData.forEach((data,index)=>emaSeries[index].setData(data));
+  emaData.forEach((data,index)=>emaSeries[index].setData(data));
  }
- renderedSnapshot={symbol:state.symbol,period:state.period,chartCandles:newData};
+ renderedSnapshot={symbol:state.symbol,period:state.period,chartCandles:newData,emaData};
  const ts=chart.timeScale();
  if(!incremental){
   if(view.range){try{ts.setVisibleRange(view.range)}catch{ts.setVisibleLogicalRange({from:Math.max(0,newData.length-120),to:newData.length})}}
