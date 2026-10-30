@@ -4,6 +4,7 @@
   if (window.__VEGAS_DATA_STREAM_LAYER_READY__) return;
 
   const $ = id => document.getElementById(id);
+  const orbCanvas = $('orb-core-canvas');
   const R = Math.random, PI = Math.PI;
   const P = [], F = [];
   let formalCards = Array.from(document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"]'));
@@ -48,7 +49,7 @@
   function resize() {
     const r = layer.getBoundingClientRect();
     geometryAppRect = app.getBoundingClientRect();
-    const orbCanvas = $('orb-core-canvas');
+    /* cached orb canvas */
     geometryOrbRect = orbCanvas ? orbCanvas.getBoundingClientRect() : null;
     geometryStartsDirty = true;
     /* 与发光球保持一致：限制高像素密度设备的离屏画布成本。 */
@@ -72,7 +73,7 @@
   }
 
   function getOrbPoints(t, frameAppRect) {
-    const orbCanvas = $('orb-core-canvas');
+    /* cached orb canvas */
     const projected = window.VegasOrbProjectedPoints;
     if (orbCanvas && Array.isArray(projected) && projected.length) {
       const r = geometryOrbRect || orbCanvas.getBoundingClientRect();
@@ -135,7 +136,7 @@
     /* 几何读取集中在滚动/尺寸/信号变化时；动画帧只消费缓存，避免逐卡布局查询。 */
     const appRect = app.getBoundingClientRect();
     geometryAppRect = appRect;
-    const orbCanvas = $('orb-core-canvas');
+    /* cached orb canvas */
     geometryOrbRect = orbCanvas ? orbCanvas.getBoundingClientRect() : null;
     cardStarts.length = 0;
     const scroller = $('mc-left');
