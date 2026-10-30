@@ -24,13 +24,16 @@ async function fetchJson(path){
  try{const r=await fetch(API+path,{cache:'no-store',signal:c.signal});if(!r.ok)throw Error('HTTP '+r.status);const j=await r.json();if(j.code!=='00000'||!Array.isArray(j.data))throw Error(j.msg||'行情响应无效');return j.data}
  finally{clearTimeout(timer)}
 }
-let stockMap=null,stockMapAt=0;
+let stockMap=null,stockMapAt=0,stockMapPromise=null;
 async function stockSymbol(s){
  if(!stockMap||Date.now()-stockMapAt>300000){
-  const rows=await fetchJson('/api/v3/reality/market/stock-info');
-  stockMap=new Map(rows.filter(x=>x&&x.code&&x.symbol).map(x=>[String(x.code).toUpperCase(),String(x.symbol)]));
-  const sk=rows.find(x=>x&&x.symbol&&(/SKHYNIX/i.test(String(x.code||''))||/SK\\s*HYNIX/i.test(String(x.name||''))||/RSKHYUSDT/i.test(String(x.symbol||''))));
-  if(sk)stockMap.set('SKHYNIX',String(sk.symbol));stockMapAt=Date.now();
+  if(!stockMapPromise)stockMapPromise=(async()=>{
+   const rows=await fetchJson('/api/v3/reality/market/stock-info');
+   const next=new Map(rows.filter(x=>x&&x.code&&x.symbol).map(x=>[String(x.code).toUpperCase(),String(x.symbol)]));
+   const sk=rows.find(x=>x&&x.symbol&&(/SKHYNIX/i.test(String(x.code||''))||/SK\\s*HYNIX/i.test(String(x.name||''))||/RSKHYUSDT/i.test(String(x.symbol||''))));
+   if(sk)next.set('SKHYNIX',String(sk.symbol));stockMap=next;stockMapAt=Date.now();
+  })().finally(()=>{stockMapPromise=null});
+  await stockMapPromise;
  }
  const value=stockMap.get(s);if(!value)throw Error('无现货映射');return value;
 }
@@ -94,6 +97,7 @@ function loadCard(card,force=false){
  if(card.disposed||card.refreshing||document.hidden)return;
  card.refreshing=true;
  enqueue(async()=>{
+  if(card.disposed||document.hidden)return;
   try{const data=await getCandles(card.symbol,card.period);if(!card.disposed)setData(card,data,force)}
   catch(e){if(!card.disposed){const err=card.el.querySelector('.vr-error');err.hidden=false;err.textContent='行情暂不可用 · '+String(e.message||e).slice(0,36);card.el.querySelector('.vr-status').textContent='数据异常'}}
   finally{card.refreshing=false;if(!card.disposed){if(card.timer)clearTimeout(card.timer);card.timer=setTimeout(()=>loadCard(card),REFRESH_MS)}}
@@ -128,7 +132,7 @@ function reconcile(symbols){
 }
 window.VegasLayer5SetAutoQueue=reconcile;
 document.addEventListener('visibilitychange',()=>{if(document.hidden){pauseScroll();cards.forEach(c=>{if(c.timer)clearTimeout(c.timer);c.timer=0})}else{cards.forEach(c=>loadCard(c,true));startScroll()}},{passive:true});
-window.addEventListener('pagehide',()=>{pauseScroll();cards.forEach(c=>{if(c.timer)clearTimeout(c.timer);c.destroy()})});
+window.addEventListener('pagehide',()=>{pauseScroll();cards.forEach(c=>{if(c.timer)clearTimeout(c.timer);c.timer=0})});
 syncLeftBoundary();
 reconcile(window.VegasFormalSignalSymbols||[]);
 })();
