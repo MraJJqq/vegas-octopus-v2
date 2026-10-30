@@ -269,6 +269,19 @@ function openSymbol(symbol){
  state.open=true;state.symbol=symbol;
  const saved=state.saved[symbol]||{};
  state.period=saved.period||'4H';
+ /* 旧版按品种保存的视窗只用于一次性迁移；之后统一使用 globalVisibleRange。 */
+ let migratedLegacyRange=false;
+ if(!globalVisibleRange){
+  const legacy=saved.visibleRanges&&saved.visibleRanges[state.period]||saved.visibleRange||
+   Object.values(state.saved).map(item=>item&&item.visibleRanges&&
+    (item.visibleRanges[state.period]||Object.values(item.visibleRanges)[0])||item&&item.visibleRange).find(Boolean);
+  if(legacy){globalVisibleRange=legacy;migratedLegacyRange=true;}
+ }
+ const hadLegacyRanges=Object.values(state.saved).some(item=>item&&typeof item==='object'&&('visibleRanges'in item||'visibleRange'in item));
+ for(const item of Object.values(state.saved)){
+  if(item&&typeof item==='object'){delete item.visibleRanges;delete item.visibleRange;}
+ }
+ if(migratedLegacyRange||hadLegacyRanges)save();
  state.loading=false;requestVersion++;
  if(STOCKS.has(symbol)&&!PERIODS.includes(state.period))state.period='4H';
  const cacheKey=symbol+'|'+state.period;const cached=state.candleCache.get(cacheKey);if(cached){state.candleCache.delete(cacheKey);state.candleCache.set(cacheKey,cached);}
