@@ -8,7 +8,7 @@ const API='https://api.bitget.com';
 const STOCKS=new Set(['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','QCOM','AMD','TSM','AVGO','ORCL','ARM','MU','ASML','SNDK','SKHYNIX','MRVL','GLW','HOOD','CBRS','SPCX']);
 const PERIODS=['1H','4H','1D'];
 const EMAS=[12,36,43,144,169,576,676];
-const EMA_COLORS=['#f5d76e','#f3f6ff','#f3f6ff','#f4d35e','#f4d35e','#ff4e5e','#ff4e5e'];
+const EMA_COLORS=['#f5d76e','#00B0FF','#00B0FF','#f4d35e','#f4d35e','#ff4e5e','#ff4e5e'];
 const PERIOD_KEY='vegas-right-track-v1';
 const CLEAR_MS=5000,TRANSITION_MS=5000;
 const root=document.getElementById('vegas-right-scroll');
@@ -82,21 +82,37 @@ async function getStockMap(){
 async function getCandles(symbol,timeframe){
  const key=symbol+'|'+timeframe,cached=cache.get(key);
  if(cached&&Date.now()-cached.at<15000)return cached.rows;
- let rows;
- if(STOCKS.has(symbol)){
-  const mapped=(await getStockMap()).get(symbol);
+ const isStock=STOCKS.has(symbol);
+ let mapped='';
+ if(isStock){
+  mapped=(await getStockMap()).get(symbol);
   if(!mapped)throw Error('无现货映射');
-  rows=await getJson('/api/v3/market/candles?'+new URLSearchParams({category:'SPOT',symbol:mapped,interval:timeframe,limit:'1000'}));
- }else{
-  rows=await getJson('/api/v2/mix/market/candles?'+new URLSearchParams({symbol:symbol+'USDT',productType:'USDT-FUTURES',granularity:timeframe,limit:'1000'}));
  }
- const normalized=rows.filter(row=>Array.isArray(row)&&row.slice(0,5).every(v=>Number.isFinite(+v)&&+v>0))
-  .map(row=>({time:Math.floor(+row[0]/1000),open:+row[1],high:+row[2],low:+row[3],close:+row[4]}))
-  .sort((a,b)=>a.time-b.time);
- if(!normalized.length)throw Error('没有有效K线');
- cache.set(key,{rows:normalized,at:Date.now()});
+ const all=new Map();
+ let endTime=null;
+ const TARGET_BARS=1200,MAX_PAGES=3,PAGE_LIMIT=1000;
+ for(let page=0;page<MAX_PAGES&&all.size<TARGET_BARS;page++){
+  const params=isStock
+   ?{category:'SPOT',symbol:mapped,interval:timeframe,limit:String(PAGE_LIMIT)}
+   :{symbol:symbol+'USDT',productType:'USDT-FUTURES',granularity:timeframe,limit:String(PAGE_LIMIT)};
+  if(endTime!==null)params.endTime=String(endTime);
+  const endpoint=isStock?'/api/v3/market/candles':'/api/v2/mix/market/candles';
+  const rows=await getJson(endpoint+'?'+new URLSearchParams(params));
+  const normalized=rows.filter(row=>Array.isArray(row)&&row.slice(0,5).every(v=>Number.isFinite(+v)&&+v>0))
+   .map(row=>({time:Math.floor(+row[0]/1000),open:+row[1],high:+row[2],low:+row[3],close:+row[4]}))
+   .filter(row=>Number.isFinite(row.time)&&row.time>0);
+  if(!normalized.length)break;
+  let added=0;
+  normalized.forEach(row=>{if(!all.has(row.time)){all.set(row.time,row);added++}});
+  const oldest=Math.min(...normalized.map(row=>row.time));
+  if(added===0||!Number.isFinite(oldest))break;
+  endTime=oldest*1000-1;
+ }
+ const result=[...all.values()].sort((a,b)=>a.time-b.time);
+ if(!result.length)throw Error('没有有效K线');
+ cache.set(key,{rows:result,at:Date.now()});
  while(cache.size>30)cache.delete(cache.keys().next().value);
- return normalized;
+ return result;
 }
 function ema(rows,length){
  if(rows.length<length)return[];
@@ -141,8 +157,10 @@ async function loadLayer(index,symbol,timeframe){
   if(token!==view.request)return false;
   setData(view,rows);
   if(index===activeLayer&&symbol===currentSymbol()){
-   status.textContent=rows.at(-1).close.toLocaleString('en-US',{maximumFractionDigits:5});
-   error.hidden=true;
+   status.textContent=rows.at(-1).close.toLocaleString('en-US',{maximumFractionDigits:5})+' · '+rows.length+'根K线';
+   if(rows.length<676){error.textContent='历史K线不足676根，EMA576/EMA676红峰无法完整显示（当前'+rows.length+'根）';error.hidden=false;}
+   else if(rows.length<1200){error.textContent='历史K线已加载'+rows.length+'根，红峰可计算但预热数据不足1200根';error.hidden=false;}
+   else error.hidden=true;
   }
   return true;
  }catch(exception){
