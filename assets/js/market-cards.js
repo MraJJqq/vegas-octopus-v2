@@ -134,8 +134,14 @@ function applyManualDelta(delta,source){
  const direction=delta<0?-1:1;
  if(!manualFrame){manualTarget=left.scrollTop;manualVelocity=0;manualLastTime=0}
  const reversing=manualVelocity!==0&&Math.sign(manualVelocity)!==Math.sign(delta);
- if(reversing){manualTarget=left.scrollTop+delta*1.12;manualVelocity=delta*.018}
- else{manualTarget+=delta*1.28;manualVelocity=Math.max(-1.2,Math.min(1.2,manualVelocity+delta*.022))}
+ if(source==='touch'){
+  manualTarget+=delta;
+  manualVelocity=Math.max(-1.2,Math.min(1.2,manualVelocity+delta*.018));
+ }else if(reversing){
+  manualTarget=left.scrollTop+delta*1.12;manualVelocity=delta*.018;
+ }else{
+  manualTarget+=delta*1.28;manualVelocity=Math.max(-1.2,Math.min(1.2,manualVelocity+delta*.022));
+ }
  loopDirection=direction;
  if(!manualFrame)manualFrame=requestAnimationFrame(runManualScroll);
 }
@@ -143,11 +149,11 @@ function runManualScroll(now){
  try{
   if(!manualLastTime)manualLastTime=now;
   const dt=Math.min(32,Math.max(1,now-manualLastTime));manualLastTime=now;
-  const current=left.scrollTop,diff=manualTarget-current,ease=1-Math.exp(-dt/72);
+  const current=left.scrollTop,diff=manualTarget-current,ease=1-Math.exp(-dt/30);
   moveLoop(diff*ease,Math.sign(diff)||loopDirection,'manual');
   manualVelocity*=Math.exp(-dt/180);
-  if(Math.abs(manualVelocity)>.008)manualTarget+=manualVelocity*dt;
-  else manualVelocity=0;
+  if(!touchActive&&Math.abs(manualVelocity)>.008)manualTarget+=manualVelocity*dt;
+  else if(Math.abs(manualVelocity)<=.008)manualVelocity=0;
   if(Math.abs(manualVelocity)<.025&&Math.abs(manualTarget-left.scrollTop)<.5){
    manualTarget=left.scrollTop;manualVelocity=0;manualFrame=0;manualLastTime=0;
    autoResumeAt=Math.max(autoResumeAt,now+(touchActive?1400:80));
