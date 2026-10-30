@@ -12,5 +12,4 @@
 #vegas-right-scroll .vr-periods button.active{color:#e8f8ff;text-shadow:0 0 7px rgba(92,198,255,.7)}
 #vegas-right-scroll .vr-error{display:none}
 #vegas-right-scroll .vr-error:not([hidden]){display:block;position:absolute;z-index:6;left:8px;bottom:8px;color:#ff9aab;font-size:10px}
-.topbar{z-index:5}
 @media(max-width:700px){#vegas-right-scroll .vr-periods{gap:3px}#vegas-right-scroll .vr-periods button{min-width:22px;padding:2px;font-size:9px}}
