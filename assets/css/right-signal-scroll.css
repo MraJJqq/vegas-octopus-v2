@@ -1,26 +1,19 @@
-/* 右滚动：复用第五层悬浮K线的极简透明模板；独立于冻结的左滚动。 */
-#vegas-right-scroll{position:fixed;z-index:0;inset:0!important;width:100vw;height:100vh;min-width:0;overflow:hidden;pointer-events:none;background:transparent!important}
+/* 右侧连续纵向轨道：非焦点品种用静态K线预览，唯一活动图表可交互。 */
+#vegas-right-scroll{position:fixed;z-index:0;inset:0;width:100vw;height:100vh;overflow:hidden;pointer-events:none;background:transparent}
 #vegas-right-scroll[hidden]{display:none}
-#vegas-right-scroll .vr-single{position:absolute;inset:0;overflow:hidden;border:0;border-radius:0;background:transparent!important;box-shadow:none;pointer-events:auto}
-#vegas-right-scroll .vr-head{position:absolute;z-index:2;top:5px;left:5px;right:5px;height:26px;display:flex;align-items:center;gap:8px;pointer-events:none}
-#vegas-right-scroll .vr-symbol,#vegas-right-scroll .vr-status{display:none!important}
+#vegas-right-scroll .vr-single{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+#vegas-right-scroll .vr-track{position:absolute;inset:0;will-change:transform;pointer-events:none}
+#vegas-right-scroll .vr-panel{position:relative;width:100%;height:100vh;min-height:100vh;overflow:hidden;pointer-events:none;background:transparent}
+#vegas-right-scroll .vr-preview-title{position:absolute;z-index:2;top:7px;left:8px;font:600 12px Inter,sans-serif;color:rgba(190,220,242,.68)}
+#vegas-right-scroll .vr-preview{position:absolute;inset:0;width:100%;height:100%;opacity:.34;pointer-events:none}
+#vegas-right-scroll .vr-panel.active .vr-preview{display:none}
+#vegas-right-scroll .vr-chart{position:absolute;inset:0;width:100%;height:100%;pointer-events:auto;touch-action:none}
+#vegas-right-scroll .vr-head{position:absolute;z-index:5;top:5px;left:5px;right:5px;height:28px;display:flex;align-items:center;pointer-events:none}
+#vegas-right-scroll .vr-symbol,#vegas-right-scroll .vr-status{display:none}
 #vegas-right-scroll .vr-periods{display:flex;gap:8px;margin-left:auto;pointer-events:auto}
 #vegas-right-scroll .vr-periods button{border:0;background:transparent;color:rgba(173,204,226,.58);font:600 11px Inter,sans-serif;padding:4px;min-width:28px;min-height:28px}
 #vegas-right-scroll .vr-periods button.active{color:#e8f8ff;text-shadow:0 0 7px rgba(92,198,255,.7)}
-#vegas-right-scroll .vr-chart{position:absolute;inset:0;width:100%;height:100%;touch-action:none;pointer-events:auto}
-#vegas-right-scroll .vr-error{position:absolute;z-index:3;left:8px;bottom:7px;font-size:10px;color:#ff9aab;pointer-events:none}
-#vegas-right-scroll .vr-error[hidden]{display:none}
-@media(max-width:700px){#vegas-right-scroll .vr-head{left:3px;right:3px;top:2px;gap:4px}#vegas-right-scroll .vr-periods{gap:3px}#vegas-right-scroll .vr-periods button{font-size:9px;min-width:22px;padding:2px}}
+#vegas-right-scroll .vr-error{display:none}
+#vegas-right-scroll .vr-error:not([hidden]){display:block;position:absolute;z-index:6;left:8px;bottom:8px;color:#ff9aab;font-size:10px}
 .topbar{z-index:5}
-/* 右滚动作为 body 的独立全屏底层；整个 app（含左滚动）位于其上方。 */
-#vegas-right-scroll .vr-single{inset:0}
-#vegas-right-scroll .vr-chart{inset:0;width:100%;height:100%}
-
-/* 轻量连续向上滚动：单个活动图表 + 切换瞬间的静态截图。 */
-#vegas-right-scroll .vr-single{isolation:isolate}
-#vegas-right-scroll .vr-chart{z-index:1;transform:translateY(0);will-change:transform}
-#vegas-right-scroll .vr-chart-enter{transform:translateY(100%)}
-#vegas-right-scroll .vr-chart-enter-active{transform:translateY(0);transition:transform .56s cubic-bezier(.22,.72,.22,1)}
-#vegas-right-scroll .vr-transition-snapshot{position:absolute;z-index:4;left:0;top:0;width:100%;height:100%;object-fit:fill;pointer-events:none;transform:translateY(0);will-change:transform}
-#vegas-right-scroll .vr-transition-snapshot.vr-transition-out{transform:translateY(-100%);transition:transform .56s cubic-bezier(.22,.72,.22,1)}
-@media(prefers-reduced-motion:reduce){#vegas-right-scroll .vr-chart-enter-active,#vegas-right-scroll .vr-transition-snapshot.vr-transition-out{transition:none}}
+@media(max-width:700px){#vegas-right-scroll .vr-periods{gap:3px}#vegas-right-scroll .vr-periods button{font-size:9px;min-width:22px;padding:2px}}
