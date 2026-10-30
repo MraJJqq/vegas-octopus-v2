@@ -16,7 +16,7 @@ const EMA_LINES=[
  {n:576,color:'#ff4e5e',width:1.8},
  {n:676,color:'#ff4e5e',width:1.8}
 ];
-const state={open:false,symbol:'',period:'4H',candles:[],loading:false,fetchAt:0,rotateTimer:0,loadedSymbol:'',loadedPeriod:'',saved:{},candleCache:new Map(),refreshTimer:0,requestController:null,requestFailures:0,retryAfter:0,pendingVisibleRange:null};
+const state={open:false,symbol:'',period:'4H',candles:[],loading:false,fetchAt:0,loadedSymbol:'',loadedPeriod:'',saved:{},candleCache:new Map(),refreshTimer:0,requestController:null,requestFailures:0,retryAfter:0,pendingVisibleRange:null};
 const readSaved=()=>{try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}catch{return {}}};
 state.saved=readSaved();
 const storedState=state.saved;state.saved=storedState.perSymbol||storedState;
@@ -271,8 +271,6 @@ function saveView(){const s=currentSaved();const range=chart.timeScale().getVisi
 function openSymbol(symbol){
  if(!symbol)return;
  lastTitleTap=0;
- if(state.rotateTimer)clearTimeout(state.rotateTimer);
- state.rotateTimer=0;
  if(state.requestController){state.requestController.abort();state.requestController=null;}
  state.open=true;state.symbol=symbol;
  const saved=state.saved[symbol]||{};
@@ -287,33 +285,9 @@ function openSymbol(symbol){
  message.hidden=!cached;message.textContent='读取历史行情…';
  if(cached){const range=savedRange(saved,state.period);draw({range,initial:!range,restore:true});}
  loadCandles(false);
- scheduleAutoRotate();
  scheduleRefresh();
 }
-function formalSymbols(){
- const fromGlobal=Array.isArray(window.VegasFormalSignalSymbols)?window.VegasFormalSignalSymbols:[];
- const fromCards=[...document.querySelectorAll('#market-cards-layer .mc-card[data-formal-signal="true"][data-symbol]')].map(card=>card.dataset.symbol);
- return [...new Set([...fromGlobal,...fromCards].map(s=>String(s||'').toUpperCase().replace(/USDT$/i,'')).filter(Boolean))];
-}
-function scheduleAutoRotate(){
- if(state.rotateTimer)clearTimeout(state.rotateTimer);
- state.rotateTimer=0;
- if(!state.open)return;
- /* 无正式信号的卡片也可打开K线，但只对正式信号品种启用自动轮播。 */
- if(!formalSymbols().includes(state.symbol))return;
- state.rotateTimer=setTimeout(()=>{
-  state.rotateTimer=0;
-  if(!state.open)return;
-  const symbols=formalSymbols();
-  if(symbols.length>1){
-   const current=symbols.indexOf(state.symbol);
-   const next=symbols[(current+1+symbols.length)%symbols.length];
-   if(next&&next!==state.symbol){openSymbol(next);return}
-  }
-  scheduleAutoRotate();
- },6000);
-}
-function close(){lastTitleTap=0;if(state.open&&state.candles.length)saveView();if(state.requestController){state.requestController.abort();state.requestController=null;}state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];if(state.rotateTimer)clearTimeout(state.rotateTimer);state.rotateTimer=0;if(state.refreshTimer)clearTimeout(state.refreshTimer);state.refreshTimer=0;win.classList.remove('is-open');}
+function close(){lastTitleTap=0;if(state.open&&state.candles.length)saveView();if(state.requestController){state.requestController.abort();state.requestController=null;}state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];if(state.refreshTimer)clearTimeout(state.refreshTimer);state.refreshTimer=0;win.classList.remove('is-open');}
 /* 品种名称双击/触屏双击退出；周期按钮仍只响应单击。 */
 let lastTitleTap=0;
 title.addEventListener('touchend',e=>{
