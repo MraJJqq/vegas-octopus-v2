@@ -382,7 +382,8 @@ async function beginTransition(){
   incoming.style.transition='none';incoming.style.opacity='0';incoming.style.filter='brightness(0.25)';
   transitioning=false;fadeState='idle';scheduleCycle(1000);return;
  }
- /* 新图继承当前图的缩放比例与可视范围，避免切换瞬间跳变。 */
+ /* 切换规则：渐变开始前，将当前图的 barSpacing 与 rightOffset 同步到下一张图。
+    只同步缩放比例和右侧偏移，不复制 visible/logical range，避免不同品种历史长度差异造成K线异常放大。 */
  syncLayerView(views[activeLayer],views[nextLayer]);
  fadeState='transitioning';
  setTransitionHint(true);
