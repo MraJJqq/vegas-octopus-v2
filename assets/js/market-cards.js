@@ -259,6 +259,20 @@ async function bitgetJson(path){
 }
 let marketLoadInFlight=false,marketRefreshTimer=0;
 let realitySymbolCache=null,realitySymbolCacheAt=0;
+let realityDirectoryPromise=null;
+function loadRealitySymbolDirectory(){
+ if(realitySymbolCache&&Date.now()-realitySymbolCacheAt<5*60*1000)return Promise.resolve(realitySymbolCache);
+ if(realityDirectoryPromise)return realityDirectoryPromise;
+ realityDirectoryPromise=bitgetJson('/api/v3/reality/market/stock-info').then(data=>{
+  const map=new Map(data.filter(s=>s&&s.code&&s.symbol).map(s=>[String(s.code).toUpperCase(),String(s.symbol)]));
+  const sk=data.find(s=>s&&s.symbol&&(String(s.code||'').toUpperCase().replace(/[^A-Z0-9]/g,'')==='SKHY'||/SK\s*HYNIX/i.test(String(s.name||''))||/RSKHYUSDT/i.test(String(s.symbol||''))));
+  if(sk)map.set('SKHYNIX',String(sk.symbol));
+  realitySymbolCache=map;realitySymbolCacheAt=Date.now();
+  return map;
+ }).finally(()=>{realityDirectoryPromise=null;});
+ return realityDirectoryPromise;
+}
+window.VegasGetRealityStockMap=loadRealitySymbolDirectory;
 function scheduleMarketRefresh(){
  if(marketRefreshTimer){clearTimeout(marketRefreshTimer);marketRefreshTimer=0;}
  if(document.hidden)return;
@@ -321,11 +335,8 @@ async function loadMarketData(){
    })
   ];
   if(needRealityDirectory){
-   tasks.push(bitgetJson('/api/v3/reality/market/stock-info').then(data=>{
-    realitySymbols=new Map(data.filter(s=>s&&s.code&&s.symbol).map(s=>[String(s.code).toUpperCase(),String(s.symbol)]));
-    const sk=data.find(s=>s&&s.symbol&&(String(s.code||'').toUpperCase().replace(/[^A-Z0-9]/g,'')==='SKHY'||/SK\s*HYNIX/i.test(String(s.name||''))||/RSKHYUSDT/i.test(String(s.symbol||''))));
-    if(sk)realitySymbols.set('SKHYNIX',String(sk.symbol));
-    realitySymbolCache=realitySymbols;realitySymbolCacheAt=Date.now();
+   tasks.push(loadRealitySymbolDirectory().then(map=>{
+    realitySymbols=map;
    }).catch(error=>{
     console.warn('[Vegas Octopus] stock directory failed:',error);
    }).finally(()=>{
