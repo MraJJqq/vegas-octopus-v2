@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#02040a">
 <title>Vegas 章鱼</title>
-<link rel="stylesheet" href="./assets/css/app.css?v=20261030-58">
+<link rel="stylesheet" href="./assets/css/app.css?v=20261030-59">
 <link rel="stylesheet" href="./assets/css/right-signal-scroll.css?v=20261030-20">
 <link rel="stylesheet" href="./assets/css/bottom-signal-ticker.css?v=20261030-3">
 </head>
@@ -39,7 +39,7 @@
  function loadSource(index){
   if(index>=sources.length){console.error('[Vegas Right Scroll] chart library failed to load');return;}
   const script=document.createElement('script');script.src=sources[index];
-  script.onload=function(){const app=document.createElement('script');app.src='./assets/js/right-signal-scroll.js?v=20261030-48';app.onerror=function(){console.error('[Vegas Right Scroll] K-line module failed to load');};document.body.appendChild(app);};
+  script.onload=function(){const app=document.createElement('script');app.src='./assets/js/right-signal-scroll.js?v=20261030-49';app.onerror=function(){console.error('[Vegas Right Scroll] K-line module failed to load');};document.body.appendChild(app);};
   script.onerror=function(){script.remove();loadSource(index+1);};document.head.appendChild(script);
  }
  loadSource(0);
