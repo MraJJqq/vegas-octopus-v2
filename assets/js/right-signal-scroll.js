@@ -32,7 +32,7 @@ let queue=[],currentIndex=0,period='4H',periodSettings={},manualSymbol='',queueI
 let manualTimer=0;
 let activeLayer=0,cycleTimer=0,transitioning=false,paused=false;
 let cycleToken=0,hidden=document.hidden,refreshTimer=0;
-let stockMap=null,stockMapAt=0,cache=new Map(),backfills=new Map();
+let stockMap=null,stockMapAt=0,cache=new Map(),backfills=new Map(),candleRequests=new Map();
 
 try{
  const saved=JSON.parse(localStorage.getItem(PERIOD_KEY)||'{}');
@@ -115,15 +115,23 @@ async function fetchCandlePage(context,timeframe,endTime){
 async function getCandles(symbol,timeframe){
  const key=symbol+'|'+timeframe,cached=cache.get(key);
  if(cached&&Date.now()-cached.at<15000)return cached.rows;
- const context=await getCandleContext(symbol);
- const latest=await fetchCandlePage(context,timeframe,null);
- if(!latest.length)throw Error('没有有效历史K线');
- /* 刷新最近一页时合并已有历史，避免每15秒重新分页下载全部EMA历史。 */
- const merged=new Map((cached?.rows||[]).map(row=>[row.time,row]));
- latest.forEach(row=>merged.set(row.time,row));
- const rows=[...merged.values()].sort((a,b)=>a.time-b.time);
- cache.set(key,{rows,at:Date.now()});
- return rows;
+ const pending=candleRequests.get(key);
+ if(pending)return pending;
+ const request=(async()=>{
+  const context=await getCandleContext(symbol);
+  const latest=await fetchCandlePage(context,timeframe,null);
+  if(!latest.length)throw Error('没有有效历史K线');
+  /* 并发刷新共用同一请求；完成时合并最新缓存，避免重复请求或覆盖期间更新。 */
+  const current=cache.get(key);
+  const merged=new Map((current?.rows||[]).map(row=>[row.time,row]));
+  latest.forEach(row=>merged.set(row.time,row));
+  const rows=[...merged.values()].sort((a,b)=>a.time-b.time);
+  cache.set(key,{rows,at:Date.now()});
+  return rows;
+ })();
+ candleRequests.set(key,request);
+ try{return await request}
+ finally{if(candleRequests.get(key)===request)candleRequests.delete(key)}
 }
 async function completeCandles(symbol,timeframe,firstRows){
  const key=symbol+'|'+timeframe;
