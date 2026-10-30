@@ -11,7 +11,7 @@
   const card=event.target instanceof Element?event.target.closest('#market-cards-layer .mc-card[data-symbol]'):null;
   if(!card)return;
   const symbol=String(card.dataset.symbol||'').trim().toUpperCase();if(!symbol)return;
-  event.preventDefault();event.stopPropagation();
+  event.preventDefault();event.stopImmediatePropagation();
   if(ready&&typeof window.VegasLayer5Open==='function'){clearFeedback();window.VegasLayer5Open(symbol)}
   else{pending=symbol;feedback('正在加载K线组件 · '+symbol)}
  },true);
