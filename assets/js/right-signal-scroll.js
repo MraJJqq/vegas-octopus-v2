@@ -271,16 +271,30 @@ async function beginTransition(){
  incoming.classList.remove('is-active');
  incoming.style.opacity='0';
  incoming.style.filter='blur(12px)';
- await loadLayer(nextLayer,nextSymbol,nextPeriod);
+ const loaded=await loadLayer(nextLayer,nextSymbol,nextPeriod);
  if(token!==cycleToken||hidden||paused){transitioning=false;return}
+ /* 数据未真正绘制完成时不启动交接，避免空图层闪入。 */
+ if(!loaded||!views[nextLayer].hasData){
+  incoming.style.transition='none';
+  incoming.style.opacity='0';incoming.style.filter='blur(12px)';
+  transitioning=false;
+  scheduleCycle(1000);
+  return;
+ }
  incoming.style.pointerEvents='none';
+ incoming.style.transition='none';
+ outgoing.style.transition='none';
+ incoming.style.opacity='0';incoming.style.filter='blur(12px)';
  incoming.getBoundingClientRect();
- incoming.style.transition='';
- outgoing.style.transition='';
+ incoming.style.transition='opacity 5s linear,filter 5s linear';
+ outgoing.style.transition='opacity 5s linear,filter 5s linear';
  incoming.classList.add('is-active');
  outgoing.classList.remove('is-active');
- incoming.style.opacity='1';incoming.style.filter='blur(0px)';
- outgoing.style.opacity='0';outgoing.style.filter='blur(12px)';
+ requestAnimationFrame(()=>{
+  if(token!==cycleToken||hidden||paused)return;
+  incoming.style.opacity='1';incoming.style.filter='blur(0px)';
+  outgoing.style.opacity='0';outgoing.style.filter='blur(12px)';
+ });
  currentIndex=nextIndex;
  setActive(nextLayer);
  setTimeout(()=>{
