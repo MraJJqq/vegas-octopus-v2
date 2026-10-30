@@ -144,7 +144,7 @@ async function completeCandles(symbol,timeframe,firstRows){
  const current=cache.get(key);
  if(current&&Array.isArray(current.rows))current.rows.forEach(row=>all.set(row.time,row));
  const result=[...all.values()].sort((a,b)=>a.time-b.time);
- cache.set(key,{rows:result,at:Date.now()});
+ cache.set(key,{rows:result,at:current?.at??Date.now()});
  while(cache.size>30)cache.delete(cache.keys().next().value);
  return result;
 }
