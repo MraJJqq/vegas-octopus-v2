@@ -80,39 +80,60 @@ async function getStockMap(){
  if(special)stockMap.set('SKHYNIX',String(special.symbol));
  stockMapAt=Date.now();return stockMap;
 }
-async function getCandles(symbol,timeframe){
- const key=symbol+'|'+timeframe,cached=cache.get(key);
- if(cached&&Date.now()-cached.at<15000)return cached.rows;
+function normalizeCandles(rows){
+ return rows.filter(row=>Array.isArray(row)&&row.slice(0,5).every(v=>Number.isFinite(+v)&&+v>0))
+  .map(row=>({time:Math.floor(+row[0]/1000),open:+row[1],high:+row[2],low:+row[3],close:+row[4]}))
+  .filter(row=>Number.isFinite(row.time)&&row.time>0);
+}
+async function getCandleContext(symbol){
  const isStock=STOCKS.has(symbol);
  let mapped='';
  if(isStock){
   mapped=(await getStockMap()).get(symbol);
   if(!mapped)throw Error('无现货映射');
  }
- const all=new Map();
- let endTime=null;
- const TARGET_BARS=1200;
- const PAGE_LIMIT=isStock?100:200;
- const MAX_PAGES=15;
- const endpoint=isStock?'/api/v3/market/history-candles':'/api/v2/mix/market/history-candles';
+ return{
+  isStock,
+  endpoint:isStock?'/api/v3/market/history-candles':'/api/v2/mix/market/history-candles',
+  params:isStock
+   ?{category:'SPOT',symbol:mapped,interval:period,limit:'100'}
+   :{symbol:symbol+'USDT',productType:'USDT-FUTURES',granularity:period,limit:'200'},
+  pageLimit:isStock?100:200
+ };
+}
+async function fetchCandlePage(context,timeframe,endTime){
+ const params={...context.params};
+ if(context.isStock)params.interval=timeframe;
+ else params.granularity=timeframe;
+ if(endTime!==null)params.endTime=String(endTime);
+ return normalizeCandles(await getJson(context.endpoint+'?'+new URLSearchParams(params)));
+}
+async function getCandles(symbol,timeframe){
+ const key=symbol+'|'+timeframe,cached=cache.get(key);
+ if(cached&&Date.now()-cached.at<15000)return cached.rows;
+ const context=await getCandleContext(symbol);
+ const rows=await fetchCandlePage(context,timeframe,null);
+ if(!rows.length)throw Error('没有有效历史K线');
+ const first=[...new Map(rows.map(row=>[row.time,row])).values()].sort((a,b)=>a.time-b.time);
+ cache.set(key,{rows:first,at:Date.now()});
+ return first;
+}
+async function completeCandles(symbol,timeframe,firstRows){
+ const key=symbol+'|'+timeframe;
+ const context=await getCandleContext(symbol);
+ const all=new Map(firstRows.map(row=>[row.time,row]));
+ let endTime=Math.min(...firstRows.map(row=>row.time))*1000-1;
+ const TARGET_BARS=1200,MAX_PAGES=14;
  for(let page=0;page<MAX_PAGES&&all.size<TARGET_BARS;page++){
-  const params=isStock
-   ?{category:'SPOT',symbol:mapped,interval:timeframe,limit:String(PAGE_LIMIT)}
-   :{symbol:symbol+'USDT',productType:'USDT-FUTURES',granularity:timeframe,limit:String(PAGE_LIMIT)};
-  if(endTime!==null)params.endTime=String(endTime);
-  const rows=await getJson(endpoint+'?'+new URLSearchParams(params));
-  const normalized=rows.filter(row=>Array.isArray(row)&&row.slice(0,5).every(v=>Number.isFinite(+v)&&+v>0))
-   .map(row=>({time:Math.floor(+row[0]/1000),open:+row[1],high:+row[2],low:+row[3],close:+row[4]}))
-   .filter(row=>Number.isFinite(row.time)&&row.time>0);
-  if(!normalized.length)break;
+  const rows=await fetchCandlePage(context,timeframe,endTime);
+  if(!rows.length)break;
   let added=0;
-  normalized.forEach(row=>{if(!all.has(row.time)){all.set(row.time,row);added++}});
-  const oldest=Math.min(...normalized.map(row=>row.time));
+  rows.forEach(row=>{if(!all.has(row.time)){all.set(row.time,row);added++}});
+  const oldest=Math.min(...rows.map(row=>row.time));
   if(added===0||!Number.isFinite(oldest))break;
   endTime=oldest*1000-1;
  }
  const result=[...all.values()].sort((a,b)=>a.time-b.time);
- if(!result.length)throw Error('没有有效历史K线');
  cache.set(key,{rows:result,at:Date.now()});
  while(cache.size>30)cache.delete(cache.keys().next().value);
  return result;
@@ -151,23 +172,36 @@ function setData(view,rows){
  view.candle.setData(rows);
  view.lines.forEach((series,index)=>series.setData(ema(rows,EMAS[index])));
 }
+function updateLayerStatus(index,symbol,rows){
+ if(index!==activeLayer||symbol!==currentSymbol())return;
+ status.textContent=rows.at(-1).close.toLocaleString('en-US',{maximumFractionDigits:5})+' · '+rows.length+'根K线';
+ if(rows.length<676){error.textContent='历史K线不足676根，EMA576/EMA676红峰无法完整显示（当前'+rows.length+'根）';error.hidden=false;}
+ else if(rows.length<1200){error.textContent='历史K线正在补齐：'+rows.length+'根';error.hidden=false;}
+ else error.hidden=true;
+}
 async function loadLayer(index,symbol,timeframe){
  if(!symbol)return false;
  const view=views[index],token=++view.request;
  const identityChanged=view.symbol!==symbol||view.period!==timeframe;
  view.symbol=symbol;view.period=timeframe;
  try{
-  const rows=await getCandles(symbol,timeframe);
+  /* 首屏只等待最近一页；先画出K线，再在后台补齐EMA所需历史。 */
+  const firstRows=await getCandles(symbol,timeframe);
   if(token!==view.request)return false;
-  setData(view,rows);
-  /* 新品种或新周期统一恢复标准K线宽度；不读取、不保存用户缩放状态。 */
+  setData(view,firstRows);
   if(identityChanged)view.chart.timeScale().applyOptions({barSpacing:5,rightOffset:3});
-  if(index===activeLayer&&symbol===currentSymbol()){
-   status.textContent=rows.at(-1).close.toLocaleString('en-US',{maximumFractionDigits:5})+' · '+rows.length+'根K线';
-   if(rows.length<676){error.textContent='历史K线不足676根，EMA576/EMA676红峰无法完整显示（当前'+rows.length+'根）';error.hidden=false;}
-   else if(rows.length<1200){error.textContent='历史K线已加载'+rows.length+'根，红峰可计算但预热数据不足1200根';error.hidden=false;}
-   else error.hidden=true;
-  }
+  updateLayerStatus(index,symbol,firstRows);
+  if(firstRows.length>=1200)return true;
+  completeCandles(symbol,timeframe,firstRows).then(rows=>{
+   if(token!==view.request||view.symbol!==symbol||view.period!==timeframe)return;
+   setData(view,rows);
+   updateLayerStatus(index,symbol,rows);
+  }).catch(exception=>{
+   if(token===view.request&&index===activeLayer&&symbol===currentSymbol()){
+    error.textContent='历史数据补齐失败 · '+String(exception.message||exception).slice(0,42);
+    error.hidden=false;
+   }
+  });
   return true;
  }catch(exception){
   if(index===activeLayer&&symbol===currentSymbol()){
