@@ -52,7 +52,7 @@ const emaSeries=EMA_LINES.map(line=>chart.addSeries(LWC.LineSeries,{color:line.c
 let renderedSnapshot=null;
 let suppressRangeSaveUntil=0;
 function currentSaved(){if(!state.saved[state.symbol])state.saved[state.symbol]={};return state.saved[state.symbol]}
-let saveTimer=0;
+let saveTimer=0,lastTitleTap=0,legacyRangesCleaned=false;
 function scheduleSave(){
  if(saveTimer)clearTimeout(saveTimer);
  saveTimer=setTimeout(()=>{saveTimer=0;save()},220);
@@ -69,7 +69,7 @@ function symbolFor(symbol){return symbol+'USDT'}
 function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({perSymbol:state.saved,globalVisibleRange,defaultPeriodMigration:'4H'}))}catch{}}
 if(storedState.defaultPeriodMigration!=='4H'){
  for(const saved of Object.values(state.saved)){
-  if(saved&&typeof saved==='object'){saved.period='4H';delete saved.visibleRange;delete saved.visibleRanges;}
+  if(saved&&typeof saved==='object')saved.period='4H';
  }
  save();
 }
@@ -249,7 +249,7 @@ function draw(view={}){
  status.textContent=last.close.toLocaleString('en-US',{maximumFractionDigits:6})+'  '+new Date(last.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
 }
 function renderControlBar(){
- const options=STOCKS.has(state.symbol)?PERIODS:PERIODS;
+ const options=PERIODS;
  periodsHost.replaceChildren(...options.map(period=>{
   const button=document.createElement('button');
   button.type='button';button.className='vegas-l5-period';
@@ -277,13 +277,19 @@ function openSymbol(symbol){
     (item.visibleRanges[state.period]||Object.values(item.visibleRanges)[0])||item&&item.visibleRange).find(Boolean);
   if(legacy){globalVisibleRange=legacy;migratedLegacyRange=true;}
  }
- const hadLegacyRanges=Object.values(state.saved).some(item=>item&&typeof item==='object'&&('visibleRanges'in item||'visibleRange'in item));
- for(const item of Object.values(state.saved)){
-  if(item&&typeof item==='object'){delete item.visibleRanges;delete item.visibleRange;}
+ if(!legacyRangesCleaned){
+  const hadLegacyRanges=Object.values(state.saved).some(item=>item&&typeof item==='object'&&('visibleRanges'in item||'visibleRange'in item));
+  if(hadLegacyRanges){
+   for(const item of Object.values(state.saved)){
+    if(item&&typeof item==='object'){delete item.visibleRanges;delete item.visibleRange;}
+   }
+   save();
+  }
+  legacyRangesCleaned=true;
  }
- if(migratedLegacyRange||hadLegacyRanges)save();
+ if(migratedLegacyRange)save();
  state.loading=false;requestVersion++;
- if(STOCKS.has(symbol)&&!PERIODS.includes(state.period))state.period='4H';
+ if(!PERIODS.includes(state.period))state.period='4H';
  const cacheKey=symbol+'|'+state.period;const cached=state.candleCache.get(cacheKey);if(cached){state.candleCache.delete(cacheKey);state.candleCache.set(cacheKey,cached);}
  state.candles=cached?cached.candles:[];state.fetchAt=cached?cached.fetchAt:0;
  state.loadedSymbol=cached?symbol:'';state.loadedPeriod=cached?state.period:'';
@@ -293,11 +299,10 @@ function openSymbol(symbol){
  loadCandles(false);
  scheduleRefresh();
 }
-let autoQueue=[],autoIndex=0,autoTimer=0,autoTransitionTimer=0,autoMode=false,manualControl=false;
+let autoQueue=[],autoIndex=0,autoTimer=0,autoMode=false,manualControl=false;
 const AUTO_DWELL=10000,FADE_MS=80;
 function clearAutoTimers(){
  if(autoTimer){clearTimeout(autoTimer);autoTimer=0;}
- if(autoTransitionTimer){clearTimeout(autoTransitionTimer);autoTransitionTimer=0;}
 }
 function hideWindow(){
  lastTitleTap=0;
@@ -392,7 +397,6 @@ function close(){
  if(shouldResume)window.setTimeout(resumeAutoQueue,FADE_MS+40);
 }
 /* 品种名称双击/触屏双击退出；周期按钮仍只响应单击。 */
-let lastTitleTap=0;
 title.addEventListener('touchend',e=>{
  if(!state.open)return;
  const now=Date.now();
