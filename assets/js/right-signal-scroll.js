@@ -1,4 +1,4 @@
-/* 右滚动：单图表实例、纵向信号队列、全局共享视窗 */
+/* 右滚动：单图表实例、纵向正式信号队列 */
 (()=>{
 'use strict';
 if(window.__VEGAS_RIGHT_SCROLL_INIT__)return;
@@ -9,7 +9,6 @@ const STOCKS=new Set(['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','
 const PERIODS=['1H','4H','1D'];
 const EMAS=[12,36,43,144,169,576,676];
 const EMA_COLORS=['#f5d76e','#f3f6ff','#f3f6ff','#f4d35e','#f4d35e','#ff4e5e','#ff4e5e'];
-const RANGE_KEY='vegas-right-global-range-v1';
 const PERIOD_KEY='vegas-right-track-v1';
 const root=document.getElementById('vegas-right-scroll');
 const LWC=window.LightweightCharts;
@@ -27,11 +26,11 @@ const title=root.querySelector('.vr-symbol');
 const status=root.querySelector('.vr-status');
 const error=root.querySelector('.vr-error');
 
-let queue=[],panels=[],current='',period='4H',data=[],sharedRange=null;
+let queue=[],panels=[],current='',period='4H',data=[];
 let periodSettings={},cache=new Map(),stockMap=null,stockMapAt=0;
 let requestId=0;
 let hidden=document.hidden,refreshTimer=0;
-let applyingRange=false,applyingRangeTarget=null,rangeApplyTimer=0,resizeFrame=0;
+let resizeFrame=0;
 
 try{
  const saved=JSON.parse(localStorage.getItem(PERIOD_KEY)||'{}');
@@ -39,18 +38,11 @@ try{
   .filter(([,v])=>PERIODS.includes(v?.period))
   .map(([symbol,v])=>[symbol,{period:v.period}]));
 }catch{}
-try{sharedRange=JSON.parse(localStorage.getItem(RANGE_KEY)||'null')}catch{}
-function validRange(range){
- return !!range&&Number.isFinite(Number(range.from))&&Number.isFinite(Number(range.to))&&Number(range.to)>Number(range.from);
-}
-if(!validRange(sharedRange))sharedRange=null;
+try{localStorage.removeItem('vegas-right-global-range-v1')}catch{}
 
 const periodFor=s=>PERIODS.includes(periodSettings[s]?.period)?periodSettings[s].period:'4H';
 function savePeriods(){
  try{localStorage.setItem(PERIOD_KEY,JSON.stringify(periodSettings))}catch{}
-}
-function saveRange(){
- try{localStorage.setItem(RANGE_KEY,JSON.stringify(sharedRange))}catch{}
 }
 function renderPeriods(){
  nav.replaceChildren();
@@ -167,48 +159,10 @@ const emaSeries=EMAS.map((length,index)=>chart.addSeries(LWC.LineSeries,{
  lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false
 }));
 
-function applySharedRange(){
- if(!data.length)return;
- const latest=data[data.length-1].time;
- if(!validRange(sharedRange)){
-  const intervalSeconds=({ '1H':3600,'4H':14400,'1D':86400 })[period]||14400;
-  const end=latest+intervalSeconds;
-  const start=data[Math.max(0,data.length-110)]?.time??data[0].time;
-  sharedRange={from:start,to:end};
-  saveRange();
- }
- const target={from:Math.floor(Number(sharedRange.from)),to:Math.floor(Number(sharedRange.to))};
- applyingRange=true;applyingRangeTarget=target;
- if(rangeApplyTimer)clearTimeout(rangeApplyTimer);
- rangeApplyTimer=setTimeout(()=>{
-  applyingRange=false;applyingRangeTarget=null;rangeApplyTimer=0;
- },350);
- try{chart.timeScale().setVisibleRange(target)}catch{
-  if(rangeApplyTimer)clearTimeout(rangeApplyTimer);
-  rangeApplyTimer=0;applyingRange=false;applyingRangeTarget=null;
- }
-}
-chart.timeScale().subscribeVisibleTimeRangeChange(range=>{
- if(!validRange(range))return;
- if(applyingRange){
-  const target=applyingRangeTarget;
-  if(target&&Math.abs(Number(range.from)-target.from)<=1&&Math.abs(Number(range.to)-target.to)<=1){
-   if(rangeApplyTimer)clearTimeout(rangeApplyTimer);
-   rangeApplyTimer=0;applyingRange=false;applyingRangeTarget=null;
-   return;
-  }
-  // 锁定期间出现不同于程序目标的范围，视为用户拖动/缩放，立即接管并保存。
-  if(rangeApplyTimer)clearTimeout(rangeApplyTimer);
-  rangeApplyTimer=0;applyingRange=false;applyingRangeTarget=null;
- }
- sharedRange={from:Number(range.from),to:Number(range.to)};
- saveRange();
-});
 function setChart(rows){
  data=rows;
  candle.setData(rows);
  emaSeries.forEach((series,index)=>series.setData(ema(EMAS[index])));
- applySharedRange();
 }
 
 function createPanel(symbol){
@@ -431,7 +385,6 @@ function scheduleChartResize(){
   resizeFrame=0;cachedPanelStep=0;
   if(!host.isConnected||!chart)return;
   chart.applyOptions({width:Math.max(1,host.clientWidth),height:Math.max(1,host.clientHeight)});
-  applySharedRange();
  });
 }
 window.addEventListener('resize',scheduleChartResize,{passive:true});
