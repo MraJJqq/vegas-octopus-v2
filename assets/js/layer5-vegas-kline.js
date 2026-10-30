@@ -239,9 +239,15 @@ function draw(view={}){
  const ts=chart.timeScale();
  if(!incremental){
   if(view.range){
-   try{ts.setVisibleRange(view.range)}
+   let restored=false;
+   try{ts.setVisibleRange(view.range);restored=true}
    catch{ts.setVisibleLogicalRange({from:Math.max(0,newData.length-120),to:newData.length})}
-   if(state.pendingVisibleRange){rememberRange(currentSaved(),state.period,view.range);state.pendingVisibleRange=null;save();}
+   if(state.pendingVisibleRange){
+    const actualRange=restored?view.range:ts.getVisibleRange();
+    if(actualRange)rememberRange(currentSaved(),state.period,actualRange);
+    state.pendingVisibleRange=null;
+    save();
+   }
   }else if(view.follow)ts.scrollToRealTime();
   else if(view.initial)ts.setVisibleLogicalRange({from:Math.max(0,newData.length-120),to:newData.length});
  }
