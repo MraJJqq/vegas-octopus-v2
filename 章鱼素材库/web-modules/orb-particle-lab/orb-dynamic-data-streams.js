@@ -170,22 +170,37 @@
     return cardStarts;
   }
 
+  /* 预绘制有限档位的发射辉光贴图，避免每帧、每张正式信号卡片重复创建 CanvasGradient。 */
+  const emissionGlowSprites = Array.from({ length: 16 }, (_, index) => {
+    const pulse = index / 15;
+    const sprite = document.createElement('canvas');
+    sprite.width = sprite.height = 128;
+    const glowCtx = sprite.getContext('2d');
+    const gradientRadius = 64 * (34 + pulse * 10) / (44 + pulse * 3);
+    const glow = glowCtx.createRadialGradient(64, 64, 0, 64, 64, gradientRadius);
+    glow.addColorStop(0, 'rgba(110,235,255,.34)');
+    glow.addColorStop(.28, 'rgba(45,190,255,.18)');
+    glow.addColorStop(1, 'rgba(30,150,255,0)');
+    glowCtx.fillStyle = glow;
+    glowCtx.beginPath();
+    glowCtx.arc(64, 64, 64, 0, PI * 2);
+    glowCtx.fill();
+    return sprite;
+  });
+
   /* 仅增强卡片发射端：不改变任何流线起点、球体终点或连接关系。 */
   function drawCardEmission(start, t) {
     const x = start.x, y = start.y;
     const pulse = (Math.sin(t * 3.1) + 1) * .5;
     const alpha = start.visibleRatio;
 
-    /* 卡片边缘的局部辉光，向外衰减，不铺设背景。 */
-    const glow = ctx.createRadialGradient(x, y, 0, x, y, 34 + pulse * 10);
-    glow.addColorStop(0, 'rgba(110,235,255,' + (.34 * alpha) + ')');
-    glow.addColorStop(.28, 'rgba(45,190,255,' + (.18 * alpha) + ')');
-    glow.addColorStop(1, 'rgba(30,150,255,0)');
+    /* 使用预绘制贴图并按脉冲档位缩放；可见比例通过globalAlpha控制。 */
     ctx.globalCompositeOperation = 'lighter';
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(x, y, 44 + pulse * 3, 0, PI * 2);
-    ctx.fill();
+    ctx.globalAlpha = alpha;
+    const glowRadius = 44 + pulse * 3;
+    const glowSprite = emissionGlowSprites[Math.min(15, Math.round(pulse * 15))];
+    ctx.drawImage(glowSprite, x - glowRadius, y - glowRadius, glowRadius * 2, glowRadius * 2);
+    ctx.globalAlpha = 1;
 
     /* 细脉冲环由卡片边缘向外扩散，避免强闪烁。 */
     for (let i = 0; i < 2; i++) {
