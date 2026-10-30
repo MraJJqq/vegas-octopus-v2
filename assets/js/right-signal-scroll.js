@@ -38,8 +38,6 @@ try{
   .filter(([,v])=>PERIODS.includes(v?.period))
   .map(([symbol,v])=>[symbol,{period:v.period}]));
 }catch{}
-try{localStorage.removeItem('vegas-right-global-range-v1')}catch{}
-
 const periodFor=s=>PERIODS.includes(periodSettings[s]?.period)?periodSettings[s].period:'4H';
 function savePeriods(){
  try{localStorage.setItem(PERIOD_KEY,JSON.stringify(periodSettings))}catch{}
