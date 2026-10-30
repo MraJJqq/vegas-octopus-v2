@@ -317,11 +317,23 @@ async function bitgetJson(path){
   throw error;
  }finally{window.clearTimeout(timeoutId)}
 }
-let marketLoadInFlight=false;
+let marketLoadInFlight=false,marketRefreshTimer=0;
 let realitySymbolCache=null,realitySymbolCacheAt=0;
+function scheduleMarketRefresh(){
+ if(marketRefreshTimer){clearTimeout(marketRefreshTimer);marketRefreshTimer=0;}
+ if(document.hidden)return;
+ marketRefreshTimer=setTimeout(async()=>{
+  marketRefreshTimer=0;
+  await loadMarketData();
+  scheduleMarketRefresh();
+ },15000);
+}
 document.addEventListener('visibilitychange',()=>{
- if(!document.hidden){
+ if(document.hidden){
+  if(marketRefreshTimer){clearTimeout(marketRefreshTimer);marketRefreshTimer=0;}
+ }else{
   loadMarketData();
+  scheduleMarketRefresh();
  }
 },{passive:true});
 async function loadMarketData(){
@@ -409,6 +421,6 @@ window.VegasApplyFormalSignals=function(){
  });
 };
 window.VegasApplyFormalSignals();
-loadMarketData();setInterval(loadMarketData,15000);
+loadMarketData();scheduleMarketRefresh();
 document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{const c=el.querySelector('.mc-card');const off=()=>{c.style.setProperty('--rx','0deg');c.style.setProperty('--ry','0deg');c.classList.remove('hot')};el.addEventListener('pointermove',e=>{const r=el.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;c.style.setProperty('--ry',((x-.5)*24)+'deg');c.style.setProperty('--rx',((.5-y)*20)+'deg');c.style.setProperty('--mx',x*100+'%');c.style.setProperty('--my',y*100+'%');c.classList.add('hot')});['pointerleave','pointerup','pointercancel'].forEach(t=>el.addEventListener(t,off))});
 })();
