@@ -15,7 +15,7 @@ const nav=root.querySelector('.vr-periods'), error=root.querySelector('.vr-error
 const cache=new Map(), settings=readSettings();
 let queue=[],index=0,current='',period='4H',data=[],requestToken=0,rotationTimer=0,refreshTimer=0,interactionTimer=0;
 let paused=false,hidden=false,activeRequests=0,requestQueue=[],transitionTimer=0;
-let sharedVisibleRange=null,applyingData=false;
+let sharedVisibleRange=null,applyingData=false,pendingSnapshot=null,transitionCleanup=0;
 function readSettings(){try{return JSON.parse(localStorage.getItem('vegas-right-single-v1')||'{}')}catch{return {}}}
 function saveSettings(){try{localStorage.setItem('vegas-right-single-v1',JSON.stringify(settings))}catch{}}
 function symbolSetting(s){if(!settings[s])settings[s]={period:'4H'};if(!PERIODS.includes(settings[s].period))settings[s].period='4H';return settings[s]}
@@ -66,10 +66,41 @@ function scheduleRotation(){
   if(queue.length>1)advance();
  },ROTATE_MS);
 }
-function advance(){if(hidden||paused||queue.length<2)return;index=(index+1)%queue.length;if(transitionTimer)clearTimeout(transitionTimer);root.classList.remove('vr-enter-up','vr-leave-up');root.classList.add('vr-leave-up');transitionTimer=setTimeout(()=>{transitionTimer=0;if(hidden||paused)return;showSymbol(queue[index])},320)}
+function advance(){
+ if(hidden||paused||queue.length<2)return;
+ index=(index+1)%queue.length;
+ try{pendingSnapshot=chart.takeScreenshot()}catch{pendingSnapshot=null}
+ showSymbol(queue[index]);
+}
+function playScrollTransition(){
+ const old=root.querySelector('.vr-transition-snapshot');
+ if(old)old.remove();
+ if(transitionCleanup)clearTimeout(transitionCleanup);
+ if(pendingSnapshot){
+  const snapshot=document.createElement('canvas');
+  snapshot.className='vr-transition-snapshot';
+  snapshot.width=pendingSnapshot.width;snapshot.height=pendingSnapshot.height;
+  snapshot.getContext('2d').drawImage(pendingSnapshot,0,0);
+  root.querySelector('.vr-single').appendChild(snapshot);
+ }
+ pendingSnapshot=null;
+ host.classList.remove('vr-chart-enter','vr-chart-enter-active');
+ void host.offsetWidth;
+ host.classList.add('vr-chart-enter');
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  host.classList.add('vr-chart-enter-active');
+  const snapshot=root.querySelector('.vr-transition-snapshot');
+  if(snapshot)snapshot.classList.add('vr-transition-out');
+ }));
+ transitionCleanup=setTimeout(()=>{
+  host.classList.remove('vr-chart-enter','vr-chart-enter-active');
+  const snapshot=root.querySelector('.vr-transition-snapshot');if(snapshot)snapshot.remove();
+  transitionCleanup=0;
+ },620);
+}
 function showSymbol(symbol){
  if(!symbol||hidden)return;root.classList.remove('vr-leave-up');current=symbol;period=symbolSetting(symbol).period;title.textContent=symbol;status.textContent='加载行情…';error.hidden=true;renderPeriodButtons();clearTimers();
- const token=++requestToken;enqueue(async()=>{try{const rows=await getCandles(symbol,period);if(token!==requestToken||current!==symbol)return;setChartData(rows);root.classList.remove('vr-leave-up','vr-enter-up');root.classList.add('vr-enter-up');setTimeout(()=>root.classList.remove('vr-enter-up'),420);scheduleRotation();scheduleRefresh()}catch(e){if(token!==requestToken)return;status.textContent='数据异常';error.textContent='行情暂不可用 · '+String(e.message||e).slice(0,48);error.hidden=false;scheduleRotation()}})
+ const token=++requestToken;enqueue(async()=>{try{const rows=await getCandles(symbol,period);if(token!==requestToken||current!==symbol)return;setChartData(rows);if(pendingSnapshot)playScrollTransition();scheduleRotation();scheduleRefresh()}catch(e){if(token!==requestToken)return;status.textContent='数据异常';error.textContent='行情暂不可用 · '+String(e.message||e).slice(0,48);error.hidden=false;scheduleRotation()}})
 }
 function scheduleRefresh(){if(refreshTimer)clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>loadCurrent(false),REFRESH_MS)}
 function loadCurrent(){if(!current||hidden)return;const symbol=current,p=period,token=++requestToken;enqueue(async()=>{try{const rows=await getCandles(symbol,p);if(token!==requestToken||current!==symbol||period!==p)return;setChartData(rows)}catch(e){if(token===requestToken){status.textContent='数据异常';error.textContent='行情暂不可用 · '+String(e.message||e).slice(0,48);error.hidden=false}}finally{if(!hidden&&current===symbol)scheduleRefresh()}})}
@@ -84,7 +115,7 @@ window.addEventListener('pointercancel',()=>{if(paused){if(interactionTimer)clea
 function reconcile(symbols){
  const next=Array.from(new Set((symbols||[]).map(s=>String(s||'').trim().toUpperCase()).filter(s=>/^[A-Z0-9.]+$/.test(s))));
  const old=current;queue=next;
- if(!queue.length){current='';++requestToken;clearTimers();paused=true;title.textContent='';status.textContent='';error.hidden=true;root.hidden=true;candle.setData([]);lines.forEach(x=>x.setData([]));data=[];return}
+ if(!queue.length){current='';++requestToken;clearTimers();paused=true;pendingSnapshot=null;const snapshot=root.querySelector('.vr-transition-snapshot');if(snapshot)snapshot.remove();title.textContent='';status.textContent='';error.hidden=true;root.hidden=true;candle.setData([]);lines.forEach(x=>x.setData([]));data=[];return}
  root.hidden=false;paused=false;if(interactionTimer){clearTimeout(interactionTimer);interactionTimer=0}let keep=queue.indexOf(old);if(keep>=0)index=keep;else index=Math.min(index,queue.length-1);
  if(old!==queue[index])showSymbol(queue[index]);else if(!old)showSymbol(queue[index]);else scheduleRotation();
 }
