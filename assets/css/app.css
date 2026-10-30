@@ -121,7 +121,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
   border-radius:0!important;
   line-height:1.45;
 }
-.v9-symbol{color:#8fe9ff;text-shadow:0 0 8px rgba(49,217,255,.14)}
+.v9-symbol{color:#8fe9ff}
 .v9-nochange{color:#8ba4be;grid-column:1/-1!important;text-align:right!important}
 @media(max-width:700px){
   .topbar{
