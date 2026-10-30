@@ -34,20 +34,25 @@ let focusSlots=Array.from(left.querySelectorAll('.mc-slot'));
 let focusFrame=0;
 function updateFocusScale(){
  focusFrame=0;
- const height=left.clientHeight,scrollTop=left.scrollTop,center=scrollTop+height/2,range=Math.max(1,height*.52),fadeRange=Math.max(1,height*.46),available=Math.max(1,left.clientWidth-8);
+ const height=left.clientHeight,scrollTop=left.scrollTop,center=scrollTop+height/2,range=Math.max(1,height*.58),fadeRange=Math.max(1,height*.50),available=Math.max(1,left.clientWidth-8);
  const first=focusSlots[0],step=cardStep();
  if(!first||!step){return}
  /* 卡片统一尺寸且按固定 gap 排列：只读取首卡几何信息，后续位置用步长推算，减少逐卡布局读取。 */
  const baseTop=first.offsetTop,slotHeight=first.offsetHeight,slotWidth=Math.max(1,first.offsetWidth),visibleBottom=scrollTop+height;
- const scaleMax=Math.min(1.34,available/slotWidth);
+ const scaleMin=.72,scaleMax=Math.min(1.32,available/slotWidth);
  const metrics=focusSlots.map((slot,index)=>{
-  const top=baseTop+index*step,bottom=top+slotHeight,distance=Math.abs((top+slotHeight/2)-center),t=Math.min(1,distance/range),ease=t*t*(3-2*t),fadeT=Math.min(1,distance/fadeRange),fadeEase=fadeT*fadeT*(3-2*fadeT);
-  const visible=Math.max(0,Math.min(bottom,visibleBottom)-Math.max(top,scrollTop)),ratio=Math.min(1,visible/Math.max(1,slotHeight)),focused=distance<height*.23&&ratio>=.98;
-  return {slot,scale:1+(scaleMax-1)*(1-ease),opacity:focused?1:(1-.72*fadeEase)*Math.min(1,ratio*1.8)};
+  const top=baseTop+index*step,bottom=top+slotHeight,offset=(top+slotHeight/2)-center,distance=Math.abs(offset),t=Math.min(1,distance/range),ease=t*t*(3-2*t),fadeT=Math.min(1,distance/fadeRange),fadeEase=fadeT*fadeT*(3-2*fadeT);
+  const visible=Math.max(0,Math.min(bottom,visibleBottom)-Math.max(top,scrollTop)),ratio=Math.min(1,visible/Math.max(1,slotHeight)),focused=distance<height*.18&&ratio>=.98,focus=1-ease;
+  const scale=scaleMin+(scaleMax-scaleMin)*focus,opacity=(1-.985*fadeEase)*Math.min(1,ratio*1.8);
+  const depth=-110*(1-focus),curveY=-Math.sign(offset)*Math.min(28,distance*.045),tilt=Math.max(-12,Math.min(12,offset/Math.max(1,height)*22));
+  return {slot,scale,opacity:focused?1:Math.max(.015,opacity),depth,curveY,tilt};
  });
- metrics.forEach(({slot,scale,opacity})=>{
+ metrics.forEach(({slot,scale,opacity,depth,curveY,tilt})=>{
   slot.style.setProperty('--mc-focus-scale',scale.toFixed(3));
-  slot.style.setProperty('--mc-page-opacity',Math.max(.025,opacity).toFixed(3));
+  slot.style.setProperty('--mc-page-opacity',opacity.toFixed(3));
+  slot.style.setProperty('--mc-focus-z',depth.toFixed(1)+'px');
+  slot.style.setProperty('--mc-focus-y',curveY.toFixed(1)+'px');
+  slot.style.setProperty('--mc-focus-tilt',tilt.toFixed(2)+'deg');
  });
 }
 function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(updateFocusScale)}
