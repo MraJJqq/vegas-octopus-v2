@@ -346,8 +346,12 @@ function showManualSymbol(value){
   layer.style.filter=index===activeLayer?'blur(0px)':'blur(12px)';
   layer.classList.toggle('is-active',index===activeLayer);
   layer.style.pointerEvents=index===activeLayer?'auto':'none';
-  layer.getBoundingClientRect();layer.style.transition='';
+  layer.style.transition='';
  });
+ /* 先更新界面反馈，再发起行情请求；不在点击路径中强制同步布局。 */
+ title.textContent=symbol;
+ status.textContent='正在切换行情…';
+ error.hidden=true;
  period=periodFor(symbol);
  setActive(activeLayer);
  scheduleRefresh();
@@ -412,5 +416,7 @@ document.addEventListener('visibilitychange',()=>{
 },{passive:true});
 window.VegasLayer5SetAutoQueue=reconcile;
 reconcile(window.VegasFormalSignalSymbols||[]);
+/* 提前预热股票代码映射，避免首次点击美股卡片时才等待映射接口。 */
+getStockMap().catch(()=>{});
 if(window.__VEGAS_PENDING_LAYER5_SYMBOL){const pending=window.__VEGAS_PENDING_LAYER5_SYMBOL;delete window.__VEGAS_PENDING_LAYER5_SYMBOL;showManualSymbol(pending);}
 })();
