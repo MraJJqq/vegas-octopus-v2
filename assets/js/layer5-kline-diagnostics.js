@@ -78,4 +78,15 @@ window.VegasLayer5Diagnostics={
  export:()=>JSON.stringify({records,longTaskCount,longTaskTotal,dimensions:dimensions(),memory:memory()},null,2)
 };
 record('diagnostics-start',{...dimensions(),userAgent:String(navigator.userAgent||'').slice(0,100)});
+if(new URLSearchParams(location.search).get('l5diag')==='export'){
+ setTimeout(()=>{
+  try{
+   const blob=new Blob([window.VegasLayer5Diagnostics.export()],{type:'application/json'});
+   const url=URL.createObjectURL(blob),link=document.createElement('a');
+   link.href=url;link.download='vegas-layer5-diagnostics.json';link.style.display='none';
+   document.body.appendChild(link);link.click();link.remove();
+   setTimeout(()=>URL.revokeObjectURL(url),1500);
+  }catch(error){console.warn('[Vegas Layer 5 diagnostic] export failed',error)}
+ },300);
+}
 })();
