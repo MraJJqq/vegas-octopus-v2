@@ -271,6 +271,7 @@ function scheduleCycle(delay=CLEAR_MS){
 async function beginTransition(){
  if(manualSymbol||transitioning||queue.length<2||hidden||paused)return;
  transitioning=true;
+ setTransitionHint(true);
  const nextIndex=(currentIndex+1)%queue.length;
  const nextSymbol=queue[nextIndex];
  const nextLayer=1-activeLayer;
@@ -311,10 +312,14 @@ async function beginTransition(){
   if(token!==cycleToken)return;
   outgoing.style.transition='none';outgoing.style.opacity='0';outgoing.style.filter='blur(12px)';
   outgoing.getBoundingClientRect();outgoing.style.transition='';
+  setTransitionHint(false);
   transitioning=false;
   preloadNext();
   scheduleCycle(CLEAR_MS);
  },TRANSITION_MS);
+}
+function setTransitionHint(enabled){
+ layers.forEach(layer=>{layer.style.willChange=enabled?'opacity,filter':'auto'});
 }
 const activePointers=new Set();
 function pauseForInteraction(event){
@@ -322,11 +327,13 @@ function pauseForInteraction(event){
  if(paused)return;
  paused=true;++cycleToken;clearTimeout(cycleTimer);
  layers.forEach(layer=>{layer.style.transition='none';});
+ setTransitionHint(false);
 }
 function resumeAfterInteraction(event){
  if(event?.pointerId!==undefined)activePointers.delete(event.pointerId);
  if(activePointers.size>0||!paused)return;
  paused=false;transitioning=false;
+ setTransitionHint(false);
  layers.forEach((layer,index)=>{
   layer.style.transition='none';
   layer.style.opacity=index===activeLayer?'1':'0';
@@ -349,6 +356,7 @@ function showManualSymbol(value){
  manualSymbol=symbol;
  clearTimeout(manualTimer);
  ++cycleToken;clearTimeout(cycleTimer);transitioning=false;paused=false;
+ setTransitionHint(false);
  root.hidden=false;
  layers.forEach((layer,index)=>{
   layer.style.transition='none';
@@ -387,6 +395,7 @@ function showManualSymbol(value){
 window.VegasLayer5ShowSymbol=showManualSymbol;
 function reconcile(symbols){
  ++cycleToken;clearTimeout(cycleTimer);transitioning=false;
+ setTransitionHint(false);
  layers.forEach((layer,index)=>{
   layer.style.transition='none';
   layer.style.opacity=index===activeLayer?'1':'0';
