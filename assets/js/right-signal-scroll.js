@@ -90,13 +90,15 @@ async function getCandles(symbol,timeframe){
  }
  const all=new Map();
  let endTime=null;
- const TARGET_BARS=1200,MAX_PAGES=3,PAGE_LIMIT=1000;
+ const TARGET_BARS=1200;
+ const PAGE_LIMIT=isStock?100:200;
+ const MAX_PAGES=15;
+ const endpoint=isStock?'/api/v3/market/history-candles':'/api/v2/mix/market/history-candles';
  for(let page=0;page<MAX_PAGES&&all.size<TARGET_BARS;page++){
   const params=isStock
    ?{category:'SPOT',symbol:mapped,interval:timeframe,limit:String(PAGE_LIMIT)}
    :{symbol:symbol+'USDT',productType:'USDT-FUTURES',granularity:timeframe,limit:String(PAGE_LIMIT)};
   if(endTime!==null)params.endTime=String(endTime);
-  const endpoint=isStock?'/api/v3/market/candles':'/api/v2/mix/market/candles';
   const rows=await getJson(endpoint+'?'+new URLSearchParams(params));
   const normalized=rows.filter(row=>Array.isArray(row)&&row.slice(0,5).every(v=>Number.isFinite(+v)&&+v>0))
    .map(row=>({time:Math.floor(+row[0]/1000),open:+row[1],high:+row[2],low:+row[3],close:+row[4]}))
@@ -109,7 +111,7 @@ async function getCandles(symbol,timeframe){
   endTime=oldest*1000-1;
  }
  const result=[...all.values()].sort((a,b)=>a.time-b.time);
- if(!result.length)throw Error('没有有效K线');
+ if(!result.length)throw Error('没有有效历史K线');
  cache.set(key,{rows:result,at:Date.now()});
  while(cache.size>30)cache.delete(cache.keys().next().value);
  return result;
