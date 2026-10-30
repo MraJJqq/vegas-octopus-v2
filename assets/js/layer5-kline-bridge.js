@@ -16,17 +16,13 @@
  }
  function symbolOf(card){return String(card&&card.dataset.symbol||'').trim().toUpperCase()}
  /*
-  * 统一使用 Pointer Events 识别触屏点击，避免 touch/click 合成事件竞争。
-  * 触屏在 pointerdown 记录原始卡片，在 pointerup 根据位移判定短按；
-  * 滑动、长按和系统取消均不打开图表。
+  * 触屏只使用浏览器原生 click 作为唯一激活入口。
+  * iPad 的 PointerEvent/touch 滚动接管可能导致 pointerup 与合成 click 时序不一致；
+  * 不再在 pointerup 提前打开，避免一次轻触触发两条竞争路径。
+  * 鼠标/触控笔仍在 pointerdown 即时打开。
   */
  document.addEventListener('pointerdown',event=>{
-  if(event.pointerType==='touch'){
-   if(event.isPrimary===false)return;
-   const card=findCard(event),symbol=symbolOf(card);
-   touchCandidate=symbol?{pointerId:event.pointerId,symbol,x:event.clientX,y:event.clientY,at:Date.now()}:null;
-   return;
-  }
+  if(event.pointerType==='touch')return;
   if((event.pointerType!=='mouse'&&event.pointerType!=='pen')||event.button!==0||event.isPrimary===false)return;
   const card=findCard(event);if(!card)return;
   const symbol=symbolOf(card);if(!symbol)return;
@@ -34,26 +30,11 @@
   lastPointerOpen={symbol,at:Date.now()};
   activate(symbol);
  },true);
- document.addEventListener('pointerup',event=>{
-  if(event.pointerType!=='touch'||!touchCandidate||event.pointerId!==touchCandidate.pointerId)return;
-  const candidate=touchCandidate;touchCandidate=null;
-  const moved=Math.hypot(event.clientX-candidate.x,event.clientY-candidate.y);
-  const elapsed=Date.now()-candidate.at;
-  if(moved>18||elapsed>1500)return;
-  lastTouchOpen={symbol:candidate.symbol,at:Date.now()};
-  activate(candidate.symbol);
- },true);
- document.addEventListener('pointercancel',event=>{
-  if(touchCandidate&&event.pointerId===touchCandidate.pointerId)touchCandidate=null;
- },true);
  document.addEventListener('click',event=>{
   const card=findCard(event);if(!card)return;
   const symbol=symbolOf(card);if(!symbol)return;
   if(lastPointerOpen&&lastPointerOpen.symbol===symbol&&Date.now()-lastPointerOpen.at<1000){
    lastPointerOpen=null;event.preventDefault();event.stopImmediatePropagation();return;
-  }
-  if(lastTouchOpen&&lastTouchOpen.symbol===symbol&&Date.now()-lastTouchOpen.at<1200){
-   lastTouchOpen=null;event.preventDefault();event.stopImmediatePropagation();return;
   }
   lastPointerOpen=null;
   event.preventDefault();event.stopImmediatePropagation();
