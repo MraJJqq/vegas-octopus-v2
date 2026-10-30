@@ -20,9 +20,9 @@ function pj(v,cs,sn,cp,spp,cx,cy,Rr,out){var x1=v.x*cs+v.z*sn,z1=-v.x*sn+v.z*cs,
 
 /* drag */
 var rot=0,pitB=.32,dn=false,lx=0,ly=0;
-cv.addEventListener("pointerdown",function(e){dn=true;lx=e.clientX;ly=e.clientY;try{cv.setPointerCapture(e.pointerId)}catch(_){} });
+cv.addEventListener("pointerdown",function(e){dn=true;lx=e.clientX;ly=e.clientY;try{cv.setPointerCapture(e.pointerId)}catch(_){} },{passive:true});
 window.addEventListener("pointerup",function(){dn=false});cv.addEventListener("pointercancel",function(){dn=false});cv.addEventListener("lostpointercapture",function(){dn=false});
-cv.addEventListener("pointermove",function(e){if(!dn)return;rot+=(e.clientX-lx)*.008;pitB=Math.max(-1.2,Math.min(1.2,pitB+(e.clientY-ly)*.006));lx=e.clientX;ly=e.clientY});
+cv.addEventListener("pointermove",function(e){if(!dn)return;rot+=(e.clientX-lx)*.008;pitB=Math.max(-1.2,Math.min(1.2,pitB+(e.clientY-ly)*.006));lx=e.clientX;ly=e.clientY},{passive:true});
 var projectedPoints=Array.from({length:N},function(){return[0,0,0,0,0]});
 var last=0,orbFrame=0,frameTimer=0;
 var FRAME_INTERVAL=1000/((window.matchMedia&&window.matchMedia('(pointer: coarse)').matches)?24:30);
