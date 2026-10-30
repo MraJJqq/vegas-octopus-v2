@@ -29,7 +29,7 @@ const layers=[0,1].map(index=>{
 });
 
 let queue=[],currentIndex=0,period='4H',periodSettings={};
-let activeLayer=0,cycleTimer=0,transitioning=false,paused=false,resumeTimer=0;
+let activeLayer=0,cycleTimer=0,transitioning=false,paused=false;
 let cycleToken=0,loadToken=0,hidden=document.hidden,refreshTimer=0;
 let stockMap=null,stockMapAt=0,cache=new Map();
 
@@ -169,7 +169,7 @@ function setActive(index){
  }else loadLayer(index,symbol,period);
 }
 function clearTimers(){
- clearTimeout(cycleTimer);clearTimeout(refreshTimer);clearTimeout(resumeTimer);
+ clearTimeout(cycleTimer);clearTimeout(refreshTimer);
  cycleTimer=refreshTimer=resumeTimer=0;
 }
 function scheduleRefresh(){
@@ -228,34 +228,36 @@ async function beginTransition(){
   scheduleCycle(CLEAR_MS);
  },TRANSITION_MS);
 }
-function pauseForInteraction(){
+const activePointers=new Set();
+function pauseForInteraction(event){
+ if(event?.pointerId!==undefined)activePointers.add(event.pointerId);
  if(paused)return;
- paused=true;++cycleToken;clearTimeout(cycleTimer);clearTimeout(resumeTimer);
+ paused=true;++cycleToken;clearTimeout(cycleTimer);
  layers.forEach(layer=>{layer.style.transition='none';});
 }
-function resumeAfterInteraction(){
- clearTimeout(resumeTimer);
- resumeTimer=setTimeout(()=>{
-  paused=false;transitioning=false;
-  layers.forEach((layer,i)=>{
-   layer.style.transition='none';
-   layer.style.opacity=i===activeLayer?'1':'0';
-   layer.style.filter=i===activeLayer?'blur(0px)':'blur(12px)';
-   layer.classList.toggle('is-active',i===activeLayer);
-   layer.getBoundingClientRect();layer.style.transition='';
-  });
-  scheduleCycle(CLEAR_MS);
- },5000);
+function resumeAfterInteraction(event){
+ if(event?.pointerId!==undefined)activePointers.delete(event.pointerId);
+ if(activePointers.size>0||!paused)return;
+ paused=false;transitioning=false;
+ layers.forEach((layer,index)=>{
+  layer.style.transition='none';
+  layer.style.opacity=index===activeLayer?'1':'0';
+  layer.style.filter=index===activeLayer?'blur(0px)':'blur(12px)';
+  layer.classList.toggle('is-active',index===activeLayer);
+  layer.classList.remove('is-outgoing');
+  layer.style.pointerEvents=index===activeLayer?'auto':'none';
+  layer.getBoundingClientRect();layer.style.transition='';
+ });
+ scheduleCycle(CLEAR_MS);
 }
 layers.forEach(layer=>{
  layer.addEventListener('pointerdown',pauseForInteraction,{capture:true,passive:true});
- layer.addEventListener('pointerup',resumeAfterInteraction,{capture:true,passive:true});
- layer.addEventListener('pointercancel',resumeAfterInteraction,{capture:true,passive:true});
- layer.addEventListener('wheel',()=>{pauseForInteraction();resumeAfterInteraction()},{capture:true,passive:true});
- layer.addEventListener('touchstart',pauseForInteraction,{capture:true,passive:true});
- layer.addEventListener('touchend',resumeAfterInteraction,{capture:true,passive:true});
- layer.addEventListener('touchcancel',resumeAfterInteraction,{capture:true,passive:true});
 });
+window.addEventListener('pointerup',resumeAfterInteraction,{capture:true,passive:true});
+window.addEventListener('pointercancel',resumeAfterInteraction,{capture:true,passive:true});
+window.addEventListener('blur',()=>{
+ if(activePointers.size){activePointers.clear();resumeAfterInteraction()}
+},{passive:true});
 function reconcile(symbols){
  ++cycleToken;clearTimeout(cycleTimer);transitioning=false;
  layers.forEach((layer,index)=>{
