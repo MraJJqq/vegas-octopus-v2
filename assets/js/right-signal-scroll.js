@@ -116,11 +116,14 @@ async function getCandles(symbol,timeframe){
  const key=symbol+'|'+timeframe,cached=cache.get(key);
  if(cached&&Date.now()-cached.at<15000)return cached.rows;
  const context=await getCandleContext(symbol);
- const rows=await fetchCandlePage(context,timeframe,null);
- if(!rows.length)throw Error('没有有效历史K线');
- const first=[...new Map(rows.map(row=>[row.time,row])).values()].sort((a,b)=>a.time-b.time);
- cache.set(key,{rows:first,at:Date.now()});
- return first;
+ const latest=await fetchCandlePage(context,timeframe,null);
+ if(!latest.length)throw Error('没有有效历史K线');
+ /* 刷新最近一页时合并已有历史，避免每15秒重新分页下载全部EMA历史。 */
+ const merged=new Map((cached?.rows||[]).map(row=>[row.time,row]));
+ latest.forEach(row=>merged.set(row.time,row));
+ const rows=[...merged.values()].sort((a,b)=>a.time-b.time);
+ cache.set(key,{rows,at:Date.now()});
+ return rows;
 }
 async function completeCandles(symbol,timeframe,firstRows){
  const key=symbol+'|'+timeframe;
