@@ -187,7 +187,7 @@ function createChart(layer){
   autoSize:true,attributionLogo:false,
   layout:{background:{type:LWC.ColorType.Solid,color:'rgba(0,0,0,0)'},textColor:'rgba(210,232,255,.72)',fontSize:11},
   grid:{vertLines:{visible:false},horzLines:{visible:false}},
-  rightPriceScale:{visible:false,borderVisible:false,mode:LWC.PriceScaleMode.Logarithmic,autoScale:true,scaleMargins:{top:.05,bottom:.05}},
+  rightPriceScale:{visible:false,borderVisible:false,mode:LWC.PriceScaleMode.Logarithmic,autoScale:true,scaleMargins:{top:.10,bottom:.10}},
   leftPriceScale:{visible:false,borderVisible:false},
   timeScale:{visible:false,borderVisible:false,rightOffset:3,barSpacing:5,minBarSpacing:.5,shiftVisibleRangeOnNewBar:false},
   crosshair:{vertLine:{visible:true,color:'rgba(120,190,230,.18)'},horzLine:{visible:true,color:'rgba(120,190,230,.18)'}},
@@ -233,6 +233,8 @@ function applyPendingLayerData(){
 }
 function resetDefaultVisibleRange(view,rows){
  if(!rows.length)return;
+ /* 切换品种/周期时重新启用该图层自己的纵向自动适配；不复制另一品种的价格范围。 */
+ view.chart.applyOptions({rightPriceScale:{autoScale:true,scaleMargins:{top:.10,bottom:.10}}});
  const timeScale=view.chart.timeScale();
  const barSpacing=5,rightOffset=3;
  timeScale.applyOptions({barSpacing,rightOffset});
