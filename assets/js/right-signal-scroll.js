@@ -13,7 +13,7 @@ if(!root||!LWC){console.error('[Vegas Right Scroll] missing host or chart librar
 const host=root.querySelector('.vr-chart'), title=root.querySelector('.vr-symbol'), status=root.querySelector('.vr-status');
 const nav=root.querySelector('.vr-periods'), error=root.querySelector('.vr-error');
 const cache=new Map(), settings=readSettings();
-let queue=[],index=0,current='',period='4H',data=[],requestToken=0,rotationTimer=0,refreshTimer=0,interactionTimer=0,returnFrame=0;
+let queue=[],index=0,current='',period='4H',data=[],requestToken=0,rotationTimer=0,refreshTimer=0,interactionTimer=0;
 let paused=false,hidden=false,activeRequests=0,requestQueue=[],transitionTimer=0;
 let sharedVisibleRange=null,applyingData=false;
 function readSettings(){try{return JSON.parse(localStorage.getItem('vegas-right-single-v1')||'{}')}catch{return {}}}
@@ -80,7 +80,7 @@ let swipeStart=null;
 host.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(t)swipeStart={x:t.clientX,y:t.clientY,at:performance.now()}},{passive:true});
 host.addEventListener('touchend',e=>{if(!swipeStart)return;const t=e.changedTouches&&e.changedTouches[0];if(!t){swipeStart=null;return}const dy=t.clientY-swipeStart.y,dx=t.clientX-swipeStart.x,dt=performance.now()-swipeStart.at;swipeStart=null;if(dy<-58&&Math.abs(dy)>Math.abs(dx)*1.2&&dt<650&&queue.length>1){if(interactionTimer)clearTimeout(interactionTimer);paused=false;clearTimers();advance()}},{passive:true});
 window.addEventListener('pointerup',()=>{if(paused){if(interactionTimer)clearTimeout(interactionTimer);resumeRotation()}},{passive:true});
-window.addEventListener('pointercancel',()=>{if(paused){if(interactionTimer)clearTimeout(interactionTimer);interactionTimer=setTimeout(restoreLatest,1800)}},{passive:true});
+window.addEventListener('pointercancel',()=>{if(paused){if(interactionTimer)clearTimeout(interactionTimer);resumeRotation()}},{passive:true});
 function reconcile(symbols){
  const next=Array.from(new Set((symbols||[]).map(s=>String(s||'').trim().toUpperCase()).filter(s=>/^[A-Z0-9.]+$/.test(s))));
  const old=current;queue=next;
@@ -89,7 +89,7 @@ function reconcile(symbols){
  if(old!==queue[index])showSymbol(queue[index]);else if(!old)showSymbol(queue[index]);else scheduleRotation();
 }
 window.VegasLayer5SetAutoQueue=reconcile;
-document.addEventListener('visibilitychange',()=>{hidden=document.hidden;if(hidden){clearTimers();if(interactionTimer)clearTimeout(interactionTimer);if(returnFrame)cancelAnimationFrame(returnFrame)}else if(current){loadCurrent(true);scheduleRotation()}},{passive:true});
+document.addEventListener('visibilitychange',()=>{hidden=document.hidden;if(hidden){clearTimers();if(interactionTimer)clearTimeout(interactionTimer);}else if(current){loadCurrent();scheduleRotation()}},{passive:true});
 window.addEventListener('pagehide',()=>{clearTimers();if(interactionTimer)clearTimeout(interactionTimer);if(returnFrame)cancelAnimationFrame(returnFrame)});
 reconcile(window.VegasFormalSignalSymbols||[]);
 })();
