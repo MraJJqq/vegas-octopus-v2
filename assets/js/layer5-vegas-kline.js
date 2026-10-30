@@ -230,7 +230,6 @@ function draw(view={}){
   emaData.forEach((data,index)=>emaSeries[index].setData(data));
  }
  renderedSnapshot={symbol:state.symbol,period:state.period,chartCandles:newData,emaData};
- if(!chartPriceBase){const range=readChartPriceRange();if(range&&range.to>range.from)chartPriceBase={from:range.from,to:range.to};}
  const ts=chart.timeScale();
  if(view.range){
   let restored=false;
@@ -255,6 +254,11 @@ function draw(view={}){
    save();
   }
  }else if(view.initial&&!incremental)ts.setVisibleLogicalRange({from:Math.max(0,newData.length-120),to:newData.length});
+ /* 必须在恢复用户的时间/缩放视窗后记录价格范围，避免用旧的自动定标范围覆盖用户缩放。 */
+ const restoredPriceRange=readChartPriceRange();
+ if(restoredPriceRange&&Number.isFinite(restoredPriceRange.from)&&Number.isFinite(restoredPriceRange.to)&&restoredPriceRange.to>restoredPriceRange.from){
+  chartPriceBase={from:restoredPriceRange.from,to:restoredPriceRange.to};
+ }
  const last=state.candles[state.candles.length-1];
  title.textContent=state.symbol;
  status.textContent=last.close.toLocaleString('en-US',{maximumFractionDigits:6})+'  '+new Date(last.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
@@ -354,7 +358,7 @@ function runChartAutoScroll(now){
     const span=chartPriceBase.to-chartPriceBase.from;
     const limit=span*CHART_VERTICAL_LIMIT;
     const step=span*CHART_VERTICAL_SPEED*chartAutoEngage*dt;
-    let offset=(range.from-chartPriceBase.from)+chartVerticalDirection*step;
+    let offset=(range.from-chartPriceBase.from)-chartVerticalDirection*step;
     if(offset>=limit){offset=limit;chartVerticalDirection=-1}
     else if(offset<=-limit){offset=-limit;chartVerticalDirection=1}
     if(step>0){
