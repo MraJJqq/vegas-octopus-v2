@@ -10,6 +10,9 @@ let records=[];
 let lastSize='';
 let activePointers=new Map();
 let lastPersist=0;
+let lastMoveAt=0;
+let lastWheelAt=0;
+let lastSizeAt=0;
 let longTaskTotal=0;
 let longTaskCount=0;
 try{const saved=JSON.parse(localStorage.getItem(KEY)||'[]');if(Array.isArray(saved))records=saved.slice(-MAX)}catch{}
@@ -34,8 +37,8 @@ function dimensions(){
  return {width:Math.round(r.width*10)/10,height:Math.round(r.height*10)/10,dpr:window.devicePixelRatio||1,canvas:[...host.querySelectorAll('canvas')].map(c=>({width:c.width,height:c.height,clientWidth:c.clientWidth,clientHeight:c.clientHeight}))};
 }
 function sizeCheck(){
- const d=dimensions(),key=JSON.stringify(d);
- if(key!==lastSize){lastSize=key;record('chart-size',d)}
+ const d=dimensions(),key=JSON.stringify(d),now=performance.now();
+ if(key!==lastSize){const previous=lastSize;lastSize=key;record('chart-size',{...d,previous:previous||null,rapid:lastSizeAt>0&&now-lastSizeAt<250});lastSizeAt=now}
 }
 function bindCanvas(canvas){
  if(canvas.dataset.vegasDiag==='1')return;
@@ -53,13 +56,21 @@ window.addEventListener('resize',sizeCheck,{passive:true});
  else activePointers.delete(e.pointerId);
  record('pointer-input',{event:type,pointerType:e.pointerType||'unknown',activePointers:activePointers.size,isPrimary:!!e.isPrimary,...(type==='pointerdown'?{memory:memory()}: {})});
 },{capture:true,passive:true}));
+host.addEventListener('pointermove',e=>{
+ const now=performance.now();if(now-lastMoveAt<120)return;lastMoveAt=now;
+ record('pointer-move',{pointerType:e.pointerType||'unknown',activePointers:activePointers.size,buttons:e.buttons||0,isPrimary:!!e.isPrimary});
+},{capture:true,passive:true});
+host.addEventListener('wheel',e=>{
+ const now=performance.now();if(now-lastWheelAt<180)return;lastWheelAt=now;
+ record('wheel-input',{deltaMode:e.deltaMode,ctrlKey:!!e.ctrlKey});
+},{capture:true,passive:true});
 document.addEventListener('visibilitychange',()=>record('visibility',{hidden:document.hidden}));
 window.addEventListener('pagehide',()=>record('pagehide'));
 window.addEventListener('pageshow',e=>record('pageshow',{persisted:!!e.persisted}));
 window.addEventListener('error',e=>record('window-error',{message:String(e.message||'unknown').slice(0,160),source:String(e.filename||'').slice(-100),line:e.lineno||0}));
 window.addEventListener('unhandledrejection',e=>record('unhandled-rejection',{reason:String(e.reason&&e.reason.message||e.reason||'unknown').slice(0,160)}));
 if(window.PerformanceObserver){
- try{new PerformanceObserver(list=>{for(const item of list.getEntries()){longTaskCount++;longTaskTotal+=item.duration} }).observe({entryTypes:['longtask']})}catch{}
+ try{new PerformanceObserver(list=>{for(const item of list.getEntries()){longTaskCount++;longTaskTotal+=item.duration;if(item.duration>=80)record('long-task',{duration:Math.round(item.duration),start:Math.round(item.startTime)})} }).observe({entryTypes:['longtask']})}catch{}
 }
 window.VegasLayer5Diagnostics={
  snapshot:()=>({records:records.slice(),longTaskCount,longTaskTotal:Math.round(longTaskTotal),dimensions:dimensions(),memory:memory()}),
