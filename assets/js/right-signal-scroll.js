@@ -229,8 +229,9 @@ function syncLayerView(source,target){
  const sourceScale=source.chart.timeScale(),targetScale=target.chart.timeScale();
  try{
   const options=sourceScale.options();
-  /* 只同步每根K线的像素宽度和右侧留白，不复制另一品种的绝对逻辑索引。
-     不同品种的历史数据长度可能不同，复制逻辑范围会造成K线突然放大或缩小。 */
+  /* 渐变前先同步当前图与下一张图的横向缩放比例（barSpacing）和右侧偏移量（rightOffset）。
+     仅应用这两个视图参数，不复制不同品种的绝对逻辑索引/可视范围，避免历史数据长度不同导致K线突然放大或缩小。
+     不修改行情数据、EMA、10秒显示循环或15秒行情刷新规则。 */
   targetScale.applyOptions({
    barSpacing:options.barSpacing,
    rightOffset:options.rightOffset
