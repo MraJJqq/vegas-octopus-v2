@@ -389,7 +389,8 @@ function pauseForInteraction(event){
  if(paused)return;
  paused=true;++cycleToken;clearTimeout(cycleTimer);cycleTimer=0;
  clearTransitionWork();
- settleTransition();
+ layers.forEach(layer=>{layer.style.transition='none';});
+ setTransitionHint(false);
  paused=true;fadeState='paused';
 }
 function resumeAfterInteraction(event){
