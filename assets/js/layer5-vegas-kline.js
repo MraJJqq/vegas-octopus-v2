@@ -297,6 +297,19 @@ title.addEventListener('touchend',e=>{
 title.addEventListener('dblclick',e=>{
  if(state.open){e.preventDefault();close()}
 });
+/* 将品种点击绑定在卡片容器上，避免全局捕获监听被其他层级干扰。 */
+const marketLayer=document.getElementById('market-cards-layer');
+if(marketLayer){
+ marketLayer.addEventListener('click',e=>{
+  const card=e.target instanceof Element?e.target.closest('.mc-card[data-symbol]'):null;
+  if(!card||!marketLayer.contains(card))return;
+  const symbol=String(card.dataset.symbol||'').trim().toUpperCase();
+  if(!symbol)return;
+  e.preventDefault();
+  e.stopPropagation();
+  openSymbol(symbol);
+ },true);
+}
 /* Escape 键保留为全局退出方式。 */
 periodsHost.addEventListener('click',e=>{
  const button=e.target.closest&&e.target.closest('button[data-period]');
@@ -325,13 +338,6 @@ document.addEventListener('click',e=>{
  /* 底部空白带作为单击退出区；周期栏优先保留自身点击，不拦截图表区域。 */
  if(state.open&&e.clientY>=window.innerHeight-56&&!(e.target.closest&&e.target.closest('#vegas-layer5-control'))){
   e.preventDefault();e.stopPropagation();close();return;
- }
- const card=e.target.closest&&e.target.closest('#market-cards-layer .mc-card[data-symbol]');
- if(card){
-  const symbol=String(card.dataset.symbol||'').toUpperCase();
-  if(!symbol)return;
-  e.preventDefault();e.stopPropagation();openSymbol(symbol);
-  return;
  }
  /* 全屏画布覆盖整个可视屏幕，无法再定义窗口外区域；使用 Escape 退出。 */
 },true);
