@@ -279,7 +279,6 @@ function reconcile(symbols){
  if(currentIndex>=queue.length)currentIndex=0;
  period=periodFor(currentSymbol());
  setActive(activeLayer);
- const inactive=1-activeLayer;
  if(queue.length>1)preloadNext();
  scheduleCycle(CLEAR_MS);
  scheduleRefresh();
