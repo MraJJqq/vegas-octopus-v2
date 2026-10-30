@@ -39,20 +39,15 @@ function updateFocusScale(){
  if(!first||!step){return}
  /* 卡片统一尺寸且按固定 gap 排列：只读取首卡几何信息，后续位置用步长推算，减少逐卡布局读取。 */
  const baseTop=first.offsetTop,slotHeight=first.offsetHeight,slotWidth=Math.max(1,first.offsetWidth),visibleBottom=scrollTop+height;
- const scaleMin=.72,scaleMax=Math.min(1.32,available/slotWidth);
+ const scaleMax=Math.min(1.34,available/slotWidth);
  const metrics=focusSlots.map((slot,index)=>{
-  const top=baseTop+index*step,bottom=top+slotHeight,offset=(top+slotHeight/2)-center,distance=Math.abs(offset),t=Math.min(1,distance/range),ease=t*t*(3-2*t),fadeT=Math.min(1,distance/fadeRange),fadeEase=fadeT*fadeT*(3-2*fadeT);
-  const visible=Math.max(0,Math.min(bottom,visibleBottom)-Math.max(top,scrollTop)),ratio=Math.min(1,visible/Math.max(1,slotHeight)),focused=distance<height*.18&&ratio>=.98,focus=1-ease;
-  const scale=scaleMin+(scaleMax-scaleMin)*focus,opacity=(1-.985*fadeEase)*Math.min(1,ratio*1.8);
-  const depth=-110*(1-focus),curveY=-Math.sign(offset)*Math.min(28,distance*.045),tilt=Math.max(-12,Math.min(12,offset/Math.max(1,height)*22));
-  return {slot,scale,opacity:focused?1:Math.max(.015,opacity),depth,curveY,tilt};
+  const top=baseTop+index*step,bottom=top+slotHeight,distance=Math.abs((top+slotHeight/2)-center),t=Math.min(1,distance/range),ease=t*t*(3-2*t),fadeT=Math.min(1,distance/fadeRange),fadeEase=fadeT*fadeT*(3-2*fadeT);
+  const visible=Math.max(0,Math.min(bottom,visibleBottom)-Math.max(top,scrollTop)),ratio=Math.min(1,visible/Math.max(1,slotHeight)),focused=distance<height*.23&&ratio>=.98;
+  return {slot,scale:1+(scaleMax-1)*(1-ease),opacity:focused?1:(1-.72*fadeEase)*Math.min(1,ratio*1.8)};
  });
- metrics.forEach(({slot,scale,opacity,depth,curveY,tilt})=>{
+ metrics.forEach(({slot,scale,opacity})=>{
   slot.style.setProperty('--mc-focus-scale',scale.toFixed(3));
-  slot.style.setProperty('--mc-page-opacity',opacity.toFixed(3));
-  slot.style.setProperty('--mc-focus-z',depth.toFixed(1)+'px');
-  slot.style.setProperty('--mc-focus-y',curveY.toFixed(1)+'px');
-  slot.style.setProperty('--mc-focus-tilt',tilt.toFixed(2)+'deg');
+  slot.style.setProperty('--mc-page-opacity',Math.max(.025,opacity).toFixed(3));
  });
 }
 function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(updateFocusScale)}
