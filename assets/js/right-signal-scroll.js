@@ -180,13 +180,14 @@ function ema(rows,length){
  for(let i=length;i<rows.length;i++){value=rows[i].close*factor+value*(1-factor);result.push({time:rows[i].time,value})}
  return result;
 }
+/* 每个品种独立自动纵向缩放；上下各留5%空间，手动缩放仍由图表交互接管。 */
 function createChart(layer){
  const host=document.createElement('div');host.className='vr-chart';layer.append(host);
  const chart=LWC.createChart(host,{
   autoSize:true,attributionLogo:false,
   layout:{background:{type:LWC.ColorType.Solid,color:'rgba(0,0,0,0)'},textColor:'rgba(210,232,255,.72)',fontSize:11},
   grid:{vertLines:{visible:false},horzLines:{visible:false}},
-  rightPriceScale:{visible:false,borderVisible:false,mode:LWC.PriceScaleMode.Logarithmic,scaleMargins:{top:.09,bottom:.08}},
+  rightPriceScale:{visible:false,borderVisible:false,mode:LWC.PriceScaleMode.Logarithmic,autoScale:true,scaleMargins:{top:.05,bottom:.05}},
   leftPriceScale:{visible:false,borderVisible:false},
   timeScale:{visible:false,borderVisible:false,rightOffset:3,barSpacing:5,minBarSpacing:.5,shiftVisibleRangeOnNewBar:false},
   crosshair:{vertLine:{visible:true,color:'rgba(120,190,230,.18)'},horzLine:{visible:true,color:'rgba(120,190,230,.18)'}},
