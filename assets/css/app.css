@@ -79,3 +79,45 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 
 /* 全屏禁止双击放大；保留正常单指滚动与系统手势。 */
 html,body{touch-action:manipulation;}
+
+
+/* 第三层小卡片：B方案分层能量边界；仅覆盖边框视觉，不改变卡片布局与交互。 */
+#market-cards-layer .mc-bg{
+  border:1px solid rgba(105,164,205,.30);
+  box-shadow:0 0 9px -5px rgba(83,177,224,.28),inset 0 0 13px -9px rgba(91,190,230,.24);
+  transition:border-color .32s ease,box-shadow .32s ease;
+}
+#market-cards-layer .mc-bg::after{
+  content:"";
+  position:absolute;
+  inset:4px;
+  border:1px solid rgba(104,184,220,.12);
+  border-radius:calc(inherit - 4px);
+  pointer-events:none;
+  background:
+    linear-gradient(rgba(125,218,255,.52),rgba(125,218,255,.52)) left top/13px 1px no-repeat,
+    linear-gradient(rgba(125,218,255,.52),rgba(125,218,255,.52)) left top/1px 13px no-repeat,
+    linear-gradient(rgba(125,218,255,.52),rgba(125,218,255,.52)) right top/13px 1px no-repeat,
+    linear-gradient(rgba(125,218,255,.52),rgba(125,218,255,.52)) right top/1px 13px no-repeat,
+    linear-gradient(rgba(125,218,255,.52),rgba(125,218,255,.52)) left bottom/13px 1px no-repeat,
+    linear-gradient(rgba(125,218,255,.52),rgba(125,218,255,.52)) left bottom/1px 13px no-repeat,
+    linear-gradient(rgba(125,218,255,.52),rgba(125,218,255,.52)) right bottom/13px 1px no-repeat,
+    linear-gradient(rgba(125,218,255,.52),rgba(125,218,255,.52)) right bottom/1px 13px no-repeat;
+  opacity:.72;
+}
+#market-cards-layer .mc-g1,
+#market-cards-layer .mc-g2{
+  border-color:rgba(100,177,215,.16);
+  transition:border-color .32s ease,opacity .32s ease;
+}
+#market-cards-layer .mc-card[data-formal-signal="true"] .mc-bg{
+  border-color:rgba(99,224,255,.78);
+  box-shadow:0 0 15px -7px rgba(70,218,255,.72),inset 0 0 17px -11px rgba(70,218,255,.52);
+}
+#market-cards-layer .mc-card[data-formal-signal="true"] .mc-bg::after{
+  border-color:rgba(111,228,255,.38);
+  opacity:1;
+}
+#market-cards-layer .mc-card[data-formal-signal="true"] .mc-g1{
+  border-color:rgba(93,220,255,.42);
+}
