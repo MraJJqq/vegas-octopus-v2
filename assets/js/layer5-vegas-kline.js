@@ -183,7 +183,7 @@ function openSymbol(symbol){
  if(state.requestController){state.requestController.abort();state.requestController=null;}
  state.open=true;state.symbol=symbol;
  const saved=state.saved[symbol]||{};
- state.period='4H';
+ state.period=saved.period||(STOCKS.has(symbol)?'1H':'2H');
  state.loading=false;requestVersion++;
  if(STOCKS.has(symbol)&&!STOCK_PERIODS.includes(state.period))state.period='1H';
  const cached=state.candleCache.get(symbol+'|'+state.period);
