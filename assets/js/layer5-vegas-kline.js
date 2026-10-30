@@ -67,36 +67,39 @@ if(storedState.defaultPeriodMigration!=='4H'){
  }
  save();
 }
-async function getJson(path){
- const c=new AbortController(),t=setTimeout(()=>c.abort(),10000);state.requestController=c;
- try{
-  let lastError;
-  for(let attempt=0;attempt<3;attempt++){
-   try{
-    const r=await fetch(API+path,{cache:'no-store',signal:c.signal});
-    if(!r.ok){const error=Error('HTTP '+r.status);error.retryable=r.status===429||r.status>=500;if(!error.retryable||attempt===2)throw error;lastError=error}
-    else{
-     const j=await r.json();
-     if(j.code!=='00000'||!Array.isArray(j.data))throw Error(j.msg||'行情响应无效');
-     return j.data;
-    }
-   }catch(error){
-    if(c.signal.aborted||error.name==='AbortError')throw error;
-    if(!error.retryable&&!(error instanceof TypeError))throw error;
-    lastError=error;if(attempt===2)throw error;
+async function getJson(path,controller){
+ const signal=controller.signal;
+ let lastError;
+ for(let attempt=0;attempt<3;attempt++){
+  if(signal.aborted)throw new DOMException('Aborted','AbortError');
+  const timeout=setTimeout(()=>controller.abort(),10000);
+  try{
+   const r=await fetch(API+path,{cache:'no-store',signal});
+   if(!r.ok){const error=Error('HTTP '+r.status);error.retryable=r.status===429||r.status>=500;if(!error.retryable||attempt===2)throw error;lastError=error}
+   else{
+    const j=await r.json();
+    if(j.code!=='00000'||!Array.isArray(j.data))throw Error(j.msg||'行情响应无效');
+    return j.data;
    }
-   await new Promise((resolve,reject)=>{
-    const delay=setTimeout(resolve,350*(attempt+1));
-    c.signal.addEventListener('abort',()=>{clearTimeout(delay);reject(new DOMException('Aborted','AbortError'))},{once:true});
-   });
-  }
-  throw lastError||Error('行情请求失败');
- }finally{clearTimeout(t);if(state.requestController===c)state.requestController=null}
+  }catch(error){
+   if(signal.aborted||error.name==='AbortError')throw error;
+   if(!error.retryable&&!(error instanceof TypeError))throw error;
+   lastError=error;if(attempt===2)throw error;
+  }finally{clearTimeout(timeout)}
+  await new Promise((resolve,reject)=>{
+   if(signal.aborted){reject(new DOMException('Aborted','AbortError'));return;}
+   const delay=setTimeout(done,350*(attempt+1));
+   function done(){signal.removeEventListener('abort',abort);resolve()}
+   function abort(){clearTimeout(delay);signal.removeEventListener('abort',abort);reject(new DOMException('Aborted','AbortError'))}
+   signal.addEventListener('abort',abort,{once:true});
+  });
+ }
+ throw lastError||Error('行情请求失败');
 }
 let stockDirectory=null,stockDirectoryAt=0;
-async function getStockSymbol(symbol){
+async function getStockSymbol(symbol,controller){
  if(!stockDirectory||Date.now()-stockDirectoryAt>300000){
-  const rows=await getJson('/api/v3/reality/market/stock-info');
+  const rows=await getJson('/api/v3/reality/market/stock-info',controller);
   stockDirectory=new Map(rows.filter(x=>x&&x.code&&x.symbol).map(x=>[String(x.code).toUpperCase(),String(x.symbol)]));
   const sk=rows.find(x=>x&&x.symbol&&(/SKHYNIX/i.test(String(x.code||''))||/SK\\s*HYNIX/i.test(String(x.name||''))||/RSKHYUSDT/i.test(String(x.symbol||''))));
   if(sk)stockDirectory.set('SKHYNIX',String(sk.symbol));
@@ -111,15 +114,15 @@ async function loadCandles(force=false){
  if(state.loading&&!force)return;
  if(!force&&Date.now()-state.fetchAt<25000)return;
  if(force&&state.requestController){state.requestController.abort();state.requestController=null;}
- state.loading=true;const requestId=++requestVersion;const symbolAtRequest=state.symbol;message.hidden=false;message.textContent=state.candles.length?'更新行情…':'读取历史行情…';
+ state.loading=true;const requestId=++requestVersion;const symbolAtRequest=state.symbol;const controller=new AbortController();state.requestController=controller;message.hidden=false;message.textContent=state.candles.length?'更新行情…':'读取历史行情…';
  try{
   const stock=STOCKS.has(symbolAtRequest),period=state.period;
   let rows;
   if(stock){
-   const sym=await getStockSymbol(symbolAtRequest);
-   rows=await getJson('/api/v3/market/candles?'+new URLSearchParams({category:'SPOT',symbol:sym,interval:period,limit:'1000'}));
+   const sym=await getStockSymbol(symbolAtRequest,controller);
+   rows=await getJson('/api/v3/market/candles?'+new URLSearchParams({category:'SPOT',symbol:sym,interval:period,limit:'1000'}),controller);
   }else{
-   rows=await getJson('/api/v2/mix/market/candles?'+new URLSearchParams({symbol:symbolFor(symbolAtRequest),productType:'USDT-FUTURES',granularity:period,limit:'1000'}));
+   rows=await getJson('/api/v2/mix/market/candles?'+new URLSearchParams({symbol:symbolFor(symbolAtRequest),productType:'USDT-FUTURES',granularity:period,limit:'1000'}),controller);
   }
   if(requestId!==requestVersion||symbolAtRequest!==state.symbol)return;
   const data=rows.filter(r=>Array.isArray(r)&&Number(r[0])>0&&Number(r[1])>0&&Number(r[2])>0&&Number(r[3])>0&&Number(r[4])>0)
