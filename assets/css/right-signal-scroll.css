@@ -1,0 +1,20 @@
+/* 右滚动：独立于左滚动的正式信号K线卡片区域。 */
+#vegas-right-scroll{position:absolute;z-index:3;top:0;right:0;bottom:0;left:clamp(150px,36vw,460px);min-width:0;overflow:hidden;pointer-events:none;background:transparent!important}
+#vegas-right-scroll[hidden]{display:none}
+#vegas-right-scroll .vr-list{position:absolute;inset:0;display:flex;flex-direction:column;gap:10px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;pointer-events:auto;background:transparent;mask-image:linear-gradient(to bottom,transparent 0%,#000 7%,#000 93%,transparent 100%);-webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 7%,#000 93%,transparent 100%);padding:10px 8px}
+#vegas-right-scroll .vr-list::-webkit-scrollbar{display:none}
+#vegas-right-scroll .vr-card{position:relative;flex:0 0 clamp(170px,27vh,245px);min-width:0;min-height:0;width:100%;overflow:hidden;border:1px solid rgba(95,177,231,.2);border-radius:12px;background:rgba(2,9,22,.12);box-shadow:0 0 14px rgba(52,158,220,.08);opacity:1;touch-action:pan-y}
+#vegas-right-scroll .vr-head{position:absolute;z-index:2;top:5px;left:8px;right:8px;height:22px;display:flex;align-items:center;gap:8px;pointer-events:none}
+#vegas-right-scroll .vr-head strong{font-size:12px;letter-spacing:.08em;color:rgba(224,244,255,.92)}
+#vegas-right-scroll .vr-status{font-size:10px;color:rgba(174,214,239,.7);font-variant-numeric:tabular-nums}
+#vegas-right-scroll .vr-periods{display:flex;gap:7px;margin-left:auto;pointer-events:auto}
+#vegas-right-scroll .vr-periods button{border:0;background:transparent;color:rgba(173,204,226,.56);font:600 10px Inter,sans-serif;padding:2px;min-width:23px;min-height:22px}
+#vegas-right-scroll .vr-periods button.active{color:#e8f8ff;text-shadow:0 0 7px rgba(92,198,255,.7)}
+#vegas-right-scroll .vr-chart{position:absolute;inset:27px 0 0;width:100%;height:calc(100% - 27px);touch-action:pan-x pan-y;pointer-events:auto}
+#vegas-right-scroll .vr-error{position:absolute;z-index:3;left:8px;bottom:5px;font-size:10px;color:#ff9aab;pointer-events:none}
+#vegas-right-scroll .vr-error[hidden]{display:none}
+@media(max-width:700px){#vegas-right-scroll{left:48vw}#vegas-right-scroll .vr-list{gap:7px;padding:8px 4px}#vegas-right-scroll .vr-card{flex-basis:clamp(150px,23vh,205px);border-radius:9px}#vegas-right-scroll .vr-head{left:6px;right:5px}#vegas-right-scroll .vr-head strong{font-size:10px}#vegas-right-scroll .vr-status{font-size:9px}#vegas-right-scroll .vr-periods{gap:4px}#vegas-right-scroll .vr-periods button{font-size:9px;min-width:20px}}
+@media(prefers-reduced-motion:reduce){#vegas-right-scroll .vr-list{scroll-behavior:auto}}
+
+/* 最新事件保持在右滚动卡片上方，避免顶部信息被K线遮挡。 */
+.topbar{z-index:5}
