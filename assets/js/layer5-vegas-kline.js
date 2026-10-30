@@ -152,7 +152,7 @@ async function loadCandles(force=false){
  if(!force&&Date.now()<state.retryAfter)return;
  if(!force&&Date.now()-state.fetchAt<25000)return;
  if(force&&state.requestController){state.requestController.abort();state.requestController=null;}
- state.loading=true;const requestId=++requestVersion;const symbolAtRequest=state.symbol;const controller=new AbortController();state.requestController=controller;message.hidden=false;message.textContent=state.candles.length?'更新行情…':'读取历史行情…';
+ state.loading=true;const requestId=++requestVersion;const symbolAtRequest=state.symbol;const controller=new AbortController();state.requestController=controller;
  try{
   const stock=STOCKS.has(symbolAtRequest),period=state.period;
   let rows;
@@ -258,7 +258,6 @@ function draw(view={}){
  status.textContent=last.close.toLocaleString('en-US',{maximumFractionDigits:6})+'  '+new Date(last.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
 }
 function renderControlBar(){
- title.textContent=state.symbol||'';
  const options=STOCKS.has(state.symbol)?PERIODS:PERIODS;
  periodsHost.replaceChildren(...options.map(period=>{
   const button=document.createElement('button');
@@ -283,15 +282,14 @@ function openSymbol(symbol){
  const cacheKey=symbol+'|'+state.period;const cached=state.candleCache.get(cacheKey);if(cached){state.candleCache.delete(cacheKey);state.candleCache.set(cacheKey,cached);}
  state.candles=cached?cached.candles:[];state.fetchAt=cached?cached.fetchAt:0;
  state.loadedSymbol=cached?symbol:'';state.loadedPeriod=cached?state.period:'';
- if(!cached){candleSeries.setData([]);emaSeries.forEach(s=>s.setData([]));}
  renderControlBar();win.classList.add('is-open');
- message.hidden=!cached;message.textContent='读取历史行情…';
+ message.hidden=true;
  if(cached){const range=savedRange(saved,state.period);draw({range,initial:!range,restore:true});}
  loadCandles(false);
  scheduleRefresh();
 }
 let autoQueue=[],autoIndex=0,autoTimer=0,autoTransitionTimer=0,autoMode=false,manualControl=false;
-const AUTO_DWELL=10000,FADE_MS=190;
+const AUTO_DWELL=10000,FADE_MS=80;
 function clearAutoTimers(){
  if(autoTimer){clearTimeout(autoTimer);autoTimer=0;}
  if(autoTransitionTimer){clearTimeout(autoTransitionTimer);autoTransitionTimer=0;}
@@ -318,19 +316,9 @@ function showAutoSymbol(symbol){
   autoMode=true;scheduleAutoStep();return;
  }
  autoMode=true;
- if(state.open){
-  win.classList.remove('is-open');
-  win.classList.add('is-closing');
-  autoTransitionTimer=window.setTimeout(()=>{
-   autoTransitionTimer=0;
-   if(manualControl||document.hidden)return;
-   openSymbol(symbol);
-   scheduleAutoStep();
-  },FADE_MS);
- }else{
-  openSymbol(symbol);
-  scheduleAutoStep();
- }
+ /* 无缝切换：保留当前画面，收到下一品种数据后由 draw() 直接替换。 */
+ openSymbol(symbol);
+ scheduleAutoStep();
 }
 function advanceAutoQueue(){
  if(manualControl||document.hidden||!autoQueue.length)return;
