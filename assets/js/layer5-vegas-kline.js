@@ -142,7 +142,7 @@ async function loadCandles(force=false){
   draw({range,follow,initial});
   state.loadedSymbol=symbolAtRequest;state.loadedPeriod=period;
  }catch(e){if(requestId===requestVersion){message.hidden=false;message.textContent='行情读取失败 · '+String(e.message||e).slice(0,48);status.textContent='数据异常';console.warn('[Vegas Layer 5] candle load failed',e)}}
- finally{if(requestId===requestVersion)state.loading=false}
+ finally{if(state.requestController===controller)state.requestController=null;if(requestId===requestVersion)state.loading=false}
 }
 function ema(values,n){
  const out=new Array(values.length).fill(null);if(values.length<n)return out;
