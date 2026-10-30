@@ -5,7 +5,6 @@ const API='https://api.bitget.com';
 const STORAGE_KEY='vegas-octopus-layer5-kline-v1';
 const STOCKS=new Set(['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','QCOM','AMD','TSM','AVGO','ORCL','ARM','MU','ASML','SNDK','SKHYNIX','MRVL','GLW','HOOD','CBRS','SPCX']);
 const PERIODS=['1H','4H','1D'];
-const STOCK_PERIODS=PERIODS;
 let requestVersion=0;
 const EMA_LINES=[
  {n:12,color:'#f5d76e',width:1.2},
@@ -56,7 +55,6 @@ function rememberRange(saved,period,range){
  if(!saved||!range)return;
  if(!saved.visibleRanges||typeof saved.visibleRanges!=='object')saved.visibleRanges={};
  saved.visibleRanges[period]=range;
- saved.visibleRange=range;
  saved.period=period;
 }
 let saveTimer=0;
@@ -257,7 +255,7 @@ function draw(view={}){
 }
 function renderControlBar(){
  title.textContent=state.symbol||'';
- const options=STOCKS.has(state.symbol)?STOCK_PERIODS:PERIODS;
+ const options=STOCKS.has(state.symbol)?PERIODS:PERIODS;
  periodsHost.replaceChildren(...options.map(period=>{
   const button=document.createElement('button');
   button.type='button';button.className='vegas-l5-period';
@@ -276,7 +274,7 @@ function openSymbol(symbol){
  const saved=state.saved[symbol]||{};
  state.period=saved.period||'4H';
  state.loading=false;requestVersion++;
- if(STOCKS.has(symbol)&&!STOCK_PERIODS.includes(state.period))state.period='4H';
+ if(STOCKS.has(symbol)&&!PERIODS.includes(state.period))state.period='4H';
  const cacheKey=symbol+'|'+state.period;const cached=state.candleCache.get(cacheKey);if(cached){state.candleCache.delete(cacheKey);state.candleCache.set(cacheKey,cached);}
  state.candles=cached?cached.candles:[];state.fetchAt=cached?cached.fetchAt:0;
  state.loadedSymbol=cached?symbol:'';state.loadedPeriod=cached?state.period:'';
