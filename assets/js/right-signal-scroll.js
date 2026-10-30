@@ -189,11 +189,27 @@ function createChart(layer){
  return{layer,host,chart,candle,lines,symbol:'',period:'4H',request:0,hasData:false,dataAt:0};
 }
 const views=layers.map(createChart);
-function setData(view,rows){
+function setData(view,rows,preserveRange=false){
+ const timeScale=view.chart.timeScale();
+ const visibleRange=preserveRange?timeScale.getVisibleRange():null;
  view.candle.setData(rows);
  view.lines.forEach((series,index)=>series.setData(ema(rows,EMAS[index])));
+ if(visibleRange){
+  try{timeScale.setVisibleRange(visibleRange)}catch{}
+ }
  view.hasData=true;
  view.dataAt=Date.now();
+}
+function resetDefaultVisibleRange(view,rows){
+ if(!rows.length)return;
+ const timeScale=view.chart.timeScale();
+ const barSpacing=5,rightOffset=3;
+ timeScale.applyOptions({barSpacing,rightOffset});
+ const width=Math.max(1,view.host.clientWidth||window.innerWidth||1);
+ const visibleBars=Math.max(30,Math.floor(width/barSpacing));
+ const to=rows.length-1;
+ const from=Math.max(0,to-visibleBars+1);
+ timeScale.setVisibleLogicalRange({from,to});
 }
 function updateLayerStatus(index,symbol,rows){
  if(index!==activeLayer||symbol!==currentSymbol())return;
@@ -212,8 +228,8 @@ async function loadLayer(index,symbol,timeframe){
   /* 首屏只等待最近一页；先画出K线，再在后台补齐EMA所需历史。 */
   const firstRows=await getCandles(symbol,timeframe);
   if(token!==view.request)return false;
-  setData(view,firstRows);
-  if(identityChanged)view.chart.timeScale().applyOptions({barSpacing:5,rightOffset:3});
+  setData(view,firstRows,!identityChanged);
+  if(identityChanged)resetDefaultVisibleRange(view,firstRows);
   updateLayerStatus(index,symbol,firstRows);
   if(firstRows.length>=1200)return true;
   const backfillKey=symbol+'|'+timeframe;
@@ -224,7 +240,7 @@ async function loadLayer(index,symbol,timeframe){
   }
   backfill.then(rows=>{
    if(token!==view.request||view.symbol!==symbol||view.period!==timeframe)return;
-   setData(view,rows);
+   setData(view,rows,true);
    updateLayerStatus(index,symbol,rows);
   }).catch(exception=>{
    if(token===view.request&&index===activeLayer&&symbol===currentSymbol()){
