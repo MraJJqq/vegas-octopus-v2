@@ -1,5 +1,5 @@
 /* 右侧连续纵向轨道：非焦点品种用静态K线预览，唯一活动图表可交互。 */
-#vegas-right-scroll{position:fixed;z-index:0;inset:0;width:100vw;height:100vh;overflow:hidden;pointer-events:none;background:transparent}
+#vegas-right-scroll{position:fixed;z-index:2;inset:0;width:100vw;height:100vh;overflow:hidden;pointer-events:none;background:transparent}
 #vegas-right-scroll[hidden]{display:none}
 #vegas-right-scroll .vr-single{position:absolute;inset:0;overflow:hidden;pointer-events:none}
 #vegas-right-scroll .vr-track{position:absolute;inset:0;will-change:transform;pointer-events:none}
