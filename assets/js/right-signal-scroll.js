@@ -28,7 +28,7 @@ const error=root.querySelector('.vr-error');
 
 let queue=[],panels=[],current='',period='4H',data=[],sharedRange=null;
 let periodSettings={},cache=new Map(),stockMap=null,stockMapAt=0;
-let requestId=0,raf=0,lastFrame=0,offset=0,paused=false;
+let requestId=0;
 let hidden=document.hidden,refreshTimer=0,resumeTimer=0,wheelDelta=0,touchStart=null;
 let applyingRange=false,rangeApplyFrame=0;
 
@@ -213,6 +213,7 @@ function buildTrack(){
  track.replaceChildren();
  panels=queue.map(createPanel);
  panels.forEach(item=>track.append(item.element));
+ track.scrollTop=0;cachedPanelStep=0;lastObservedScrollTop=0;
  mountChart();
 }
 function focus(symbol){
@@ -246,63 +247,150 @@ async function loadActive(){
  }
 }
 
+/* 左滚动控制器移植：原生 scrollTop、连续触屏、滚轮、缓动与循环校正 */
+let cachedPanelStep=0,manualTarget=0,manualVelocity=0,manualFrame=0,manualLastTime=0;
+let autoResumeAt=0,touchActive=false,touchDragging=false,touchStartY=0,touchLastY=0;
+let autoLastTime=0,autoEngageLastTime=0,autoEngage=1,autoRemainder=0,autoTimer=0;
+let lastObservedScrollTop=0,normalizing=false,loopDirection=1;
+function panelStep(){
+ if(cachedPanelStep>0)return cachedPanelStep;
+ const first=panels[0]?.element,second=panels[1]?.element;
+ cachedPanelStep=first?(second?Math.max(0,second.offsetTop-first.offsetTop):first.offsetHeight):0;
+ return cachedPanelStep||innerHeight;
+}
 function stopAnimation(){
- if(raf)cancelAnimationFrame(raf);
- raf=0;
+ if(autoFrame){cancelAnimationFrame(autoFrame);autoFrame=0}
+ if(autoTimer){clearTimeout(autoTimer);autoTimer=0}
+ autoLastTime=0;autoEngageLastTime=0;
 }
-function startAnimation(){
- if(hidden||paused||queue.length<2||raf)return;
- lastFrame=0;
- raf=requestAnimationFrame(tick);
-}
-function pauseAnimation(){
- paused=true;
- stopAnimation();
- clearTimeout(resumeTimer);
- resumeTimer=setTimeout(()=>{
-  paused=false;
-  startAnimation();
- },1800);
-}
-function rotate(direction){
- if(panels.length<2)return;
- const panel=direction>0?panels.shift():panels.pop();
- if(direction>0){
-  track.append(panel.element);
-  panels.push(panel);
+function normalizeLoopPosition(direction){
+ if(normalizing||panels.length<2)return 0;
+ const step=panelStep();if(step<1)return 0;
+ normalizing=true;
+ let top=track.scrollTop,shift=0,guard=0;
+ if(direction<0){
+  while(top<=0&&guard++<panels.length){
+   const last=panels.pop();track.insertBefore(last.element,track.firstChild);panels.unshift(last);
+   top+=step;shift+=step;
+  }
  }else{
-  track.prepend(panel.element);
-  panels.unshift(panel);
+  while(top>=step&&guard++<panels.length){
+   const first=panels.shift();track.append(first.element);panels.push(first);
+   top-=step;shift-=step;
+  }
  }
- offset=0;
- track.style.transform='translate3d(0,0,0)';
- focus(panels[0].symbol);
+ if(Math.abs(top-track.scrollTop)>.1)track.scrollTop=top;
+ if(manualFrame&&shift)manualTarget+=shift;
+ lastObservedScrollTop=track.scrollTop;
+ normalizing=false;
+ return shift;
 }
-function manualMove(direction){
- if(panels.length<2)return;
- pauseAnimation();
- rotate(direction>0?1:-1);
+function moveLoop(delta,direction,source){
+ if(!Number.isFinite(delta)||Math.abs(delta)<.01)return;
+ loopDirection=direction<0?-1:1;
+ track.scrollTop+=delta;
+ normalizeLoopPosition(loopDirection);
+ if(source==='manual')manualTarget=track.scrollTop;
+ lastObservedScrollTop=track.scrollTop;
 }
-function tick(now){
- raf=0;
- if(hidden||paused||queue.length<2)return;
- if(!lastFrame)lastFrame=now;
- const elapsed=Math.min(40,now-lastFrame);
- lastFrame=now;
- offset+=elapsed*.00022*innerHeight;
- if(offset>=innerHeight){
-  offset-=innerHeight;
-  const first=panels.shift();
-  track.append(first.element);
-  panels.push(first);
-  track.style.transform='translate3d(0,0,0)';
-  focus(panels[0].symbol);
- }else{
-  track.style.transform='translate3d(0,'+(-offset)+'px,0)';
+function scheduleAutoScroll(){
+ if(hidden||autoFrame||autoTimer)return;
+ autoTimer=setTimeout(()=>{
+  autoTimer=0;
+  if(!hidden)autoFrame=requestAnimationFrame(runAutoScroll);
+ },50);
+}
+function runAutoScroll(now){
+ autoFrame=0;
+ try{
+  if(!autoLastTime)autoLastTime=now;
+  const dt=Math.min(40,Math.max(0,now-autoLastTime))/1000;autoLastTime=now;
+  if(!autoEngageLastTime)autoEngageLastTime=now;
+  const engageDt=Math.min(40,Math.max(0,now-autoEngageLastTime));autoEngageLastTime=now;
+  if(!manualFrame&&!touchActive&&now>=autoResumeAt){
+   autoEngage=Math.min(1,autoEngage+engageDt/1000);
+   const step=panelStep();
+   if(panels.length>1&&step>0){
+    const speed=Math.max(.1,step*panels.length/120);
+    autoRemainder+=speed*autoEngage*dt;
+    const movement=Math.floor(autoRemainder);
+    if(movement>=1){autoRemainder-=movement;moveLoop(movement,1,'auto')}
+   }
+  }
+ }catch(exception){console.warn('[Vegas Right Scroll] auto-scroll recovered:',exception)}
+ finally{scheduleAutoScroll()}
+}
+function applyManualDelta(delta,source){
+ if(Math.abs(delta)<.1)return;
+ const now=performance.now();
+ autoResumeAt=now+(source==='touch'?1600:180);
+ autoEngage=Math.min(autoEngage,.28);autoEngageLastTime=now;
+ const direction=delta<0?-1:1;
+ if(!manualFrame){manualTarget=track.scrollTop;manualVelocity=0;manualLastTime=0}
+ const reversing=manualVelocity!==0&&Math.sign(manualVelocity)!==Math.sign(delta);
+ if(reversing){manualTarget=track.scrollTop+delta*1.12;manualVelocity=delta*.018}
+ else{manualTarget+=delta*1.28;manualVelocity=Math.max(-1.2,Math.min(1.2,manualVelocity+delta*.022))}
+ loopDirection=direction;
+ if(!manualFrame)manualFrame=requestAnimationFrame(runManualScroll);
+}
+function runManualScroll(now){
+ try{
+  if(!manualLastTime)manualLastTime=now;
+  const dt=Math.min(32,Math.max(1,now-manualLastTime));manualLastTime=now;
+  const current=track.scrollTop,diff=manualTarget-current,ease=1-Math.exp(-dt/72);
+  moveLoop(diff*ease,Math.sign(diff)||loopDirection,'manual');
+  manualVelocity*=Math.exp(-dt/180);
+  if(Math.abs(manualVelocity)>.008)manualTarget+=manualVelocity*dt;
+  else manualVelocity=0;
+  if(Math.abs(manualVelocity)<.025&&Math.abs(manualTarget-track.scrollTop)<.5){
+   manualTarget=track.scrollTop;manualVelocity=0;manualFrame=0;manualLastTime=0;
+   autoResumeAt=Math.max(autoResumeAt,now+(touchActive?1400:80));
+   return;
+  }
+  manualFrame=requestAnimationFrame(runManualScroll);
+ }catch(exception){
+  manualTarget=track.scrollTop;manualVelocity=0;manualFrame=0;manualLastTime=0;
+  autoResumeAt=performance.now()+120;
+  console.warn('[Vegas Right Scroll] manual-scroll recovered:',exception);
  }
- raf=requestAnimationFrame(tick);
 }
-
+track.addEventListener('wheel',event=>{
+ if(Math.abs(event.deltaY)<.1)return;
+ event.preventDefault();event.stopPropagation();
+ const unit=event.deltaMode===1?16:event.deltaMode===2?track.clientHeight:1;
+ applyManualDelta(event.deltaY*unit,'wheel');
+},{passive:false,capture:true});
+track.addEventListener('touchstart',event=>{
+ if(event.touches.length!==1)return;
+ const touch=event.touches[0];
+ if(manualFrame){cancelAnimationFrame(manualFrame);manualFrame=0}
+ manualLastTime=0;manualVelocity=0;
+ touchStartY=touchLastY=touch.clientY;touchActive=true;touchDragging=false;
+ manualTarget=track.scrollTop;autoResumeAt=performance.now()+1600;autoEngage=0;
+},{passive:true});
+track.addEventListener('touchmove',event=>{
+ if(event.touches.length!==1||!touchActive)return;
+ const y=event.touches[0].clientY,delta=touchLastY-y;
+ if(!touchDragging&&Math.abs(y-touchStartY)<3){touchLastY=y;return}
+ touchDragging=true;event.preventDefault();
+ if(Math.abs(delta)>.1){touchLastY=y;applyManualDelta(delta,'touch')}else touchLastY=y;
+},{passive:false});
+function finishTouch(){
+ touchActive=false;touchDragging=false;touchStartY=touchLastY=0;
+ autoResumeAt=performance.now()+1400;
+}
+track.addEventListener('touchend',finishTouch,{passive:true});
+track.addEventListener('touchcancel',finishTouch,{passive:true});
+track.addEventListener('scroll',()=>{
+ if(normalizing)return;
+ const current=track.scrollTop,delta=current-lastObservedScrollTop;
+ if(!manualFrame&&!touchActive&&Math.abs(delta)>.5){
+  loopDirection=delta<0?-1:1;
+  normalizeLoopPosition(loopDirection);
+  manualTarget=track.scrollTop;manualVelocity=0;
+ }
+ lastObservedScrollTop=track.scrollTop;
+},{passive:true});
 function reconcile(symbols){
  const next=[...new Set((symbols||[])
   .map(value=>String(value||'').trim().toUpperCase())
@@ -313,10 +401,11 @@ function reconcile(symbols){
   requestId++;
   clearTimeout(refreshTimer);
   stopAnimation();
+  if(manualFrame){cancelAnimationFrame(manualFrame);manualFrame=0}
   root.hidden=true;
   current='';
   panels=[];
-  track.replaceChildren();
+  track.replaceChildren();track.scrollTop=0;cachedPanelStep=0;lastObservedScrollTop=0;
   return;
  }
  root.hidden=false;
@@ -333,56 +422,7 @@ function reconcile(symbols){
  startAnimation();
 }
 
-host.addEventListener('pointerdown',event=>{
- pauseAnimation();
- if(event.pointerType==='touch')touchStart={x:event.clientX,y:event.clientY};
-},{passive:true});
-host.addEventListener('pointerup',event=>{
- if(!touchStart)return;
- const deltaY=event.clientY-touchStart.y;
- const deltaX=event.clientX-touchStart.x;
- touchStart=null;
- if(Math.abs(deltaY)>45&&Math.abs(deltaY)>Math.abs(deltaX)*1.2){
-  manualMove(deltaY<0?1:-1);
- }
-},{passive:true});
-host.addEventListener('wheel',event=>{
- if(Math.abs(event.deltaY)<=Math.abs(event.deltaX))return;
- event.preventDefault();
- pauseAnimation();
- wheelDelta+=event.deltaY;
- if(Math.abs(wheelDelta)>=55){
-  manualMove(wheelDelta>0?1:-1);
-  wheelDelta=0;
- }
-},{passive:false});
-window.addEventListener('pointerup',()=>{
- if(!paused)return;
- clearTimeout(resumeTimer);
- resumeTimer=setTimeout(()=>{
-  paused=false;
-  startAnimation();
- },1800);
-},{passive:true});
-document.addEventListener('visibilitychange',()=>{
- hidden=document.hidden;
- if(hidden){
-  stopAnimation();
-  clearTimeout(refreshTimer);
- }else{
-  loadActive();
-  startAnimation();
- }
-});
-window.addEventListener('resize',()=>{
- if(host.isConnected){
-  chart.applyOptions({
-   width:Math.max(1,host.clientWidth),
-   height:Math.max(1,host.clientHeight)
-  });
- }
-},{passive:true});
-
 window.VegasLayer5SetAutoQueue=reconcile;
 reconcile(window.VegasFormalSignalSymbols||[]);
+scheduleAutoScroll();
 })();
