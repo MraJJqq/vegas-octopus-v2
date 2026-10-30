@@ -365,12 +365,13 @@ async function loadMarketData(){
 /* html/body 已使用 touch-action:manipulation，交由浏览器原生手势处理。
    不再全局取消第二次 touchend，避免误吞品种卡片的点击。 */
 window.VegasApplyFormalSignals=function(){
- const formal=new Set(window.VegasFormalSignalSymbols||[]);
+ const formal=new Set((window.VegasFormalSignalSymbols||[]).map(s=>String(s||'').toUpperCase()));
  document.querySelectorAll('#market-cards-layer .mc-card[data-symbol]').forEach(card=>{
   const active=formal.has(String(card.dataset.symbol||'').toUpperCase());
   if(active)card.setAttribute('data-formal-signal','true');
   else card.removeAttribute('data-formal-signal');
  });
+ if(typeof window.VegasLayer5SetAutoQueue==='function')window.VegasLayer5SetAutoQueue(Array.from(formal));
 };
 window.VegasApplyFormalSignals();
 loadMarketData();scheduleMarketRefresh();
