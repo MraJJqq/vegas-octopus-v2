@@ -101,12 +101,24 @@ async function getCandleContext(symbol){
  }
  return{
   isStock,
+  /* 首屏走最新K线接口：美股与合约均可一次取最多1000根。 */
+  latestEndpoint:isStock?'/api/v3/market/candles':'/api/v2/mix/market/candles',
+  latestParams:isStock
+   ?{category:'SPOT',symbol:mapped,interval:period,limit:'1000'}
+   :{symbol:symbol+'USDT',productType:'USDT-FUTURES',granularity:period,limit:'1000'},
+  /* 历史接口负责向更早时间分页补齐，保留各接口规定的分页上限。 */
   endpoint:isStock?'/api/v3/market/history-candles':'/api/v2/mix/market/history-candles',
   params:isStock
    ?{category:'SPOT',symbol:mapped,interval:period,limit:'100'}
    :{symbol:symbol+'USDT',productType:'USDT-FUTURES',granularity:period,limit:'200'},
   pageLimit:isStock?100:200
  };
+}
+async function fetchLatestCandlePage(context,timeframe){
+ const params={...context.latestParams};
+ if(context.isStock)params.interval=timeframe;
+ else params.granularity=timeframe;
+ return normalizeCandles(await getJson(context.latestEndpoint+'?'+new URLSearchParams(params)));
 }
 async function fetchCandlePage(context,timeframe,endTime){
  const params={...context.params};
@@ -122,7 +134,7 @@ async function getCandles(symbol,timeframe){
  if(pending)return pending;
  const request=(async()=>{
   const context=await getCandleContext(symbol);
-  const latest=await fetchCandlePage(context,timeframe,null);
+  const latest=await fetchLatestCandlePage(context,timeframe);
   if(!latest.length)throw Error('没有有效历史K线');
   /* 并发刷新共用同一请求；完成时合并最新缓存，避免重复请求或覆盖期间更新。 */
   const current=cache.get(key);
