@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#02040a">
 <title>Vegas 章鱼 · AETHER 3D 数据宇宙</title>
 <link rel="stylesheet" href="./assets/css/app.css?v=20261030-53">
-<link rel="stylesheet" href="./assets/css/layer5-vegas-kline.css?v=20261030-4">
+<link rel="stylesheet" href="./assets/css/layer5-vegas-kline.css?v=20261030-5">
 </head>
 <body>
 <div class="app">
@@ -23,7 +23,7 @@
 </section>
 </div>
 <script src="./assets/js/v9-events.js?v=20261030-4"></script>
-<script src="./assets/js/market-cards.js?v=20261030-13"></script>
+<script src="./assets/js/market-cards.js?v=20261030-14"></script>
 <script src="./assets/js/layer5-kline-bridge.js?v=20261030-7"></script>
 <script>
 /* K线依赖异步加载；点击桥接已提前就绪。 */
@@ -41,7 +41,7 @@
   script.src=sources[index];
   script.onload=function(){
    const app=document.createElement('script');
-   app.src='./assets/js/layer5-vegas-kline.js?v=20261030-35';
+   app.src='./assets/js/layer5-vegas-kline.js?v=20261030-36';
    app.onerror=function(){console.error('[Vegas Layer 5] K-line module failed to load');if(typeof window.VegasLayer5BridgeFailed==='function')window.VegasLayer5BridgeFailed();};
    document.body.appendChild(app);
   };
