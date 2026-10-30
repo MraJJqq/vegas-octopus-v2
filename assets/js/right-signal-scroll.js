@@ -172,6 +172,15 @@ function clearTimers(){
  clearTimeout(cycleTimer);clearTimeout(refreshTimer);clearTimeout(resumeTimer);
  cycleTimer=refreshTimer=resumeTimer=0;
 }
+function scheduleRefresh(){
+ clearTimeout(refreshTimer);
+ if(hidden||!currentSymbol())return;
+ refreshTimer=setTimeout(async()=>{
+  const symbol=currentSymbol();
+  if(symbol)await loadLayer(activeLayer,symbol,periodFor(symbol));
+  scheduleRefresh();
+ },15000);
+}
 function scheduleCycle(delay=CLEAR_MS){
  clearTimeout(cycleTimer);
  if(hidden||paused||queue.length<2)return;
