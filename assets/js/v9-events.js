@@ -24,6 +24,9 @@
   function renderSymbols(targetId,symbols){
     const target=$(targetId);
     if(!target)return;
+    const renderKey="symbols:"+symbols.join(",");
+    if(target.dataset.v9RenderKey===renderKey)return;
+    target.dataset.v9RenderKey=renderKey;
     target.replaceChildren();
     if(!symbols.length){
       const empty=document.createElement("span");
@@ -43,6 +46,9 @@
     ["v9Stocks","v9Core"].forEach(id=>{
       const target=$(id);
       if(!target)return;
+      const renderKey="message:"+message;
+      if(target.dataset.v9RenderKey===renderKey)return;
+      target.dataset.v9RenderKey=renderKey;
       target.replaceChildren();
       const item=document.createElement("span");
       item.className="v9-nochange";
