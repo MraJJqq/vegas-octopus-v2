@@ -16,40 +16,35 @@
  }
  function symbolOf(card){return String(card&&card.dataset.symbol||'').trim().toUpperCase()}
  /*
-  * iPad/iPhone：不用合成 click 作为主要触发条件。
-  * touchstart 记录卡片，touchend 在位移很小的短按时打开；
-  * 有明显位移的手势仍交给卡片列表滚动逻辑。
-  */
- document.addEventListener('touchstart',event=>{
-  const touch=event.changedTouches&&event.changedTouches[0];
-  const card=findCard(event);
-  if(!touch||!card){touchCandidate=null;return}
-  touchCandidate={identifier:touch.identifier,x:touch.clientX,y:touch.clientY,symbol:symbolOf(card),at:Date.now()};
- },{capture:true,passive:true});
- document.addEventListener('touchend',event=>{
-  if(!touchCandidate)return;
-  const candidate=touchCandidate;touchCandidate=null;
-  const touch=Array.from(event.changedTouches||[]).find(item=>item.identifier===candidate.identifier);
-  if(!touch||!candidate.symbol||Date.now()-candidate.at>1200)return;
-  const moved=Math.hypot(touch.clientX-candidate.x,touch.clientY-candidate.y);
-  if(moved>10)return;
-  lastTouchOpen={symbol:candidate.symbol,at:Date.now()};
-  activate(candidate.symbol);
- },{capture:true,passive:true});
- document.addEventListener('touchcancel',()=>{touchCandidate=null},{capture:true,passive:true});
- /*
-  * 鼠标/触控笔在 pointerdown 阶段立即打开。
-  * 不再等待 click：卡片有 3D 倾斜与浮动变换，按下到抬起期间命中目标可能变化，
-  * 浏览器因此可能不派发目标卡片的 click，表现为需要连续点击。
-  * 触屏仍沿用 click，避免手指开始滚动时误打开图表。
+  * 统一使用 Pointer Events 识别触屏点击，避免 touch/click 合成事件竞争。
+  * 触屏在 pointerdown 记录原始卡片，在 pointerup 根据位移判定短按；
+  * 滑动、长按和系统取消均不打开图表。
   */
  document.addEventListener('pointerdown',event=>{
+  if(event.pointerType==='touch'){
+   if(event.isPrimary===false)return;
+   const card=findCard(event),symbol=symbolOf(card);
+   touchCandidate=symbol?{pointerId:event.pointerId,symbol,x:event.clientX,y:event.clientY,at:Date.now()}:null;
+   return;
+  }
   if((event.pointerType!=='mouse'&&event.pointerType!=='pen')||event.button!==0||event.isPrimary===false)return;
   const card=findCard(event);if(!card)return;
   const symbol=symbolOf(card);if(!symbol)return;
   event.preventDefault();event.stopImmediatePropagation();
   lastPointerOpen={symbol,at:Date.now()};
   activate(symbol);
+ },true);
+ document.addEventListener('pointerup',event=>{
+  if(event.pointerType!=='touch'||!touchCandidate||event.pointerId!==touchCandidate.pointerId)return;
+  const candidate=touchCandidate;touchCandidate=null;
+  const moved=Math.hypot(event.clientX-candidate.x,event.clientY-candidate.y);
+  const elapsed=Date.now()-candidate.at;
+  if(moved>18||elapsed>1500)return;
+  lastTouchOpen={symbol:candidate.symbol,at:Date.now()};
+  activate(candidate.symbol);
+ },true);
+ document.addEventListener('pointercancel',event=>{
+  if(touchCandidate&&event.pointerId===touchCandidate.pointerId)touchCandidate=null;
  },true);
  document.addEventListener('click',event=>{
   const card=findCard(event);if(!card)return;
