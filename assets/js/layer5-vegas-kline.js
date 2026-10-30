@@ -236,8 +236,7 @@ function draw(view={}){
    try{ts.setVisibleRange(view.range);restored=true}
    catch{ts.setVisibleLogicalRange({from:Math.max(0,newData.length-120),to:newData.length})}
    if(state.pendingVisibleRange){
-    const actualRange=restored?view.range:ts.getVisibleRange();
-    if(actualRange)globalVisibleRange=actualRange;
+    if(restored)globalVisibleRange=view.range;
     state.pendingVisibleRange=null;
     save();
    }
@@ -270,12 +269,11 @@ function openSymbol(symbol){
  const saved=state.saved[symbol]||{};
  state.period=saved.period||'4H';
  /* 旧版按品种保存的视窗只用于一次性迁移；之后统一使用 globalVisibleRange。 */
- let migratedLegacyRange=false;
  if(!globalVisibleRange){
   const legacy=saved.visibleRanges&&saved.visibleRanges[state.period]||saved.visibleRange||
    Object.values(state.saved).map(item=>item&&item.visibleRanges&&
     (item.visibleRanges[state.period]||Object.values(item.visibleRanges)[0])||item&&item.visibleRange).find(Boolean);
-  if(legacy){globalVisibleRange=legacy;migratedLegacyRange=true;}
+  if(legacy)globalVisibleRange=legacy;
  }
  if(!legacyRangesCleaned){
   const hadLegacyRanges=Object.values(state.saved).some(item=>item&&typeof item==='object'&&('visibleRanges'in item||'visibleRange'in item));
@@ -287,7 +285,6 @@ function openSymbol(symbol){
   }
   legacyRangesCleaned=true;
  }
- if(migratedLegacyRange)save();
  state.loading=false;requestVersion++;
  if(!PERIODS.includes(state.period))state.period='4H';
  const cacheKey=symbol+'|'+state.period;const cached=state.candleCache.get(cacheKey);if(cached){state.candleCache.delete(cacheKey);state.candleCache.set(cacheKey,cached);}
