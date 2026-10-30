@@ -6,7 +6,8 @@
 #vegas-right-scroll .vr-fade-layer.is-active{opacity:1;filter:blur(0);z-index:2;pointer-events:auto}
 #vegas-right-scroll .vr-chart{position:absolute;inset:0;width:100%;height:100%;pointer-events:auto;touch-action:none}
 #vegas-right-scroll .vr-head{position:absolute;z-index:5;top:5px;left:5px;right:5px;height:28px;display:flex;align-items:center;pointer-events:none}
-#vegas-right-scroll .vr-symbol,#vegas-right-scroll .vr-status{display:none}
+#vegas-right-scroll .vr-symbol{display:block;margin:0;color:rgba(225,245,255,.96);font:700 13px/28px Inter,system-ui,sans-serif;letter-spacing:.08em;text-shadow:0 0 8px rgba(92,198,255,.48);white-space:nowrap}
+#vegas-right-scroll .vr-status{display:none}
 #vegas-right-scroll .vr-periods{display:flex;gap:8px;margin-left:auto;pointer-events:auto}
 #vegas-right-scroll .vr-periods button{min-width:28px;min-height:28px;padding:4px;border:0;background:transparent;color:rgba(173,204,226,.58);font:600 11px Inter,sans-serif}
 #vegas-right-scroll .vr-periods button.active{color:#e8f8ff;text-shadow:0 0 7px rgba(92,198,255,.7)}
