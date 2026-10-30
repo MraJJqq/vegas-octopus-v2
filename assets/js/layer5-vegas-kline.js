@@ -281,4 +281,7 @@ document.addEventListener('visibilitychange',()=>{
  if(document.hidden){if(state.open&&state.candles.length)saveView();if(state.refreshTimer)clearTimeout(state.refreshTimer);state.refreshTimer=0;return;}
  if(state.open){loadCandles(true);scheduleRefresh();}
 });
+window.addEventListener('pagehide',()=>{
+ if(state.open&&state.candles.length)saveView();
+});
 })();
