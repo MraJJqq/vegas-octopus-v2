@@ -181,6 +181,12 @@ function scheduleRefresh(){
   scheduleRefresh();
  },15000);
 }
+function preloadNext(){
+ if(queue.length<2||hidden)return;
+ const nextIndex=(currentIndex+1)%queue.length;
+ const symbol=queue[nextIndex];
+ loadLayer(1-activeLayer,symbol,periodFor(symbol));
+}
 function scheduleCycle(delay=CLEAR_MS){
  clearTimeout(cycleTimer);
  if(hidden||paused||queue.length<2)return;
@@ -218,6 +224,7 @@ async function beginTransition(){
   outgoing.classList.remove('is-outgoing');
   outgoing.getBoundingClientRect();outgoing.style.transition='';
   transitioning=false;
+  preloadNext();
   scheduleCycle(CLEAR_MS);
  },TRANSITION_MS);
 }
@@ -273,7 +280,7 @@ function reconcile(symbols){
  period=periodFor(currentSymbol());
  setActive(activeLayer);
  const inactive=1-activeLayer;
- if(queue.length>1)loadLayer(inactive,queue[(currentIndex+1)%queue.length],periodFor(queue[(currentIndex+1)%queue.length]));
+ if(queue.length>1)preloadNext();
  scheduleCycle(CLEAR_MS);
  scheduleRefresh();
 }
