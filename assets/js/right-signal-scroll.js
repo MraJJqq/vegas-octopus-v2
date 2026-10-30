@@ -165,12 +165,13 @@ function createChart(layer){
  const lines=EMAS.map((length,index)=>chart.addSeries(LWC.LineSeries,{
   color:EMA_COLORS[index],lineWidth:index?2:1,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false
  }));
- return{layer,host,chart,candle,lines,symbol:'',period:'4H',request:0};
+ return{layer,host,chart,candle,lines,symbol:'',period:'4H',request:0,hasData:false};
 }
 const views=layers.map(createChart);
 function setData(view,rows){
  view.candle.setData(rows);
  view.lines.forEach((series,index)=>series.setData(ema(rows,EMAS[index])));
+ view.hasData=true;
 }
 function updateLayerStatus(index,symbol,rows){
  if(index!==activeLayer||symbol!==currentSymbol())return;
@@ -213,6 +214,7 @@ async function loadLayer(index,symbol,timeframe){
   if(index===activeLayer&&symbol===currentSymbol()){
    status.textContent='数据异常';error.textContent='行情暂不可用 · '+String(exception.message||exception).slice(0,42);error.hidden=false;
   }
+  if(token===view.request){view.symbol='';view.hasData=false;}
   return false;
  }
 }
@@ -227,7 +229,7 @@ function setActive(index){
  period=periodFor(symbol);
  renderPeriods();
  const view=views[index];
- if(view.symbol===symbol&&view.period===period){
+ if(view.symbol===symbol&&view.period===period&&view.hasData){
   status.textContent='';error.hidden=true;
  }else loadLayer(index,symbol,period);
 }
