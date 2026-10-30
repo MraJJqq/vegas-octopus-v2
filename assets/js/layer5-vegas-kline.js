@@ -43,6 +43,41 @@ const chart=LWC.createChart(chartHost,{
 });
 const candleSeries=chart.addSeries(LWC.CandlestickSeries,{upColor:'rgba(0,0,0,0)',downColor:'#ff5c7c',borderUpColor:'#2ee6a6',borderDownColor:'#ff5c7c',wickUpColor:'#2ee6a6',wickDownColor:'#ff5c7c',borderVisible:true,lastValueVisible:false,priceLineVisible:false});
 const emaSeries=EMA_LINES.map(line=>chart.addSeries(LWC.LineSeries,{color:line.color,lineWidth:Math.max(1,Math.min(4,Math.round(line.width))),lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false}));
+/* 轻量故障诊断：仅记录事件，不改变图表手势、渲染或行情逻辑。 */
+const layer5Diag=(()=>{
+ const records=[];const maxRecords=80;let lastSize='',activePointers=new Map(),canvasObserver=null,resizeObserver=null;
+ const record=(type,detail={})=>{
+  const item={at:new Date().toISOString(),type,...detail};
+  records.push(item);if(records.length>maxRecords)records.shift();
+  if(type==='canvas-context-lost'||type==='window-error'||type==='unhandled-rejection')console.warn('[Vegas Layer 5 diagnostic]',item);
+ };
+ const sizeOf=()=>{const r=chartHost.getBoundingClientRect();return {width:Math.round(r.width*100)/100,height:Math.round(r.height*100)/100,dpr:window.devicePixelRatio||1}};
+ const recordSize=()=>{const s=sizeOf(),key=[s.width,s.height,s.dpr].join('x');if(key!==lastSize){lastSize=key;record('chart-size',s)}};
+ const bindCanvas=canvas=>{
+  if(canvas.__vegasL5DiagBound)return;canvas.__vegasL5DiagBound=true;
+  canvas.addEventListener('contextlost',e=>{record('canvas-context-lost',{tag:canvas.tagName,width:canvas.width,height:canvas.height});},false);
+  canvas.addEventListener('contextrestored',()=>record('canvas-context-restored',{width:canvas.width,height:canvas.height}),false);
+ };
+ const scanCanvases=()=>chartHost.querySelectorAll('canvas').forEach(bindCanvas);
+ scanCanvases();
+ if(window.MutationObserver){canvasObserver=new MutationObserver(scanCanvases);canvasObserver.observe(chartHost,{childList:true,subtree:true})}
+ if(window.ResizeObserver){resizeObserver=new ResizeObserver(recordSize);resizeObserver.observe(chartHost)}
+ window.addEventListener('resize',recordSize,{passive:true});
+ ['pointerdown','pointerup','pointercancel','lostpointercapture'].forEach(type=>chartHost.addEventListener(type,e=>{
+  if(type==='pointerdown')activePointers.set(e.pointerId,e.pointerType||'unknown');
+  else activePointers.delete(e.pointerId);
+  record('touch-input',{event:type,pointerType:e.pointerType||'unknown',activePointers:activePointers.size,isPrimary:!!e.isPrimary});
+ },{capture:true,passive:true}));
+ document.addEventListener('visibilitychange',()=>record('visibility',{hidden:document.hidden}));
+ window.addEventListener('pagehide',()=>record('pagehide'));
+ window.addEventListener('pageshow',e=>record('pageshow',{persisted:!!e.persisted}));
+ window.addEventListener('error',e=>record('window-error',{message:String(e.message||'unknown').slice(0,160),source:String(e.filename||'').slice(-100),line:e.lineno||0}));
+ window.addEventListener('unhandledrejection',e=>record('unhandled-rejection',{reason:String(e.reason&&e.reason.message||e.reason||'unknown').slice(0,160)}));
+ record('diagnostics-start',{...sizeOf(),userAgent:String(navigator.userAgent||'').slice(0,100)});
+ return {snapshot:()=>records.map(x=>({...x})),clear:()=>{records.length=0;record('diagnostics-cleared')},size:sizeOf};
+})();
+window.VegasLayer5Diagnostics=layer5Diag;
+
 let renderedSnapshot=null;
 let suppressRangeSaveUntil=0;
 function currentSaved(){if(!state.saved[state.symbol])state.saved[state.symbol]={};return state.saved[state.symbol]}
