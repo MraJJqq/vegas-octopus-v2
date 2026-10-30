@@ -314,6 +314,7 @@ function openSymbol(symbol){
  state.loadedSymbol=cached?symbol:'';state.loadedPeriod=cached?state.period:'';
  renderControlBar();
  if(animateIn)playRollIn();else win.classList.add('is-open');
+ if(window.matchMedia&&window.matchMedia('(hover:hover)').matches&&chartHost.matches(':hover')){chartHover=true;syncChartInteraction();}
  message.hidden=true;
  if(cached){const range=globalVisibleRange;draw({range,initial:!range,restore:true});}
  loadCandles(false);
