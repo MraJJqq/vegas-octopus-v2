@@ -16,10 +16,11 @@
 #vegas-right-scroll .vr-single{inset:0}
 #vegas-right-scroll .vr-chart{inset:0;width:100%;height:100%}
 
-/* 单图循环轮播：每个品种均向上离场，下一品种从下方进入。 */
-#vegas-right-scroll .vr-single{will-change:transform,opacity}
-#vegas-right-scroll.vr-leave-up .vr-single{animation:vr-slide-out-up .32s cubic-bezier(.4,0,1,1) both}
-#vegas-right-scroll.vr-enter-up .vr-single{animation:vr-slide-in-up .42s cubic-bezier(.22,1,.36,1) both}
-@keyframes vr-slide-out-up{to{transform:translateY(-100%);opacity:0}}
-@keyframes vr-slide-in-up{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
-@media(prefers-reduced-motion:reduce){#vegas-right-scroll.vr-leave-up .vr-single,#vegas-right-scroll.vr-enter-up .vr-single{animation:none}}
+/* 轻量连续向上滚动：单个活动图表 + 切换瞬间的静态截图。 */
+#vegas-right-scroll .vr-single{isolation:isolate}
+#vegas-right-scroll .vr-chart{z-index:1;transform:translateY(0);will-change:transform}
+#vegas-right-scroll .vr-chart-enter{transform:translateY(100%)}
+#vegas-right-scroll .vr-chart-enter-active{transform:translateY(0);transition:transform .56s cubic-bezier(.22,.72,.22,1)}
+#vegas-right-scroll .vr-transition-snapshot{position:absolute;z-index:4;left:0;top:0;width:100%;height:100%;object-fit:fill;pointer-events:none;transform:translateY(0);will-change:transform}
+#vegas-right-scroll .vr-transition-snapshot.vr-transition-out{transform:translateY(-100%);transition:transform .56s cubic-bezier(.22,.72,.22,1)}
+@media(prefers-reduced-motion:reduce){#vegas-right-scroll .vr-chart-enter-active,#vegas-right-scroll .vr-transition-snapshot.vr-transition-out{transition:none}}
