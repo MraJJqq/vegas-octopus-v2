@@ -46,9 +46,18 @@ const emaSeries=EMA_LINES.map(line=>chart.addSeries(LWC.LineSeries,{color:line.c
 let renderedSnapshot=null;
 let suppressRangeSaveUntil=0;
 function currentSaved(){if(!state.saved[state.symbol])state.saved[state.symbol]={};return state.saved[state.symbol]}
+let saveTimer=0;
+function scheduleSave(){
+ if(saveTimer)clearTimeout(saveTimer);
+ saveTimer=setTimeout(()=>{saveTimer=0;save()},220);
+}
+function flushSave(){
+ if(saveTimer){clearTimeout(saveTimer);saveTimer=0;}
+ save();
+}
 chart.timeScale().subscribeVisibleTimeRangeChange(range=>{
  if(!range||!state.open||!state.candles.length||Date.now()<suppressRangeSaveUntil)return;
- const saved=currentSaved();saved.visibleRange=range;saved.period=state.period;save();
+ const saved=currentSaved();saved.visibleRange=range;saved.period=state.period;scheduleSave();
 });
 function symbolFor(symbol){return symbol+'USDT'}
 function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({perSymbol:state.saved}))}catch{}}
@@ -175,7 +184,7 @@ function draw(view={}){
  title.textContent=state.symbol+' · '+state.period+' · VEGAS';
  status.textContent=last.close.toLocaleString('en-US',{maximumFractionDigits:6})+'  '+new Date(last.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
 }
-function saveView(){const s=currentSaved();s.period=state.period;const range=chart.timeScale().getVisibleRange();if(range)s.visibleRange=range;save()}
+function saveView(){const s=currentSaved();s.period=state.period;const range=chart.timeScale().getVisibleRange();if(range)s.visibleRange=range;flushSave()}
 function openSymbol(symbol){
  if(!symbol)return;
  if(state.rotateTimer)clearTimeout(state.rotateTimer);
@@ -269,7 +278,7 @@ function scheduleRefresh(){
  },30000);
 }
 document.addEventListener('visibilitychange',()=>{
- if(document.hidden){if(state.refreshTimer)clearTimeout(state.refreshTimer);state.refreshTimer=0;return;}
+ if(document.hidden){if(state.open&&state.candles.length)saveView();if(state.refreshTimer)clearTimeout(state.refreshTimer);state.refreshTimer=0;return;}
  if(state.open){loadCandles(true);scheduleRefresh();}
 });
 })();
