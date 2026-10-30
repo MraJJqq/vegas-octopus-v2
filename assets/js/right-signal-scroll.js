@@ -225,6 +225,21 @@ function resetDefaultVisibleRange(view,rows){
  const from=Math.max(0,to-visibleBars+1);
  timeScale.setVisibleLogicalRange({from,to});
 }
+function syncLayerView(source,target){
+ const sourceScale=source.chart.timeScale(),targetScale=target.chart.timeScale();
+ try{
+  const range=sourceScale.getVisibleLogicalRange();
+  if(!range)return;
+  const options=sourceScale.options();
+  targetScale.applyOptions({
+   barSpacing:options.barSpacing,
+   rightOffset:options.rightOffset
+  });
+  targetScale.setVisibleLogicalRange(range);
+ }catch(error){
+  console.warn('[Vegas] K线视图同步失败',error);
+ }
+}
 function updateLayerStatus(index,symbol,rows){
  if(index!==activeLayer||symbol!==currentSymbol())return;
  status.textContent=rows.at(-1).close.toLocaleString('en-US',{maximumFractionDigits:5})+' · '+rows.length+'根K线';
@@ -367,6 +382,8 @@ async function beginTransition(){
   incoming.style.transition='none';incoming.style.opacity='0';incoming.style.filter='brightness(0.25)';
   transitioning=false;fadeState='idle';scheduleCycle(1000);return;
  }
+ /* 新图继承当前图的缩放比例与可视范围，避免切换瞬间跳变。 */
+ syncLayerView(views[activeLayer],views[nextLayer]);
  fadeState='transitioning';
  setTransitionHint(true);
  incoming.style.pointerEvents='none';
