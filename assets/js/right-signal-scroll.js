@@ -228,16 +228,15 @@ function resetDefaultVisibleRange(view,rows){
 function syncLayerView(source,target){
  const sourceScale=source.chart.timeScale(),targetScale=target.chart.timeScale();
  try{
-  const range=sourceScale.getVisibleLogicalRange();
-  if(!range)return;
   const options=sourceScale.options();
+  /* 只同步每根K线的像素宽度和右侧留白，不复制另一品种的绝对逻辑索引。
+     不同品种的历史数据长度可能不同，复制逻辑范围会造成K线突然放大或缩小。 */
   targetScale.applyOptions({
    barSpacing:options.barSpacing,
    rightOffset:options.rightOffset
   });
-  targetScale.setVisibleLogicalRange(range);
  }catch(error){
-  console.warn('[Vegas] K线视图同步失败',error);
+  console.warn('[Vegas] K线缩放同步失败',error);
  }
 }
 function updateLayerStatus(index,symbol,rows){
