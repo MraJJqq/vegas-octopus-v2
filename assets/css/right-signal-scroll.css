@@ -22,4 +22,4 @@
 #vegas-right-scroll.vr-enter-up .vr-single{animation:vr-slide-in-up .42s cubic-bezier(.22,1,.36,1) both}
 @keyframes vr-slide-out-up{to{transform:translateY(-100%);opacity:0}}
 @keyframes vr-slide-in-up{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
-@media(prefers-reduced-motion:reduce){#vegas-right-scroll.vr-leave-up .vr-single,#vegas-right-scroll.vr-enter-up .vr-single,#vegas-right-scroll.vr-enter-down .vr-single{animation:none}}
+@media(prefers-reduced-motion:reduce){#vegas-right-scroll.vr-leave-up .vr-single,#vegas-right-scroll.vr-enter-up .vr-single,{animation:none}}
