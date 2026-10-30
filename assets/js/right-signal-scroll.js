@@ -71,7 +71,7 @@ function makeCard(symbol){
  });
  const candle=chart.addSeries(LWC.CandlestickSeries,{upColor:'rgba(0,0,0,0)',downColor:'#ff5c7c',borderUpColor:'#2ee6a6',borderDownColor:'#ff5c7c',wickUpColor:'#2ee6a6',wickDownColor:'#ff5c7c',lastValueVisible:false,priceLineVisible:false});
  const lines=EMA_LINES.map((n,i)=>chart.addSeries(LWC.LineSeries,{color:EMA_COLORS[i],lineWidth:i===3||i===4?2:1,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false}));
- const card={symbol,el,chart,candle,lines,period:view.period,data:[],timer:0,interaction:false,rangeSaved:null,disposed:false,refreshing:false};
+ const card={symbol,el,chart,candle,lines,period:view.period,data:[],timer:0,interaction:false,rangeSaved:null,disposed:false,refreshing:false,pendingReload:false};
  function setPeriod(p){if(!PERIODS.includes(p)||p===card.period)return;card.period=p;view.period=p;saved[symbol]=view;persist();nav.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.period===p));loadCard(card,true)}
  PERIODS.forEach(p=>{const b=document.createElement('button');b.type='button';b.textContent=p;b.dataset.period=p;b.classList.toggle('active',p===card.period);b.addEventListener('click',()=>setPeriod(p));nav.appendChild(b)});
  let pointerCount=0;
@@ -97,18 +97,23 @@ function setData(card,data,initial=false){
  card.el.querySelector('.vr-error').hidden=true;
 }
 function loadCard(card,force=false){
- if(card.disposed||card.refreshing||document.hidden)return;
+ if(card.disposed||document.hidden)return;
+ if(card.refreshing){if(force)card.pendingReload=true;return;}
  card.refreshing=true;
+ const requestedPeriod=card.period;
  enqueue(async()=>{
   try{
    if(card.disposed||document.hidden)return;
-   const data=await getCandles(card.symbol,card.period);
-   if(!card.disposed)setData(card,data,false);
+   const data=await getCandles(card.symbol,requestedPeriod);
+   if(!card.disposed&&card.period===requestedPeriod)setData(card,data,false);
   }catch(e){
-   if(!card.disposed){const err=card.el.querySelector('.vr-error');err.hidden=false;err.textContent='行情暂不可用 · '+String(e.message||e).slice(0,36);card.el.querySelector('.vr-status').textContent='数据异常'}
+   if(!card.disposed&&card.period===requestedPeriod){const err=card.el.querySelector('.vr-error');err.hidden=false;err.textContent='行情暂不可用 · '+String(e.message||e).slice(0,36);card.el.querySelector('.vr-status').textContent='数据异常'}
   }finally{
    card.refreshing=false;
-   if(!card.disposed&&!document.hidden){if(card.timer)clearTimeout(card.timer);card.timer=setTimeout(()=>loadCard(card),REFRESH_MS)}
+   if(!card.disposed&&!document.hidden){
+    if(card.pendingReload){card.pendingReload=false;if(card.timer)clearTimeout(card.timer);card.timer=0;loadCard(card,true)}
+    else{if(card.timer)clearTimeout(card.timer);card.timer=setTimeout(()=>loadCard(card),REFRESH_MS)}
+   }
   }
  });
 }
