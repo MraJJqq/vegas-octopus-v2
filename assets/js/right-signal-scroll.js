@@ -140,23 +140,37 @@ async function completeCandles(symbol,timeframe,firstRows){
  const key=symbol+'|'+timeframe;
  const context=await getCandleContext(symbol);
  const all=new Map(firstRows.map(row=>[row.time,row]));
- let endTime=Math.min(...firstRows.map(row=>row.time))*1000-1;
+ let oldestKnown=all.size?Math.min(...all.keys()):0;
+ let endTime=oldestKnown?oldestKnown*1000-1:null;
  const TARGET_BARS=1200,MAX_PAGES=14;
+ const diagnostics={pages:0,received:0,added:0,stop:'target-or-page-limit',firstOldest:oldestKnown,lastOldest:oldestKnown};
  for(let page=0;page<MAX_PAGES&&all.size<TARGET_BARS;page++){
+  if(endTime===null){diagnostics.stop='no-valid-oldest-timestamp';break;}
   const rows=await fetchCandlePage(context,timeframe,endTime);
-  if(!rows.length)break;
+  diagnostics.pages++;
+  diagnostics.received+=rows.length;
+  if(!rows.length){diagnostics.stop='empty-page';break;}
   let added=0;
-  rows.forEach(row=>{if(!all.has(row.time)){all.set(row.time,row);added++}});
+  rows.forEach(row=>{if(!all.has(row.time)){all.set(row.time,row);added++;}});
+  diagnostics.added+=added;
   const oldest=Math.min(...rows.map(row=>row.time));
-  if(added===0||!Number.isFinite(oldest))break;
+  if(!Number.isFinite(oldest)){diagnostics.stop='invalid-page-timestamp';break;}
+  diagnostics.lastOldest=oldest;
+  if(added===0){diagnostics.stop='no-new-candles';break;}
+  if(oldest>=oldestKnown){diagnostics.stop='pagination-did-not-move-backward';break;}
+  oldestKnown=oldest;
   endTime=oldest*1000-1;
  }
+ if(all.size>=TARGET_BARS)diagnostics.stop='target-reached';
+ else if(diagnostics.pages>=MAX_PAGES)diagnostics.stop='max-pages-reached';
  /* 分页期间可能已有15秒行情刷新；以当前缓存覆盖相同时间戳，避免旧分页结果回滚最新K线。 */
  const current=cache.get(key);
  if(current&&Array.isArray(current.rows))current.rows.forEach(row=>all.set(row.time,row));
  const result=[...all.values()].sort((a,b)=>a.time-b.time);
  cache.set(key,{rows:result,at:current?.at??Date.now()});
  while(cache.size>30)cache.delete(cache.keys().next().value);
+ /* 只记录摘要，不输出行情价格；方便通过浏览器控制台判断分页为何提前停止。 */
+ console.info('[Vegas K-line history]',{symbol,timeframe,count:result.length,target:TARGET_BARS,...diagnostics});
  return result;
 }
 function ema(rows,length){
