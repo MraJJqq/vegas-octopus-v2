@@ -19,6 +19,7 @@ const state={open:false,symbol:'',period:'4H',candles:[],loading:false,fetchAt:0
 const readSaved=()=>{try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}catch{return {}}};
 state.saved=readSaved();
 const storedState=state.saved;state.saved=storedState.perSymbol||storedState;
+let globalVisibleRange=storedState.globalVisibleRange||null;
 const root=document.createElement('div');root.id='vegas-layer5-root';
 root.innerHTML=`<section id="vegas-layer5-window" aria-label="Vegas 全屏 K线图">
 <span id="vegas-layer5-status" aria-live="polite"></span>
@@ -51,16 +52,6 @@ const emaSeries=EMA_LINES.map(line=>chart.addSeries(LWC.LineSeries,{color:line.c
 let renderedSnapshot=null;
 let suppressRangeSaveUntil=0;
 function currentSaved(){if(!state.saved[state.symbol])state.saved[state.symbol]={};return state.saved[state.symbol]}
-function savedRange(saved,period){
- if(saved&&saved.visibleRanges&&saved.visibleRanges[period])return saved.visibleRanges[period];
- return saved&&saved.period===period?saved.visibleRange||null:null;
-}
-function rememberRange(saved,period,range){
- if(!saved||!range)return;
- if(!saved.visibleRanges||typeof saved.visibleRanges!=='object')saved.visibleRanges={};
- saved.visibleRanges[period]=range;
- saved.period=period;
-}
 let saveTimer=0;
 function scheduleSave(){
  if(saveTimer)clearTimeout(saveTimer);
@@ -72,13 +63,13 @@ function flushSave(){
 }
 chart.timeScale().subscribeVisibleTimeRangeChange(range=>{
  if(!range||!state.open||!state.candles.length||Date.now()<suppressRangeSaveUntil)return;
- const saved=currentSaved();rememberRange(saved,state.period,range);scheduleSave();
+ globalVisibleRange=range;scheduleSave();
 });
 function symbolFor(symbol){return symbol+'USDT'}
-function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({perSymbol:state.saved,defaultPeriodMigration:'4H'}))}catch{}}
+function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({perSymbol:state.saved,globalVisibleRange,defaultPeriodMigration:'4H'}))}catch{}}
 if(storedState.defaultPeriodMigration!=='4H'){
  for(const saved of Object.values(state.saved)){
-  if(saved&&typeof saved==='object'){saved.period='4H';delete saved.visibleRange;}
+  if(saved&&typeof saved==='object'){saved.period='4H';delete saved.visibleRange;delete saved.visibleRanges;}
  }
  save();
 }
@@ -176,7 +167,7 @@ async function loadCandles(force=false){
   while(state.candleCache.size>8)state.candleCache.delete(state.candleCache.keys().next().value);
   message.hidden=true;
   let range=previousRange,follow=wasFollowing,initial=false;
-  if(!sameView){const saved=state.saved[symbolAtRequest]||{};range=state.pendingVisibleRange||savedRange(saved,period);follow=false;initial=!range}
+  if(!sameView){range=state.pendingVisibleRange||globalVisibleRange;follow=false;initial=!range}
   draw({range,follow,initial});
   state.loadedSymbol=symbolAtRequest;state.loadedPeriod=period;
  }catch(e){if(requestId===requestVersion){if(e.name!=='AbortError'){state.requestFailures=Math.min(5,state.requestFailures+1);const cooldown=Math.min(300000,30000*Math.pow(2,state.requestFailures-1));state.retryAfter=Date.now()+cooldown;}message.hidden=false;message.textContent='行情读取失败 · '+String(e.message||e).slice(0,48);status.textContent='数据异常';console.warn('[Vegas Layer 5] candle load failed',e)}}
@@ -246,7 +237,7 @@ function draw(view={}){
    catch{ts.setVisibleLogicalRange({from:Math.max(0,newData.length-120),to:newData.length})}
    if(state.pendingVisibleRange){
     const actualRange=restored?view.range:ts.getVisibleRange();
-    if(actualRange)rememberRange(currentSaved(),state.period,actualRange);
+    if(actualRange)globalVisibleRange=actualRange;
     state.pendingVisibleRange=null;
     save();
    }
@@ -268,12 +259,13 @@ function renderControlBar(){
   return button;
  }));
 }
-function saveView(){const s=currentSaved();const range=chart.timeScale().getVisibleRange();if(range)rememberRange(s,state.period,range);else s.period=state.period;flushSave()}
+function saveView(){const range=chart.timeScale().getVisibleRange();if(range)globalVisibleRange=range;flushSave()}
 function openSymbol(symbol){
  if(!symbol)return;
  lastTitleTap=0;
  win.classList.remove('is-closing');
  if(state.requestController){state.requestController.abort();state.requestController=null;}
+ if(state.open&&state.candles.length)saveView();
  state.open=true;state.symbol=symbol;
  const saved=state.saved[symbol]||{};
  state.period=saved.period||'4H';
@@ -284,7 +276,7 @@ function openSymbol(symbol){
  state.loadedSymbol=cached?symbol:'';state.loadedPeriod=cached?state.period:'';
  renderControlBar();win.classList.add('is-open');
  message.hidden=true;
- if(cached){const range=savedRange(saved,state.period);draw({range,initial:!range,restore:true});}
+ if(cached){const range=globalVisibleRange;draw({range,initial:!range,restore:true});}
  loadCandles(false);
  scheduleRefresh();
 }
@@ -405,12 +397,8 @@ periodsHost.addEventListener('click',e=>{
  if(nextPeriod===state.period)return;
  const saved=currentSaved();
  const currentRange=chart.timeScale().getVisibleRange();
- if(currentRange){
-  rememberRange(saved,state.period,currentRange);
-  state.pendingVisibleRange=currentRange;
- }else{
-  state.pendingVisibleRange=savedRange(saved,state.period);
- }
+ if(currentRange)globalVisibleRange=currentRange;
+ state.pendingVisibleRange=globalVisibleRange;
  state.period=nextPeriod;
  saved.period=state.period;
  renderControlBar();
