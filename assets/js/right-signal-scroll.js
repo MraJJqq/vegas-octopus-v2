@@ -419,7 +419,7 @@ function reconcile(symbols){
  renderPeriods();
  buildTrack();
  loadActive();
- startAnimation();
+ scheduleAutoScroll();
 }
 
 window.VegasLayer5SetAutoQueue=reconcile;
