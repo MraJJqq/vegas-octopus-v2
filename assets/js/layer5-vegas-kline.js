@@ -50,7 +50,7 @@ const emaSeries=EMA_LINES.map(line=>chart.addSeries(LWC.LineSeries,{color:line.c
 
 
 let renderedSnapshot=null;
-let suppressRangeSaveUntil=0,chartAutoApplying=false;
+let suppressRangeSaveUntil=0;
 function currentSaved(){if(!state.saved[state.symbol])state.saved[state.symbol]={};return state.saved[state.symbol]}
 let saveTimer=0,rollInTimer=0,lastTitleTap=0,legacyRangesCleaned=false;
 function scheduleSave(){
@@ -62,7 +62,7 @@ function flushSave(){
  save();
 }
 chart.timeScale().subscribeVisibleTimeRangeChange(range=>{
- if(!range||!state.open||!state.candles.length||Date.now()<suppressRangeSaveUntil||chartAutoApplying)return;
+ if(!range||!state.open||!state.candles.length||Date.now()<suppressRangeSaveUntil)return;
  globalVisibleRange=range;scheduleSave();
 });
 function symbolFor(symbol){return symbol+'USDT'}
@@ -331,7 +331,7 @@ function readChartPriceRange(){
  try{return candleSeries.priceScale().getVisibleRange()}catch{return null}
 }
 function scheduleChartAutoScroll(){
- if(document.hidden||!state.open||!state.candles.length||chartAutoFrame||chartAutoTimer)return;
+ if(document.hidden||!state.open||!state.candles.length||chartInteractionActive()||chartAutoFrame||chartAutoTimer)return;
  chartAutoTimer=window.setTimeout(()=>{chartAutoTimer=0;if(!document.hidden)chartAutoFrame=requestAnimationFrame(runChartAutoScroll)},50);
 }
 function runChartAutoScroll(now){
@@ -356,9 +356,7 @@ function runChartAutoScroll(now){
     if(offset>=limit){offset=limit;chartVerticalDirection=-1}
     else if(offset<=-limit){offset=-limit;chartVerticalDirection=1}
     if(step>0){
-     chartAutoApplying=true;
-     try{candleSeries.priceScale().setVisibleRange({from:chartPriceBase.from+offset,to:chartPriceBase.to+offset})}
-     finally{chartAutoApplying=false}
+     candleSeries.priceScale().setVisibleRange({from:chartPriceBase.from+offset,to:chartPriceBase.to+offset})
     }
    }
   }
