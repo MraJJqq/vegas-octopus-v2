@@ -149,7 +149,7 @@ const chart=LWC.createChart(host,{
   vertLine:{visible:true,color:'rgba(120,190,230,.18)'},
   horzLine:{visible:true,color:'rgba(120,190,230,.18)'}
  },
- handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:true},
+ handleScroll:{mouseWheel:false,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
  handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true}
 });
 const candle=chart.addSeries(LWC.CandlestickSeries,{
@@ -193,10 +193,14 @@ chart.timeScale().subscribeVisibleTimeRangeChange(range=>{
  saveRange();
 });
 function setChart(rows){
- data=rows;
- candle.setData(rows);
- emaSeries.forEach((series,index)=>series.setData(ema(EMAS[index])));
- applySharedRange();
+ applyingRange=true;
+ try{
+  data=rows;
+  candle.setData(rows);
+  emaSeries.forEach((series,index)=>series.setData(ema(EMAS[index])));
+ }finally{
+  applySharedRange();
+ }
 }
 
 function createPanel(symbol){
@@ -256,7 +260,7 @@ async function loadActive(){
 
 /* 左滚动控制器移植：原生 scrollTop、连续触屏、滚轮、缓动与循环校正 */
 let cachedPanelStep=0,autoFrame=0,manualTarget=0,manualVelocity=0,manualFrame=0,manualLastTime=0;
-let autoResumeAt=0,touchActive=false,touchDragging=false,touchStartY=0,touchLastY=0;
+let autoResumeAt=0,touchActive=false,touchDragging=false,touchStartX=0,touchLastX=0,touchStartY=0,touchLastY=0,touchMode='pending';
 let autoLastTime=0,autoEngageLastTime=0,autoEngage=1,autoRemainder=0,autoTimer=0;
 let lastObservedScrollTop=0,normalizing=false,loopDirection=1;
 function panelStep(){
@@ -363,6 +367,8 @@ function runManualScroll(now){
  }
 }
 track.addEventListener('wheel',event=>{
+ const target=event.target;
+ if(event.ctrlKey&&target instanceof Element&&target.closest('.vr-chart'))return;
  if(Math.abs(event.deltaY)<.1)return;
  event.preventDefault();event.stopPropagation();
  const unit=event.deltaMode===1?16:event.deltaMode===2?track.clientHeight:1;
@@ -373,18 +379,27 @@ track.addEventListener('touchstart',event=>{
  const touch=event.touches[0];
  if(manualFrame){cancelAnimationFrame(manualFrame);manualFrame=0}
  manualLastTime=0;manualVelocity=0;
- touchStartY=touchLastY=touch.clientY;touchActive=true;touchDragging=false;
+ touchStartX=touchLastX=touch.clientX;touchStartY=touchLastY=touch.clientY;
+ touchActive=true;touchDragging=false;touchMode='pending';
  manualTarget=track.scrollTop;autoResumeAt=performance.now()+1600;autoEngage=0;
 },{passive:true});
 track.addEventListener('touchmove',event=>{
  if(event.touches.length!==1||!touchActive)return;
- const y=event.touches[0].clientY,delta=touchLastY-y;
- if(!touchDragging&&Math.abs(y-touchStartY)<3){touchLastY=y;return}
+ const touch=event.touches[0],x=touch.clientX,y=touch.clientY;
+ const deltaY=touchLastY-y;
+ if(touchMode==='pending'){
+  const totalX=x-touchStartX,totalY=touchStartY-y;
+  if(Math.max(Math.abs(totalX),Math.abs(totalY))<3){touchLastX=x;touchLastY=y;return}
+  touchMode=Math.abs(totalY)>=Math.abs(totalX)?'scroll':'chart';
+ }
+ touchLastX=x;touchLastY=y;
+ if(touchMode!=='scroll')return;
  touchDragging=true;event.preventDefault();
- if(Math.abs(delta)>.1){touchLastY=y;applyManualDelta(delta,'touch')}else touchLastY=y;
+ if(Math.abs(deltaY)>.1)applyManualDelta(deltaY,'touch');
 },{passive:false});
 function finishTouch(){
- touchActive=false;touchDragging=false;touchStartY=touchLastY=0;
+ touchActive=false;touchDragging=false;touchMode='pending';
+ touchStartX=touchLastX=touchStartY=touchLastY=0;
  autoResumeAt=performance.now()+1400;
 }
 track.addEventListener('touchend',finishTouch,{passive:true});
