@@ -1,7 +1,7 @@
 /* 第五层点击桥接：独立于K线CDN，页面启动后立即接收卡片输入。 */
 (()=> {
  'use strict';
- let pending='',ready=false,status=null,lastPointerOpen=null,lastTouchOpen=null,touchCandidate=null;
+ let pending='',ready=false,status=null,lastPointerOpen=null;
  function feedback(text){
   if(!status){status=document.createElement('div');status.id='vegas-layer5-bridge-status';status.style.cssText='position:fixed;z-index:10001;left:50%;bottom:56px;transform:translateX(-50%);padding:8px 12px;border:1px solid rgba(90,180,255,.35);border-radius:8px;background:rgba(2,8,20,.92);color:#d9edff;font:12px sans-serif;pointer-events:none';document.body.appendChild(status)}
   status.textContent=text;
