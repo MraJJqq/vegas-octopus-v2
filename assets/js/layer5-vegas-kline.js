@@ -285,7 +285,7 @@ function openSymbol(symbol){
  win.classList.remove('is-closing');
  if(state.requestController){state.requestController.abort();state.requestController=null;}
  if(state.open&&state.candles.length)saveView();
- state.open=true;state.symbol=symbol;
+ state.open=true;state.symbol=symbol;chartPriceBase=null;chartVerticalDirection=1;
  const saved=state.saved[symbol]||{};
  state.period=saved.period||'4H';
  /* 旧版按品种保存的视窗只用于一次性迁移；之后统一使用 globalVisibleRange。 */
@@ -550,6 +550,7 @@ periodsHost.addEventListener('click',e=>{
  const currentRange=chart.timeScale().getVisibleRange();
  if(currentRange)globalVisibleRange=currentRange;
  state.pendingVisibleRange=globalVisibleRange;
+ chartPriceBase=null;chartVerticalDirection=1;
  state.period=nextPeriod;
  saved.period=state.period;
  renderControlBar();
