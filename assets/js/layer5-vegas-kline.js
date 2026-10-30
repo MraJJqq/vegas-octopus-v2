@@ -41,7 +41,7 @@ const chart=LWC.createChart(chartHost,{
  rightPriceScale:{visible:false,borderVisible:false,scaleMargins:{top:.06,bottom:.06}},leftPriceScale:{visible:false,borderVisible:false},
  timeScale:{visible:false,borderVisible:false,rightOffset:0,barSpacing:6,minBarSpacing:1,fixLeftEdge:false,fixRightEdge:false,shiftVisibleRangeOnNewBar:false},
  crosshair:{vertLine:{visible:false},horzLine:{visible:false}},
- handleScroll:{mouseWheel:false,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
+ handleScroll:{mouseWheel:false,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:true},
  handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:false,axisDoubleClickReset:false},
  kineticScroll:{touch:true,mouse:true}
 });
@@ -228,6 +228,7 @@ function draw(view={}){
   emaData.forEach((data,index)=>emaSeries[index].setData(data));
  }
  renderedSnapshot={symbol:state.symbol,period:state.period,chartCandles:newData,emaData};
+ if(!chartPriceBase){const range=readChartPriceRange();if(range&&range.to>range.from)chartPriceBase={from:range.from,to:range.to};}
  const ts=chart.timeScale();
  if(view.range){
   let restored=false;
@@ -321,8 +322,14 @@ let autoQueue=[],autoIndex=0,autoTimer=0,autoTransitionTimer=0,autoMode=false,ma
 const AUTO_DWELL=10000,ROLL_MS=240,FADE_MS=240;
 let autoInteractionPaused=false,lastChartInteractionType='mouse';
 const activeChartPointers=new Set();
-const CHART_AUTO_SPEED=.8;
-let chartAutoFrame=0,chartAutoTimer=0,chartAutoLastTime=0,chartAutoResumeAt=0,chartAutoEngage=1,chartAutoEngageLastTime=0;
+/* 竖向自动平移：只改变隐藏价格轴的可视窗口，不移动卡片或周期栏。 */
+const CHART_VERTICAL_SPEED=.035;
+const CHART_VERTICAL_LIMIT=.22;
+let chartAutoFrame=0,chartAutoTimer=0,chartAutoLastTime=0,chartAutoResumeAt=0;
+let chartAutoEngage=1,chartAutoEngageLastTime=0,chartPriceBase=null,chartVerticalDirection=1;
+function readChartPriceRange(){
+ try{return candleSeries.priceScale().getVisibleRange()}catch{return null}
+}
 function scheduleChartAutoScroll(){
  if(document.hidden||!state.open||!state.candles.length||chartAutoFrame||chartAutoTimer)return;
  chartAutoTimer=window.setTimeout(()=>{chartAutoTimer=0;if(!document.hidden)chartAutoFrame=requestAnimationFrame(runChartAutoScroll)},50);
@@ -339,20 +346,23 @@ function runChartAutoScroll(now){
   chartAutoEngageLastTime=now;
   if(now>=chartAutoResumeAt){
    chartAutoEngage=Math.min(1,chartAutoEngage+engageDt/1000);
-   const ts=chart.timeScale(),range=ts.getVisibleLogicalRange(),count=state.candles.length;
-   if(range&&count>1){
-    const width=Math.max(1,Math.min(count,range.to-range.from));
-    const advance=CHART_AUTO_SPEED*chartAutoEngage*dt;
-    if(advance>0){
-     let from=range.from+advance,to=range.to+advance;
-     if(to>=count-.5){from=0;to=width;}
+   const range=readChartPriceRange();
+   if(range&&Number.isFinite(range.from)&&Number.isFinite(range.to)&&range.to>range.from){
+    if(!chartPriceBase)chartPriceBase={from:range.from,to:range.to};
+    const span=chartPriceBase.to-chartPriceBase.from;
+    const limit=span*CHART_VERTICAL_LIMIT;
+    const step=span*CHART_VERTICAL_SPEED*chartAutoEngage*dt;
+    let offset=(range.from-chartPriceBase.from)+chartVerticalDirection*step;
+    if(offset>=limit){offset=limit;chartVerticalDirection=-1}
+    else if(offset<=-limit){offset=-limit;chartVerticalDirection=1}
+    if(step>0){
      chartAutoApplying=true;
-     try{ts.setVisibleLogicalRange({from,to})}
+     try{candleSeries.priceScale().setVisibleRange({from:chartPriceBase.from+offset,to:chartPriceBase.to+offset})}
      finally{chartAutoApplying=false}
     }
    }
   }
- }catch(error){console.warn('[Vegas Layer 5] auto-scroll frame recovered',error)}
+ }catch(error){console.warn('[Vegas Layer 5] vertical auto-scroll frame recovered',error)}
  finally{scheduleChartAutoScroll()}
 }
 function pauseChartAutoScroll(type){
@@ -364,6 +374,9 @@ function pauseChartAutoScroll(type){
 }
 function resumeChartAutoScroll(type){
  lastChartInteractionType=type||lastChartInteractionType;
+ const current=readChartPriceRange();
+ if(current&&Number.isFinite(current.from)&&Number.isFinite(current.to)&&current.to>current.from)
+  chartPriceBase={from:current.from,to:current.to};
  chartAutoResumeAt=performance.now()+(lastChartInteractionType==='touch'?1400:180);
  chartAutoEngage=lastChartInteractionType==='touch'?0:.28;
  chartAutoLastTime=0;chartAutoEngageLastTime=0;
@@ -373,6 +386,7 @@ function clearChartAutoScroll(){
  if(chartAutoFrame)cancelAnimationFrame(chartAutoFrame);
  if(chartAutoTimer)clearTimeout(chartAutoTimer);
  chartAutoFrame=0;chartAutoTimer=0;chartAutoLastTime=0;chartAutoEngageLastTime=0;
+ chartPriceBase=null;chartVerticalDirection=1;
 }
 function clearAutoTimers(){
  if(autoTimer){clearTimeout(autoTimer);autoTimer=0;}
