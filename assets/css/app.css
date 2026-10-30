@@ -47,6 +47,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 
 /* 最新事件模块：统一布局规则，保留透明背景、紧凑两列和内部滚动。 */
 .topbar{
+  pointer-events:auto!important;
   position:absolute!important;
   top:max(12px,env(safe-area-inset-top))!important;
   right:max(12px,env(safe-area-inset-right))!important;
