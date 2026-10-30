@@ -45,14 +45,14 @@ const candleSeries=chart.addSeries(LWC.CandlestickSeries,{upColor:'rgba(0,0,0,0)
 const emaSeries=EMA_LINES.map(line=>chart.addSeries(LWC.LineSeries,{color:line.color,lineWidth:Math.max(1,Math.min(4,Math.round(line.width))),lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false}));
 /* 轻量故障诊断：仅记录事件，不改变图表手势、渲染或行情逻辑。 */
 const layer5Diag=(()=>{
- const records=[];const maxRecords=80;let lastSize='',activePointers=new Map(),canvasObserver=null,resizeObserver=null;
+ const records=[];const maxRecords=120;let lastSize='',activePointers=new Map(),canvasObserver=null,resizeObserver=null,lastMoveAt=0,lastWheelAt=0,lastRangeAt=0,lastSizeAt=0;
  const record=(type,detail={})=>{
   const item={at:new Date().toISOString(),type,...detail};
   records.push(item);if(records.length>maxRecords)records.shift();
   if(type==='canvas-context-lost'||type==='window-error'||type==='unhandled-rejection')console.warn('[Vegas Layer 5 diagnostic]',item);
  };
  const sizeOf=()=>{const r=chartHost.getBoundingClientRect();return {width:Math.round(r.width*100)/100,height:Math.round(r.height*100)/100,dpr:window.devicePixelRatio||1}};
- const recordSize=()=>{const s=sizeOf(),key=[s.width,s.height,s.dpr].join('x');if(key!==lastSize){lastSize=key;record('chart-size',s)}};
+ const recordSize=()=>{const s=sizeOf(),key=[s.width,s.height,s.dpr].join('x'),now=performance.now();if(key!==lastSize){const previous=lastSize;lastSize=key;record('chart-size',{...s,previous:previous||null,rapid:lastSizeAt>0&&now-lastSizeAt<250});lastSizeAt=now}};
  const bindCanvas=canvas=>{
   if(canvas.__vegasL5DiagBound)return;canvas.__vegasL5DiagBound=true;
   canvas.addEventListener('contextlost',e=>{record('canvas-context-lost',{tag:canvas.tagName,width:canvas.width,height:canvas.height});},false);
@@ -66,15 +66,30 @@ const layer5Diag=(()=>{
  ['pointerdown','pointerup','pointercancel','lostpointercapture'].forEach(type=>chartHost.addEventListener(type,e=>{
   if(type==='pointerdown')activePointers.set(e.pointerId,e.pointerType||'unknown');
   else activePointers.delete(e.pointerId);
-  record('touch-input',{event:type,pointerType:e.pointerType||'unknown',activePointers:activePointers.size,isPrimary:!!e.isPrimary});
+  record('touch-input',{event:type,pointerType:e.pointerType||'unknown',activePointers:activePointers.size,isPrimary:!!e.isPrimary,buttons:e.buttons||0});
  },{capture:true,passive:true}));
+ chartHost.addEventListener('pointermove',e=>{
+  const now=performance.now();if(now-lastMoveAt<120)return;lastMoveAt=now;
+  record('pointer-move',{pointerType:e.pointerType||'unknown',activePointers:activePointers.size,buttons:e.buttons||0,isPrimary:!!e.isPrimary});
+ },{capture:true,passive:true});
+ chartHost.addEventListener('wheel',e=>{
+  const now=performance.now();if(now-lastWheelAt<180)return;lastWheelAt=now;
+  record('wheel-input',{deltaMode:e.deltaMode,ctrlKey:!!e.ctrlKey});
+ },{capture:true,passive:true});
+ chart.timeScale().subscribeVisibleLogicalRangeChange(range=>{
+  const now=performance.now();if(!range||now-lastRangeAt<250)return;lastRangeAt=now;
+  record('visible-range',{from:Math.round(range.from*100)/100,to:Math.round(range.to*100)/100});
+ });
+ if(window.PerformanceObserver){
+  try{const observer=new PerformanceObserver(list=>{for(const entry of list.getEntries())record('long-task',{duration:Math.round(entry.duration),start:Math.round(entry.startTime)})});observer.observe({type:'longtask',buffered:true})}catch{}
+ }
  document.addEventListener('visibilitychange',()=>record('visibility',{hidden:document.hidden}));
  window.addEventListener('pagehide',()=>record('pagehide'));
  window.addEventListener('pageshow',e=>record('pageshow',{persisted:!!e.persisted}));
  window.addEventListener('error',e=>record('window-error',{message:String(e.message||'unknown').slice(0,160),source:String(e.filename||'').slice(-100),line:e.lineno||0}));
  window.addEventListener('unhandledrejection',e=>record('unhandled-rejection',{reason:String(e.reason&&e.reason.message||e.reason||'unknown').slice(0,160)}));
  record('diagnostics-start',{...sizeOf(),userAgent:String(navigator.userAgent||'').slice(0,100)});
- return {snapshot:()=>records.map(x=>({...x})),clear:()=>{records.length=0;record('diagnostics-cleared')},size:sizeOf};
+ return {snapshot:()=>records.map(x=>({...x})),export:()=>JSON.stringify({capturedAt:new Date().toISOString(),size:sizeOf(),records},null,2),clear:()=>{records.length=0;record('diagnostics-cleared')},size:sizeOf};
 })();
 window.VegasLayer5Diagnostics=layer5Diag;
 
