@@ -248,6 +248,7 @@ function renderControlBar(){
 function saveView(){const s=currentSaved();s.period=state.period;const range=chart.timeScale().getVisibleRange();if(range)s.visibleRange=range;flushSave()}
 function openSymbol(symbol){
  if(!symbol)return;
+ lastTitleTap=0;
  if(state.rotateTimer)clearTimeout(state.rotateTimer);
  state.rotateTimer=0;
  if(state.requestController){state.requestController.abort();state.requestController=null;}
@@ -290,7 +291,7 @@ function scheduleAutoRotate(){
   scheduleAutoRotate();
  },6000);
 }
-function close(){if(state.open&&state.candles.length)saveView();if(state.requestController){state.requestController.abort();state.requestController=null;}state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];if(state.rotateTimer)clearTimeout(state.rotateTimer);state.rotateTimer=0;if(state.refreshTimer)clearTimeout(state.refreshTimer);state.refreshTimer=0;win.classList.remove('is-open');}
+function close(){lastTitleTap=0;if(state.open&&state.candles.length)saveView();if(state.requestController){state.requestController.abort();state.requestController=null;}state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];if(state.rotateTimer)clearTimeout(state.rotateTimer);state.rotateTimer=0;if(state.refreshTimer)clearTimeout(state.refreshTimer);state.refreshTimer=0;win.classList.remove('is-open');}
 /* 品种名称双击/触屏双击退出；周期按钮仍只响应单击。 */
 let lastTitleTap=0;
 title.addEventListener('touchend',e=>{
