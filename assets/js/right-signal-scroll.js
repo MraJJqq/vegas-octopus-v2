@@ -29,6 +29,7 @@ const layers=[0,1].map(index=>{
 });
 
 let queue=[],currentIndex=0,period='4H',periodSettings={},manualSymbol='';
+let manualTimer=0;
 let activeLayer=0,cycleTimer=0,transitioning=false,paused=false;
 let cycleToken=0,hidden=document.hidden,refreshTimer=0;
 let stockMap=null,stockMapAt=0,cache=new Map();
@@ -277,6 +278,7 @@ function showManualSymbol(value){
  const symbol=String(value||'').trim().toUpperCase();
  if(!/^[A-Z0-9.]+$/.test(symbol))return false;
  manualSymbol=symbol;
+ clearTimeout(manualTimer);
  ++cycleToken;clearTimeout(cycleTimer);transitioning=false;paused=false;
  root.hidden=false;
  layers.forEach((layer,index)=>{
@@ -290,6 +292,23 @@ function showManualSymbol(value){
  period=periodFor(symbol);
  setActive(activeLayer);
  scheduleRefresh();
+ manualTimer=setTimeout(()=>{
+  manualTimer=0;
+  manualSymbol='';
+  if(!queue.length){
+   ++cycleToken;clearTimers();transitioning=false;paused=false;
+   root.hidden=true;
+   views.forEach(view=>{view.request++;view.symbol='';});
+   return;
+  }
+  currentIndex=Math.max(0,queue.indexOf(symbol));
+  if(currentIndex>=queue.length)currentIndex=0;
+  period=periodFor(currentSymbol());
+  setActive(activeLayer);
+  if(queue.length>1)preloadNext();
+  scheduleCycle(CLEAR_MS);
+  scheduleRefresh();
+ },10000);
  return true;
 }
 window.VegasLayer5ShowSymbol=showManualSymbol;
