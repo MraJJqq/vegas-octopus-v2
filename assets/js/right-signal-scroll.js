@@ -115,7 +115,7 @@ function resumeChart(card){
  pauseUntil=performance.now()+1200;paused=false;startScroll();
 }
 function startScroll(){if(document.hidden||autoFrame||paused)return;autoFrame=requestAnimationFrame(scrollStep)}
-function scrollStep(now){autoFrame=0;if(document.hidden||paused)return;if(!lastFrame)lastFrame=now;const dt=Math.min(50,now-lastFrame);lastFrame=now;const max=Math.max(0,list.scrollHeight-list.clientHeight);if(max>2){list.scrollTop+=AUTO_SPEED*dt/1000;if(list.scrollTop>=max-1){list.scrollTop=0}}startScroll()}
+function scrollStep(now){autoFrame=0;if(document.hidden||paused)return;if(!lastFrame)lastFrame=now;const dt=Math.min(50,now-lastFrame);lastFrame=now;const first=list.firstElementChild;if(first&&list.children.length>1){list.scrollTop+=AUTO_SPEED*dt/1000;const gap=parseFloat(getComputedStyle(list).rowGap)||0;const step=first.getBoundingClientRect().height+gap;if(step>0&&list.scrollTop>=step){list.appendChild(first);list.scrollTop-=step}}startScroll()}
 function syncLeftBoundary(){
  const left=document.querySelector('#market-cards-layer .mc-columns');if(!left)return;
  const apply=()=>{root.style.left=Math.round(left.getBoundingClientRect().right)+'px'};
