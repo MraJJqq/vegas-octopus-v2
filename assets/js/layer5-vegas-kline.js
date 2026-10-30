@@ -160,15 +160,14 @@ async function loadCandles(force=false){
   const unique=[];for(const c of data){if(unique.length&&unique[unique.length-1].time===c.time)unique[unique.length-1]=c;else unique.push(c)}
   if(!unique.length)throw Error('交易所未返回有效K线');
   const sameView=state.loadedSymbol===symbolAtRequest&&state.loadedPeriod===period&&state.candles.length>0;
-  const previousRange=sameView?chart.timeScale().getVisibleRange():null;
-  const wasFollowing=sameView&&chart.timeScale().scrollPosition()<=1.5;
+  const previousRange=sameView?(chart.timeScale().getVisibleRange()||globalVisibleRange):null;
   state.candles=unique;state.fetchAt=Date.now();state.requestFailures=0;state.retryAfter=0;
   const cacheKey=symbolAtRequest+'|'+period;state.candleCache.delete(cacheKey);state.candleCache.set(cacheKey,{candles:unique,fetchAt:state.fetchAt});
   while(state.candleCache.size>8)state.candleCache.delete(state.candleCache.keys().next().value);
   message.hidden=true;
-  let range=previousRange,follow=wasFollowing,initial=false;
-  if(!sameView){range=state.pendingVisibleRange||globalVisibleRange;follow=false;initial=!range}
-  draw({range,follow,initial});
+  let range=previousRange,initial=false;
+  if(!sameView){range=state.pendingVisibleRange||globalVisibleRange;initial=!range}
+  draw({range,initial});
   state.loadedSymbol=symbolAtRequest;state.loadedPeriod=period;
  }catch(e){if(requestId===requestVersion){if(e.name!=='AbortError'){state.requestFailures=Math.min(5,state.requestFailures+1);const cooldown=Math.min(300000,30000*Math.pow(2,state.requestFailures-1));state.retryAfter=Date.now()+cooldown;}message.hidden=false;message.textContent='行情读取失败 · '+String(e.message||e).slice(0,48);status.textContent='数据异常';console.warn('[Vegas Layer 5] candle load failed',e)}}
  finally{if(state.requestController===controller)state.requestController=null;if(requestId===requestVersion)state.loading=false}
@@ -230,7 +229,7 @@ function draw(view={}){
  }
  renderedSnapshot={symbol:state.symbol,period:state.period,chartCandles:newData,emaData};
  const ts=chart.timeScale();
- if(view.range&&!view.follow){
+ if(view.range){
   let restored=false;
   try{ts.setVisibleRange(view.range);restored=true}
   catch{
@@ -245,15 +244,14 @@ function draw(view={}){
    };
    const from=toLogical(view.range.from),to=toLogical(view.range.to);
    if(Number.isFinite(from)&&Number.isFinite(to)&&to>from)ts.setVisibleLogicalRange({from,to});
-   else ts.setVisibleLogicalRange({from:Math.max(0,newData.length-120),to:newData.length});
+
   }
   if(state.pendingVisibleRange){
    if(restored)globalVisibleRange=view.range;
    state.pendingVisibleRange=null;
    save();
   }
- }else if(view.follow)ts.scrollToRealTime();
- else if(view.initial&&!incremental)ts.setVisibleLogicalRange({from:Math.max(0,newData.length-120),to:newData.length});
+ }else if(view.initial&&!incremental)ts.setVisibleLogicalRange({from:Math.max(0,newData.length-120),to:newData.length});
  const last=state.candles[state.candles.length-1];
  title.textContent=state.symbol;
  status.textContent=last.close.toLocaleString('en-US',{maximumFractionDigits:6})+'  '+new Date(last.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
