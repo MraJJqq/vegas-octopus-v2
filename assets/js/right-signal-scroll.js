@@ -1,126 +1,31 @@
-/* 右滚动：单图轮播，仅展示当前正式信号品种。独立于冻结的左滚动。 */
-(()=> {
-'use strict';
-if(window.__VEGAS_RIGHT_SCROLL_INIT__)return;
-window.__VEGAS_RIGHT_SCROLL_INIT__=true;
-const API='https://api.bitget.com';
-const STOCKS=new Set(['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','QCOM','AMD','TSM','AVGO','ORCL','ARM','MU','ASML','SNDK','SKHYNIX','MRVL','GLW','HOOD','CBRS','SPCX']);
-const PERIODS=['1H','4H','1D'], EMA_LINES=[12,36,43,144,169,576,676];
-const EMA_COLORS=['#f5d76e','#f3f6ff','#f3f6ff','#f4d35e','#f4d35e','#ff4e5e','#ff4e5e'];
-const ROTATE_MS=9000, REFRESH_MS=15000, MAX_REQUESTS=2;
-const root=document.getElementById('vegas-right-scroll'), LWC=window.LightweightCharts;
-if(!root||!LWC){console.error('[Vegas Right Scroll] missing host or chart library');return;}
-const host=root.querySelector('.vr-chart'), title=root.querySelector('.vr-symbol'), status=root.querySelector('.vr-status');
-const nav=root.querySelector('.vr-periods'), error=root.querySelector('.vr-error');
-const cache=new Map(), settings=readSettings();
-let queue=[],index=0,current='',period='4H',data=[],requestToken=0,rotationTimer=0,refreshTimer=0,interactionTimer=0;
-let paused=false,hidden=false,activeRequests=0,requestQueue=[],transitionTimer=0;
-let sharedVisibleRange=null,applyingData=false,pendingSnapshot=null,transitionCleanup=0;
-function readSettings(){try{return JSON.parse(localStorage.getItem('vegas-right-single-v1')||'{}')}catch{return {}}}
-function saveSettings(){try{localStorage.setItem('vegas-right-single-v1',JSON.stringify(settings))}catch{}}
-function symbolSetting(s){if(!settings[s])settings[s]={period:'4H'};if(!PERIODS.includes(settings[s].period))settings[s].period='4H';return settings[s]}
-function ema(values,n){const out=new Array(values.length).fill(null);if(values.length<n)return out;let sum=0;for(let i=0;i<n;i++)sum+=values[i];let p=sum/n;out[n-1]=p;const k=2/(n+1);for(let i=n;i<values.length;i++){p=values[i]*k+p*(1-k);out[i]=p}return out}
-async function fetchJson(path){const c=new AbortController(),t=setTimeout(()=>c.abort(),12000);try{const r=await fetch(API+path,{cache:'no-store',signal:c.signal});if(!r.ok)throw Error('HTTP '+r.status);const j=await r.json();if(j.code!=='00000'||!Array.isArray(j.data))throw Error(j.msg||'行情响应无效');return j.data}finally{clearTimeout(t)}}
-let stockMap=null,stockMapAt=0,stockMapPromise=null;
-async function stockSymbol(s){
- if(!stockMap||Date.now()-stockMapAt>300000){
-  if(!stockMapPromise)stockMapPromise=(async()=>{const rows=await fetchJson('/api/v3/reality/market/stock-info');const next=new Map(rows.filter(x=>x&&x.code&&x.symbol).map(x=>[String(x.code).toUpperCase(),String(x.symbol)]));const sk=rows.find(x=>x&&x.symbol&&(/SKHYNIX/i.test(String(x.code||''))||/SK\s*HYNIX/i.test(String(x.name||''))||/RSKHYUSDT/i.test(String(x.symbol||''))));if(sk)next.set('SKHYNIX',String(sk.symbol));stockMap=next;stockMapAt=Date.now()})().finally(()=>{stockMapPromise=null});
-  await stockMapPromise;
- }
- const v=stockMap.get(s);if(!v)throw Error('无现货映射');return v;
-}
-async function getCandles(symbol,p){
- const key=symbol+'|'+p,hit=cache.get(key);if(hit&&Date.now()-hit.at<REFRESH_MS)return hit.data;
- let rows;
- if(STOCKS.has(symbol)){const mapped=await stockSymbol(symbol);rows=await fetchJson('/api/v3/market/candles?'+new URLSearchParams({category:'SPOT',symbol:mapped,interval:p,limit:'1000'}))}
- else rows=await fetchJson('/api/v2/mix/market/candles?'+new URLSearchParams({symbol:symbol+'USDT',productType:'USDT-FUTURES',granularity:p,limit:'1000'}));
- const result=rows.filter(r=>Array.isArray(r)&&r.slice(0,5).every(v=>Number.isFinite(Number(v))&&Number(v)>0)).map(r=>({time:Math.floor(Number(r[0])/1000),open:+r[1],high:+r[2],low:+r[3],close:+r[4]})).sort((a,b)=>a.time-b.time);
- const unique=[];for(const c of result){if(unique.length&&unique[unique.length-1].time===c.time)unique[unique.length-1]=c;else unique.push(c)}
- if(!unique.length)throw Error('没有有效K线');cache.set(key,{data:unique,at:Date.now()});while(cache.size>24)cache.delete(cache.keys().next().value);return unique;
-}
-function enqueue(task){requestQueue.push(task);pump()}
-function pump(){while(activeRequests<MAX_REQUESTS&&requestQueue.length){const task=requestQueue.shift();activeRequests++;task().catch(()=>{}).finally(()=>{activeRequests--;pump()})}}
-const chart=LWC.createChart(host,{autoSize:true,attributionLogo:false,
- layout:{background:{type:LWC.ColorType.Solid,color:'rgba(0,0,0,0)'},textColor:'rgba(210,232,255,.72)',fontSize:11,fontFamily:'Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'},
- grid:{vertLines:{visible:false},horzLines:{visible:false}},rightPriceScale:{visible:false,borderVisible:false,scaleMargins:{top:.09,bottom:.08},autoScale:true},leftPriceScale:{visible:false,borderVisible:false,autoScale:true},
- timeScale:{visible:false,borderVisible:false,rightOffset:3,barSpacing:5,minBarSpacing:.5,shiftVisibleRangeOnNewBar:false,timeVisible:false,secondsVisible:false},
- crosshair:{vertLine:{visible:true,color:'rgba(120,190,230,.18)'},horzLine:{visible:true,color:'rgba(120,190,230,.18)'}},
- handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:true},handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true,axisDoubleClickReset:true},kineticScroll:{touch:true,mouse:true}});
-const candle=chart.addSeries(LWC.CandlestickSeries,{upColor:'rgba(0,0,0,0)',downColor:'#ff5c7c',borderUpColor:'#2ee6a6',borderDownColor:'#ff5c7c',wickUpColor:'#2ee6a6',wickDownColor:'#ff5c7c',lastValueVisible:false,priceLineVisible:false});
-const lines=EMA_LINES.map((n,i)=>chart.addSeries(LWC.LineSeries,{color:EMA_COLORS[i],lineWidth:i===0?1:2,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false}));
-function renderPeriodButtons(){nav.replaceChildren();PERIODS.forEach(p=>{const b=document.createElement('button');b.type='button';b.textContent=p;b.dataset.period=p;b.classList.toggle('active',p===period);b.addEventListener('click',()=>{if(p===period)return;period=p;symbolSetting(current).period=p;saveSettings();renderPeriodButtons();loadCurrent()});nav.appendChild(b)})}
-function setChartData(rows){
- const previous=sharedVisibleRange;applyingData=true;data=rows;candle.setData(rows);const closes=rows.map(x=>x.close);
- lines.forEach((line,i)=>line.setData(ema(closes,EMA_LINES[i]).map((v,j)=>v==null?null:{time:rows[j].time,value:v}).filter(Boolean)));
- try{if(previous)chart.timeScale().setVisibleLogicalRange(previous);else{const initial={from:Math.max(0,rows.length-110),to:rows.length};chart.timeScale().setVisibleLogicalRange(initial);sharedVisibleRange=initial}}catch{}
- applyingData=false;const last=rows[rows.length-1];status.textContent=last.close.toLocaleString('en-US',{maximumFractionDigits:5});error.hidden=true;
-}
-chart.timeScale().subscribeVisibleLogicalRangeChange(range=>{if(!applyingData&&range&&current&&data.length)sharedVisibleRange={from:range.from,to:range.to}});
-function clearTimers(){if(rotationTimer)clearTimeout(rotationTimer);if(refreshTimer)clearTimeout(refreshTimer);rotationTimer=refreshTimer=0}
-function scheduleRotation(){
- if(hidden||paused||!current||!queue.length)return;
- if(rotationTimer)clearTimeout(rotationTimer);
- rotationTimer=setTimeout(()=>{
-  rotationTimer=0;
-  if(hidden||paused||!current)return;
-  if(queue.length>1)advance();
- },ROTATE_MS);
-}
-function advance(){
- if(hidden||paused||queue.length<2)return;
- index=(index+1)%queue.length;
- try{pendingSnapshot=chart.takeScreenshot()}catch{pendingSnapshot=null}
- showSymbol(queue[index]);
-}
-function playScrollTransition(){
- const old=root.querySelector('.vr-transition-snapshot');
- if(old)old.remove();
- if(transitionCleanup)clearTimeout(transitionCleanup);
- if(pendingSnapshot){
-  const snapshot=document.createElement('canvas');
-  snapshot.className='vr-transition-snapshot';
-  snapshot.width=pendingSnapshot.width;snapshot.height=pendingSnapshot.height;
-  snapshot.getContext('2d').drawImage(pendingSnapshot,0,0);
-  root.querySelector('.vr-single').appendChild(snapshot);
- }
- pendingSnapshot=null;
- host.classList.remove('vr-chart-enter','vr-chart-enter-active');
- void host.offsetWidth;
- host.classList.add('vr-chart-enter');
- requestAnimationFrame(()=>requestAnimationFrame(()=>{
-  host.classList.add('vr-chart-enter-active');
-  const snapshot=root.querySelector('.vr-transition-snapshot');
-  if(snapshot)snapshot.classList.add('vr-transition-out');
- }));
- transitionCleanup=setTimeout(()=>{
-  host.classList.remove('vr-chart-enter','vr-chart-enter-active');
-  const snapshot=root.querySelector('.vr-transition-snapshot');if(snapshot)snapshot.remove();
-  transitionCleanup=0;
- },620);
-}
-function showSymbol(symbol){
- if(!symbol||hidden)return;current=symbol;period=symbolSetting(symbol).period;title.textContent=symbol;status.textContent='加载行情…';error.hidden=true;renderPeriodButtons();clearTimers();
- const token=++requestToken;enqueue(async()=>{try{const rows=await getCandles(symbol,period);if(token!==requestToken||current!==symbol)return;setChartData(rows);if(pendingSnapshot)playScrollTransition();scheduleRotation();scheduleRefresh()}catch(e){if(token!==requestToken)return;status.textContent='数据异常';error.textContent='行情暂不可用 · '+String(e.message||e).slice(0,48);error.hidden=false;scheduleRotation()}})
-}
-function scheduleRefresh(){if(refreshTimer)clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>loadCurrent(false),REFRESH_MS)}
-function loadCurrent(){if(!current||hidden)return;const symbol=current,p=period,token=++requestToken;enqueue(async()=>{try{const rows=await getCandles(symbol,p);if(token!==requestToken||current!==symbol||period!==p)return;setChartData(rows)}catch(e){if(token===requestToken){status.textContent='数据异常';error.textContent='行情暂不可用 · '+String(e.message||e).slice(0,48);error.hidden=false}}finally{if(!hidden&&current===symbol)scheduleRefresh()}})}
-function resumeRotation(){if(interactionTimer)clearTimeout(interactionTimer);interactionTimer=setTimeout(()=>{interactionTimer=0;paused=false;scheduleRotation();scheduleRefresh()},1800)}
-function pauseForInteraction(){paused=true;clearTimers();resumeRotation()}
-['pointerdown','touchstart','wheel'].forEach(type=>host.addEventListener(type,pauseForInteraction,{passive:true}));
-let swipeStart=null;
-host.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(t)swipeStart={x:t.clientX,y:t.clientY,at:performance.now()}},{passive:true});
-host.addEventListener('touchend',e=>{if(!swipeStart)return;const t=e.changedTouches&&e.changedTouches[0];if(!t){swipeStart=null;return}const dy=t.clientY-swipeStart.y,dx=t.clientX-swipeStart.x,dt=performance.now()-swipeStart.at;swipeStart=null;if(dy<-58&&Math.abs(dy)>Math.abs(dx)*1.2&&dt<650&&queue.length>1){if(interactionTimer)clearTimeout(interactionTimer);paused=false;clearTimers();advance()}},{passive:true});
-window.addEventListener('pointerup',()=>{if(paused){if(interactionTimer)clearTimeout(interactionTimer);resumeRotation()}},{passive:true});
-window.addEventListener('pointercancel',()=>{if(paused){if(interactionTimer)clearTimeout(interactionTimer);resumeRotation()}},{passive:true});
-function reconcile(symbols){
- const next=Array.from(new Set((symbols||[]).map(s=>String(s||'').trim().toUpperCase()).filter(s=>/^[A-Z0-9.]+$/.test(s))));
- const old=current;queue=next;
- if(!queue.length){current='';++requestToken;clearTimers();paused=true;pendingSnapshot=null;const snapshot=root.querySelector('.vr-transition-snapshot');if(snapshot)snapshot.remove();title.textContent='';status.textContent='';error.hidden=true;root.hidden=true;candle.setData([]);lines.forEach(x=>x.setData([]));data=[];return}
- root.hidden=false;paused=false;if(interactionTimer){clearTimeout(interactionTimer);interactionTimer=0}let keep=queue.indexOf(old);if(keep>=0)index=keep;else index=Math.min(index,queue.length-1);
- if(old!==queue[index])showSymbol(queue[index]);else if(!old)showSymbol(queue[index]);else scheduleRotation();
-}
-window.VegasLayer5SetAutoQueue=reconcile;
-document.addEventListener('visibilitychange',()=>{hidden=document.hidden;if(hidden){clearTimers();if(interactionTimer)clearTimeout(interactionTimer);}else if(current){loadCurrent();scheduleRotation()}},{passive:true});
-window.addEventListener('pagehide',()=>{clearTimers();if(interactionTimer)clearTimeout(interactionTimer);});
-reconcile(window.VegasFormalSignalSymbols||[]);
+/* 右滚动：纵向连续循环轨道 + 静态K线预览 + 唯一活动图表 */
+(()=>{'use strict';if(window.__VEGAS_RIGHT_SCROLL_INIT__)return;window.__VEGAS_RIGHT_SCROLL_INIT__=true;
+const API='https://api.bitget.com',STOCKS=new Set(['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','QCOM','AMD','TSM','AVGO','ORCL','ARM','MU','ASML','SNDK','SKHYNIX','MRVL','GLW','HOOD','CBRS','SPCX']),PERIODS=['1H','4H','1D'],EMAS=[12,36,43,144,169,576,676],COLORS=['#f5d76e','#f3f6ff','#f3f6ff','#f4d35e','#f4d35e','#ff4e5e','#ff4e5e'];
+const root=document.getElementById('vegas-right-scroll'),LWC=window.LightweightCharts;if(!root||!LWC)return;
+const nav=root.querySelector('.vr-periods'),title=root.querySelector('.vr-symbol'),status=root.querySelector('.vr-status'),error=root.querySelector('.vr-error');let track=root.querySelector('.vr-track');if(!track){track=document.createElement('div');track.className='vr-track';root.querySelector('.vr-single').append(track)}
+const host=document.createElement('div');host.className='vr-chart';let queue=[],panels=[],current='',period='4H',data=[],sharedRange=null,settings={},cache=new Map(),stockMap=null,stockMapAt=0,token=0,raf=0,last=0,progress=0,paused=false,hidden=document.hidden,refresh=0,resume=0;try{settings=JSON.parse(localStorage.getItem('vegas-right-track-v1')||'{}')}catch{}
+const periodFor=s=>PERIODS.includes(settings[s]?.period)?settings[s].period:'4H';function save(){try{localStorage.setItem('vegas-right-track-v1',JSON.stringify(settings))}catch{}}
+function renderNav(){nav.replaceChildren();PERIODS.forEach(p=>{const b=document.createElement('button');b.type='button';b.textContent=p;b.classList.toggle('active',p===period);b.onclick=()=>{if(p===period)return;period=p;if(current){settings[current]={...(settings[current]||{}),period:p};save()}renderNav();loadActive()};nav.append(b)})}
+async function getJson(path){const c=new AbortController(),t=setTimeout(()=>c.abort(),12000);try{const r=await fetch(API+path,{cache:'no-store',signal:c.signal});if(!r.ok)throw Error('HTTP '+r.status);const j=await r.json();if(j.code!=='00000'||!Array.isArray(j.data))throw Error(j.msg||'行情响应无效');return j.data}finally{clearTimeout(t)}}
+async function mapped(s){if(!stockMap||Date.now()-stockMapAt>300000){const a=await getJson('/api/v3/reality/market/stock-info');stockMap=new Map(a.filter(x=>x?.code&&x?.symbol).map(x=>[String(x.code).toUpperCase(),String(x.symbol)]));const sk=a.find(x=>x?.symbol&&(/SKHYNIX/i.test(String(x.code||''))||/SK\\s*HYNIX/i.test(String(x.name||''))||/RSKHYUSDT/i.test(String(x.symbol||''))));if(sk)stockMap.set('SKHYNIX',String(sk.symbol));stockMapAt=Date.now()}if(!stockMap.has(s))throw Error('无现货映射');return stockMap.get(s)}
+async function getCandles(s,p){const k=s+'|'+p,h=cache.get(k);if(h&&Date.now()-h.at<15000)return h.rows;let a;if(STOCKS.has(s)){const m=await mapped(s);a=await getJson('/api/v3/market/candles?'+new URLSearchParams({category:'SPOT',symbol:m,interval:p,limit:'1000'}))}else a=await getJson('/api/v2/mix/market/candles?'+new URLSearchParams({symbol:s+'USDT',productType:'USDT-FUTURES',granularity:p,limit:'1000'}));const rows=a.filter(r=>Array.isArray(r)&&r.slice(0,5).every(v=>Number.isFinite(+v)&&+v>0)).map(r=>({time:Math.floor(+r[0]/1000),open:+r[1],high:+r[2],low:+r[3],close:+r[4]})).sort((x,y)=>x.time-y.time);if(!rows.length)throw Error('没有有效K线');cache.set(k,{rows,at:Date.now()});while(cache.size>30)cache.delete(cache.keys().next().value);return rows}
+function ema(n){if(data.length<n)return[];let v=data.slice(0,n).reduce((a,x)=>a+x.close,0)/n,out=[{time:data[n-1].time,value:v}],k=2/(n+1);for(let i=n;i<data.length;i++){v=data[i].close*k+v*(1-k);out.push({time:data[i].time,value:v})}return out}
+const chart=LWC.createChart(host,{autoSize:true,attributionLogo:false,layout:{background:{type:LWC.ColorType.Solid,color:'rgba(0,0,0,0)'},textColor:'rgba(210,232,255,.72)',fontSize:11},grid:{vertLines:{visible:false},horzLines:{visible:false}},rightPriceScale:{visible:false,borderVisible:false,scaleMargins:{top:.09,bottom:.08}},leftPriceScale:{visible:false,borderVisible:false},timeScale:{visible:false,borderVisible:false,rightOffset:3,barSpacing:5,minBarSpacing:.5,shiftVisibleRangeOnNewBar:false},crosshair:{vertLine:{visible:true,color:'rgba(120,190,230,.18)'},horzLine:{visible:true,color:'rgba(120,190,230,.18)'}},handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:true},handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true}});
+const candle=chart.addSeries(LWC.CandlestickSeries,{upColor:'rgba(0,0,0,0)',downColor:'#ff5c7c',borderUpColor:'#2ee6a6',borderDownColor:'#ff5c7c',wickUpColor:'#2ee6a6',wickDownColor:'#ff5c7c',lastValueVisible:false,priceLineVisible:false}),lines=EMAS.map((n,i)=>chart.addSeries(LWC.LineSeries,{color:COLORS[i],lineWidth:i?2:1,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false}));
+chart.timeScale().subscribeVisibleLogicalRangeChange(r=>{if(r&&current)sharedRange={from:r.from,to:r.to}});
+function setChart(rows){data=rows;candle.setData(rows);lines.forEach((l,i)=>l.setData(ema(EMAS[i])));if(sharedRange){try{chart.timeScale().setVisibleLogicalRange(sharedRange)}catch{}}else{sharedRange={from:Math.max(0,rows.length-110),to:rows.length};chart.timeScale().setVisibleLogicalRange(sharedRange)}}
+function preview(canvas,rows){const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight),d=Math.min(2,devicePixelRatio||1);canvas.width=w*d;canvas.height=h*d;const c=canvas.getContext('2d');c.scale(d,d);c.clearRect(0,0,w,h);const a=rows.slice(-90);if(!a.length)return;const lo=Math.min(...a.map(x=>x.low)),hi=Math.max(...a.map(x=>x.high)),range=hi-lo||1,step=w/a.length,bw=Math.max(1,step*.56),y=v=>h-5-(v-lo)/range*(h-10);a.forEach((x,i)=>{const up=x.close>=x.open,cx=i*step+step/2;c.strokeStyle=up?'#2ee6a6':'#ff5c7c';c.fillStyle=up?'rgba(46,230,166,.62)':'rgba(255,92,124,.62)';c.beginPath();c.moveTo(cx,y(x.high));c.lineTo(cx,y(x.low));c.stroke();c.fillRect(cx-bw/2,y(Math.max(x.open,x.close)),bw,Math.max(1,y(Math.min(x.open,x.close))-y(Math.max(x.open,x.close))))})}
+function panel(s){const el=document.createElement('section');el.className='vr-panel';el.dataset.symbol=s;const label=document.createElement('div');label.className='vr-preview-title';label.textContent=s;const cv=document.createElement('canvas');cv.className='vr-preview';el.append(label,cv);return{el,cv,s}}
+async function previewPanel(p){if(p.s===current)return;try{const a=await getCandles(p.s,periodFor(p.s));if(p.s!==current&&p.el.isConnected)preview(p.cv,a)}catch{}}
+function attach(){const p=panels.find(x=>x.s===current);if(!p)return;const cv=p.el.querySelector('.vr-preview');if(cv)cv.remove();p.el.classList.add('active');p.el.append(host);requestAnimationFrame(()=>chart.applyOptions({width:Math.max(1,host.clientWidth),height:Math.max(1,host.clientHeight)}))}
+function build(){track.replaceChildren();panels=queue.map(panel);panels.forEach(p=>track.append(p.el));if(queue.length>1)track.append(panel(queue[0]).el);attach();panels.forEach(previewPanel)}
+function focus(s){if(!s||s===current)return;current=s;period=periodFor(s);title.textContent=s;renderNav();panels.forEach(p=>{p.el.classList.toggle('active',p.s===s);if(p.s!==s&&!p.el.querySelector('.vr-preview')){p.cv=document.createElement('canvas');p.cv.className='vr-preview';p.el.append(p.cv);previewPanel(p)}});attach();loadActive()}
+async function loadActive(){const s=current,p=period,id=++token;if(!s)return;status.textContent='加载行情…';error.hidden=true;try{const a=await getCandles(s,p);if(id!==token||s!==current)return;setChart(a);status.textContent=a.at(-1).close.toLocaleString('en-US',{maximumFractionDigits:5})}catch(e){if(id===token){status.textContent='数据异常';error.textContent='行情暂不可用 · '+String(e.message||e).slice(0,42);error.hidden=false}}finally{clearTimeout(refresh);if(!hidden)refresh=setTimeout(loadActive,15000)}}
+function tick(now){raf=0;if(hidden||paused||queue.length<2)return;if(!last)last=now;const dt=Math.min(40,now-last);last=now;progress+=dt*.00022*innerHeight;if(progress>=innerHeight){progress-=innerHeight;const first=panels.shift();track.append(first.el);panels.push(first);focus(panels[0].s);track.style.transform='translate3d(0,0,0)'}else track.style.transform='translate3d(0,'+(-progress)+'px,0)';raf=requestAnimationFrame(tick)}
+function start(){if(hidden||paused||queue.length<2||raf)return;last=0;raf=requestAnimationFrame(tick)}
+function pause(){paused=true;if(raf)cancelAnimationFrame(raf);raf=0;clearTimeout(resume);resume=setTimeout(()=>{paused=false;start()},1800)}
+function reconcile(list){const next=[...new Set((list||[]).map(x=>String(x||'').trim().toUpperCase()).filter(x=>/^[A-Z0-9.]+$/.test(x)))],old=current;queue=next;if(!next.length){token++;clearTimeout(refresh);if(raf)cancelAnimationFrame(raf);raf=0;root.hidden=true;current='';track.replaceChildren();panels=[];return}root.hidden=false;if(!queue.includes(old)){current=queue[0];period=periodFor(current)}else current=old;title.textContent=current;renderNav();build();loadActive();start()}
+host.addEventListener('pointerdown',pause,{passive:true});host.addEventListener('wheel',pause,{passive:true});host.addEventListener('touchstart',pause,{passive:true});window.addEventListener('pointerup',()=>{if(paused){clearTimeout(resume);resume=setTimeout(()=>{paused=false;start()},1800)}},{passive:true});
+document.addEventListener('visibilitychange',()=>{hidden=document.hidden;if(hidden){if(raf)cancelAnimationFrame(raf);raf=0;clearTimeout(refresh)}else{loadActive();start()}});
+window.addEventListener('resize',()=>panels.forEach(previewPanel),{passive:true});window.VegasLayer5SetAutoQueue=reconcile;reconcile(window.VegasFormalSignalSymbols||[]);
 })();
