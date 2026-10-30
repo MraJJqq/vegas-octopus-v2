@@ -16,7 +16,7 @@ const EMA_LINES=[
  {n:576,color:'#ff4e5e',width:1.8},
  {n:676,color:'#ff4e5e',width:1.8}
 ];
-const state={open:false,symbol:'',period:'2H',candles:[],loading:false,fetchAt:0,rotateTimer:0,loadedSymbol:'',loadedPeriod:'',saved:{},candleCache:new Map(),refreshTimer:0,requestController:null};
+const state={open:false,symbol:'',period:'4H',candles:[],loading:false,fetchAt:0,rotateTimer:0,loadedSymbol:'',loadedPeriod:'',saved:{},candleCache:new Map(),refreshTimer:0,requestController:null};
 const readSaved=()=>{try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}catch{return {}}};
 state.saved=readSaved();
 const storedState=state.saved;state.saved=storedState.perSymbol||storedState;
@@ -60,7 +60,13 @@ chart.timeScale().subscribeVisibleTimeRangeChange(range=>{
  const saved=currentSaved();saved.visibleRange=range;saved.period=state.period;scheduleSave();
 });
 function symbolFor(symbol){return symbol+'USDT'}
-function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({perSymbol:state.saved}))}catch{}}
+function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({perSymbol:state.saved,defaultPeriodMigration:'4H'}))}catch{}}
+if(storedState.defaultPeriodMigration!=='4H'){
+ for(const saved of Object.values(state.saved)){
+  if(saved&&typeof saved==='object'){saved.period='4H';delete saved.visibleRange;}
+ }
+ save();
+}
 async function getJson(path){
  const c=new AbortController(),t=setTimeout(()=>c.abort(),10000);state.requestController=c;
  try{
@@ -192,7 +198,7 @@ function openSymbol(symbol){
  if(state.requestController){state.requestController.abort();state.requestController=null;}
  state.open=true;state.symbol=symbol;
  const saved=state.saved[symbol]||{};
- state.period=saved.period||(STOCKS.has(symbol)?'1H':'2H');
+ state.period=saved.period||'4H';
  state.loading=false;requestVersion++;
  if(STOCKS.has(symbol)&&!STOCK_PERIODS.includes(state.period))state.period='1H';
  const cached=state.candleCache.get(symbol+'|'+state.period);
