@@ -24,6 +24,7 @@ cv.addEventListener("pointerdown",function(e){dn=true;lx=e.clientX;ly=e.clientY;
 window.addEventListener("pointerup",function(){dn=false});cv.addEventListener("pointercancel",function(){dn=false});cv.addEventListener("lostpointercapture",function(){dn=false});
 cv.addEventListener("pointermove",function(e){if(!dn)return;rot+=(e.clientX-lx)*.008;pitB=Math.max(-1.2,Math.min(1.2,pitB+(e.clientY-ly)*.006));lx=e.clientX;ly=e.clientY},{passive:true});
 var projectedPoints=Array.from({length:N},function(){return[0,0,0,0,0]});
+var glowGradient=null,glowCx=-1,glowCy=-1,glowRadius=-1;
 var last=0,orbFrame=0,frameTimer=0;
 var FRAME_INTERVAL=1000/((window.matchMedia&&window.matchMedia('(pointer: coarse)').matches)?24:30);
 /* 按目标帧率调度 RAF，避免每个显示器刷新周期都执行无效回调。 */
@@ -35,7 +36,7 @@ var pr=projectedPoints;
 for(var n=0;n<N;n++){var p=P[n],tc=trigPair(rot*p.rotFactor,trigOut),q=pj(p,tc[0],tc[1],cp,spp,cx,cy,Rr,pr[n]),u=(q[0]-(cx-Rr))/(2*Rr);q[3]=Math.max(0,Math.min(1,(.6-u)/.22));q[4]=(q[2]+1)/2}
 window.VegasOrbProjectedPoints=pr;
 x.globalCompositeOperation="lighter";x.globalAlpha=1;
-var g=x.createRadialGradient(cx,cy,0,cx,cy,Rr*.22);g.addColorStop(0,"rgba(255,225,160,.45)");g.addColorStop(1,"rgba(255,200,100,0)");x.fillStyle=g;x.fillRect(cx-Rr*.22,cy-Rr*.22,Rr*.44,Rr*.44);
+if(!glowGradient||cx!==glowCx||cy!==glowCy||Rr!==glowRadius){glowGradient=x.createRadialGradient(cx,cy,0,cx,cy,Rr*.22);glowGradient.addColorStop(0,"rgba(255,225,160,.45)");glowGradient.addColorStop(1,"rgba(255,200,100,0)");glowCx=cx;glowCy=cy;glowRadius=Rr}x.fillStyle=glowGradient;x.fillRect(cx-Rr*.22,cy-Rr*.22,Rr*.44,Rr*.44);
 x.lineWidth=.6;
 for(var k=0;k<N;k++){var q=pr[k],gw=q[3],tw0=trigSinPositive(t*1.1+k*13.7)*.5+.5,tw=tw0*tw0*tw0,a=(.012+.11*tw)*(.35+.65*q[4])*(.45+.55*gw)*V.ln;if(a<.012)continue;x.strokeStyle="rgba("+(140+115*gw|0)+","+(185+5*gw|0)+","+(255-185*gw|0)+","+Math.min(a,.5)+")";x.beginPath();x.moveTo(cx+(q[0]-cx)*.1,cy+(q[1]-cy)*.1);x.lineTo(q[0],q[1]);x.stroke()}
 
