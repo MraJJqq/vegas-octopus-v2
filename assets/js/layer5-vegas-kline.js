@@ -424,6 +424,7 @@ window.VegasLayer5SetAutoQueue=function(symbols){
  }
  if(autoIndex>=autoQueue.length)autoIndex=0;
  if(manualControl)return;
+ if(state.open&&!autoMode){autoMode=true;scheduleAutoStep();return;}
  if(state.open&&autoMode&&!autoQueue.includes(state.symbol)){
   clearAutoTimers();
   autoIndex=0;
