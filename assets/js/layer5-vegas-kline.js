@@ -272,9 +272,17 @@ function renderControlBar(){
  }));
 }
 function saveView(){const range=chart.timeScale().getVisibleRange();if(range)globalVisibleRange=range;flushSave()}
+function playRollIn(){
+ win.classList.remove('is-closing','is-roll-out','is-roll-in');
+ win.classList.add('is-open');
+ void win.offsetWidth;
+ win.classList.add('is-roll-in');
+ requestAnimationFrame(()=>requestAnimationFrame(()=>win.classList.remove('is-roll-in')));
+}
 function openSymbol(symbol){
  if(!symbol)return;
  lastTitleTap=0;
+ const animateIn=!state.open||win.classList.contains('is-roll-out')||win.classList.contains('is-closing');
  win.classList.remove('is-closing');
  if(state.requestController){state.requestController.abort();state.requestController=null;}
  if(state.open&&state.candles.length)saveView();
@@ -303,17 +311,47 @@ function openSymbol(symbol){
  const cacheKey=symbol+'|'+state.period;const cached=state.candleCache.get(cacheKey);if(cached){state.candleCache.delete(cacheKey);state.candleCache.set(cacheKey,cached);}
  state.candles=cached?cached.candles:[];state.fetchAt=cached?cached.fetchAt:0;
  state.loadedSymbol=cached?symbol:'';state.loadedPeriod=cached?state.period:'';
- renderControlBar();win.classList.add('is-open');
+ renderControlBar();
+ if(animateIn)playRollIn();else win.classList.add('is-open');
  message.hidden=true;
  if(cached){const range=globalVisibleRange;draw({range,initial:!range,restore:true});}
  loadCandles(false);
  scheduleRefresh();
 }
-let autoQueue=[],autoIndex=0,autoTimer=0,autoMode=false,manualControl=false;
-const AUTO_DWELL=10000,FADE_MS=80;
+let autoQueue=[],autoIndex=0,autoTimer=0,autoTransitionTimer=0,autoMode=false,manualControl=false;
+const AUTO_DWELL=10000,ROLL_MS=240,FADE_MS=240;
+let chartHover=false,autoInteractionPaused=false;
+const activeChartPointers=new Set();
 function clearAutoTimers(){
  if(autoTimer){clearTimeout(autoTimer);autoTimer=0;}
+ if(autoTransitionTimer){clearTimeout(autoTransitionTimer);autoTransitionTimer=0;}
 }
+function chartInteractionActive(){return chartHover||activeChartPointers.size>0}
+function syncChartInteraction(){
+ const paused=chartInteractionActive();
+ if(paused===autoInteractionPaused)return;
+ autoInteractionPaused=paused;
+ if(paused){if(autoTimer){clearTimeout(autoTimer);autoTimer=0;}}
+ else scheduleAutoStep();
+}
+chartHost.addEventListener('pointerenter',e=>{
+ if(e.pointerType==='mouse'||e.pointerType==='pen'){chartHover=true;syncChartInteraction()}
+},{passive:true});
+chartHost.addEventListener('pointerleave',e=>{
+ if(e.pointerType==='mouse'||e.pointerType==='pen'){chartHover=false;syncChartInteraction()}
+},{passive:true});
+chartHost.addEventListener('pointerdown',e=>{
+ activeChartPointers.add(e.pointerId);syncChartInteraction();
+},{passive:true});
+window.addEventListener('pointerup',e=>{
+ activeChartPointers.delete(e.pointerId);syncChartInteraction();
+},{passive:true});
+window.addEventListener('pointercancel',e=>{
+ activeChartPointers.delete(e.pointerId);syncChartInteraction();
+},{passive:true});
+chartHost.addEventListener('lostpointercapture',e=>{
+ activeChartPointers.delete(e.pointerId);syncChartInteraction();
+},{passive:true});
 function hideWindow(){
  lastTitleTap=0;
  if(state.open&&state.candles.length)saveView();
@@ -321,29 +359,38 @@ function hideWindow(){
  state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];
  if(state.refreshTimer)clearTimeout(state.refreshTimer);
  state.refreshTimer=0;
- win.classList.remove('is-open');
+ win.classList.remove('is-open','is-roll-in','is-roll-out');
  win.classList.add('is-closing');
  window.setTimeout(()=>{if(!state.open)win.classList.remove('is-closing')},FADE_MS+30);
 }
 function scheduleAutoStep(){
- if(manualControl||document.hidden||!autoMode||!autoQueue.length)return;
+ if(manualControl||document.hidden||!autoMode||!autoQueue.length||chartInteractionActive())return;
  if(autoTimer)clearTimeout(autoTimer);
  autoTimer=window.setTimeout(()=>{autoTimer=0;advanceAutoQueue()},AUTO_DWELL);
 }
 function showAutoSymbol(symbol){
  if(!symbol||manualControl||document.hidden)return;
- if(state.open&&state.symbol===symbol){
-  autoMode=true;scheduleAutoStep();return;
- }
+ if(state.open&&state.symbol===symbol){autoMode=true;scheduleAutoStep();return;}
  autoMode=true;
- /* 无缝切换：保留当前画面，收到下一品种数据后由 draw() 直接替换。 */
+ if(state.open){
+  if(autoTransitionTimer)clearTimeout(autoTransitionTimer);
+  win.classList.remove('is-roll-in');
+  win.classList.add('is-roll-out');
+  autoTransitionTimer=window.setTimeout(()=>{
+   autoTransitionTimer=0;
+   if(manualControl||document.hidden)return;
+   openSymbol(symbol);
+   scheduleAutoStep();
+  },ROLL_MS);
+  return;
+ }
  openSymbol(symbol);
  scheduleAutoStep();
 }
 function advanceAutoQueue(){
  if(manualControl||document.hidden||!autoQueue.length)return;
  if(autoQueue.length===1){
-  if(!state.open)showAutoSymbol(autoQueue[0]);
+  if(!state.open||state.symbol!==autoQueue[0])showAutoSymbol(autoQueue[0]);
   else scheduleAutoStep();
   return;
  }
@@ -393,18 +440,19 @@ window.VegasLayer5SetAutoQueue=function(symbols){
 };
 window.VegasLayer5Open=function(symbol){
  clearAutoTimers();
- manualControl=true;autoMode=false;
+ manualControl=false;
  const manualIndex=autoQueue.indexOf(String(symbol||'').trim().toUpperCase());
- if(manualIndex>=0&&autoQueue.length)autoIndex=(manualIndex+1)%autoQueue.length;
+ autoIndex=manualIndex>=0?manualIndex:Math.max(0,autoQueue.length-1);
+ autoMode=autoQueue.length>0;
  openSymbol(symbol);
+ if(autoMode)scheduleAutoStep();
 };
 if(typeof window.VegasLayer5BridgeReady==='function')window.VegasLayer5BridgeReady();
 function close(){
- const shouldResume=manualControl||autoMode;
  clearAutoTimers();
- manualControl=false;autoMode=false;
+ manualControl=true;autoMode=false;
+ activeChartPointers.clear();chartHover=false;autoInteractionPaused=false;
  hideWindow();
- if(shouldResume)window.setTimeout(resumeAutoQueue,FADE_MS+40);
 }
 /* 品种名称双击/触屏双击退出；周期按钮仍只响应单击。 */
 title.addEventListener('touchend',e=>{
@@ -459,6 +507,7 @@ function scheduleRefresh(){
 document.addEventListener('visibilitychange',()=>{
  if(document.hidden){
   clearAutoTimers();
+  activeChartPointers.clear();chartHover=false;autoInteractionPaused=false;
   if(autoMode&&state.open){win.classList.remove('is-closing');win.classList.add('is-open');}
   if(state.open&&state.candles.length)saveView();
   if(state.refreshTimer)clearTimeout(state.refreshTimer);
