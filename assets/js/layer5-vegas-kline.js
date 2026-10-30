@@ -306,6 +306,10 @@ title.addEventListener('dblclick',e=>{
 /* Escape 键保留为全局退出方式。 */
 periodsHost.addEventListener('click',e=>{const button=e.target.closest&&e.target.closest('button[data-period]');if(!button||!state.symbol)return;const nextPeriod=button.dataset.period;if(nextPeriod===state.period)return;state.period=nextPeriod;renderControlBar();state.fetchAt=0;state.candles=[];const saved=currentSaved();saved.period=state.period;delete saved.visibleRange;state.loadedSymbol='';state.loadedPeriod='';save();loadCandles(true)});
 document.addEventListener('click',e=>{
+ /* 底部空白带作为单击退出区；周期栏优先保留自身点击，不拦截图表区域。 */
+ if(state.open&&e.clientY>=window.innerHeight-56&&!(e.target.closest&&e.target.closest('#vegas-layer5-control'))){
+  e.preventDefault();e.stopPropagation();close();return;
+ }
  const card=e.target.closest&&e.target.closest('#market-cards-layer .mc-card[data-symbol]');
  if(card){
   const symbol=String(card.dataset.symbol||'').toUpperCase();
