@@ -334,7 +334,7 @@
   /* 无可见正式信号时停止绘制；滚动、窗口尺寸或信号变化时按需恢复。 */
   const motionScroller = $('mc-left');
   if (motionScroller) motionScroller.addEventListener('scroll', () => { updateGeometrySnapshot(); start(); }, { passive: true });
-  window.addEventListener('scroll', updateGeometrySnapshot, { passive: true });
+  window.addEventListener('scroll', () => { updateGeometrySnapshot(); start(); }, { passive: true });
   function stop() {
     if (frameId) cancelAnimationFrame(frameId);
     if (frameTimer) clearTimeout(frameTimer);
@@ -345,7 +345,7 @@
   resize();
   window.addEventListener('resize', () => { resize(); updateGeometrySnapshot(); start(); }, { passive: true });
   if (window.ResizeObserver) {
-    resizeObserver = new ResizeObserver(() => { resize(); updateGeometrySnapshot(); });
+    resizeObserver = new ResizeObserver(() => { resize(); updateGeometrySnapshot(); start(); });
     resizeObserver.observe(app);
   }
   document.addEventListener('visibilitychange', () => {
