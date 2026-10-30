@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#02040a">
 <title>Vegas 章鱼</title>
 <link rel="stylesheet" href="./assets/css/app.css?v=20261030-54">
-<link rel="stylesheet" href="./assets/css/layer5-vegas-kline.css?v=20261030-9">
+<link rel="stylesheet" href="./assets/css/right-signal-scroll.css?v=20261030-1">
 </head>
 <body>
 <div class="app">
@@ -21,12 +21,12 @@
     <div class="mc-side left" id="mc-left" aria-label="全部27个行情卡片，纵向滚动"></div>
   </div>
 </section>
+<section id="vegas-right-scroll" aria-label="正式信号K线滚动区域" hidden><div class="vr-list"></div></section>
 </div>
 <script src="./assets/js/v9-events.js?v=20261030-4"></script>
 <script src="./assets/js/market-cards.js?v=20261030-18"></script>
-<script src="./assets/js/layer5-kline-bridge.js?v=20261030-7"></script>
 <script>
-/* K线依赖异步加载；点击桥接已提前就绪。 */
+/* 右滚动K线依赖异步加载；信号队列由右滚动模块直接接管。 */
 (function(){
  const sources=[
   'https://cdn.jsdelivr.net/npm/lightweight-charts@5.2.1/dist/lightweight-charts.standalone.production.js',
@@ -34,15 +34,15 @@
  ];
  function loadSource(index){
   if(index>=sources.length){
-   if(typeof window.VegasLayer5BridgeFailed==='function')window.VegasLayer5BridgeFailed();
+   console.error('[Vegas Right Scroll] chart library failed to load');
    return;
   }
   const script=document.createElement('script');
   script.src=sources[index];
   script.onload=function(){
    const app=document.createElement('script');
-   app.src='./assets/js/layer5-vegas-kline.js?v=20261030-54';
-   app.onerror=function(){console.error('[Vegas Layer 5] K-line module failed to load');if(typeof window.VegasLayer5BridgeFailed==='function')window.VegasLayer5BridgeFailed();};
+   app.src='./assets/js/right-signal-scroll.js?v=20261030-1';
+   app.onerror=function(){console.error('[Vegas Right Scroll] K-line module failed to load');};
    document.body.appendChild(app);
   };
   script.onerror=function(){script.remove();loadSource(index+1);};
