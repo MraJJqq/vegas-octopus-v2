@@ -10,7 +10,7 @@ const PERIODS=['1H','4H','1D'];
 const EMAS=[12,36,43,144,169,576,676];
 const EMA_COLORS=['#f5d76e','#00B0FF','#00B0FF','#f4d35e','#f4d35e','#ff4e5e','#ff4e5e'];
 const PERIOD_KEY='vegas-right-track-v1';
-const CLEAR_MS=5000,TRANSITION_MS=5000;
+const INITIAL_REVEAL_MS=1000,INITIAL_CLEAR_MS=4000,CLEAR_MS=5000,TRANSITION_MS=5000;
 const root=document.getElementById('vegas-right-scroll');
 const LWC=window.LightweightCharts;
 if(!root||!LWC)return;
@@ -31,7 +31,7 @@ const layers=[0,1].map(index=>{
 let queue=[],currentIndex=0,period='4H',periodSettings={},manualSymbol='',queueInitialized=false;
 let manualTimer=0;
 let activeLayer=0,cycleTimer=0,transitionTimer=0,transitionRaf=0,transitioning=false,paused=false;
-let cycleToken=0,hidden=document.hidden,refreshTimer=0,fadeState='idle';
+let cycleToken=0,hidden=document.hidden,refreshTimer=0,fadeState='idle',initialRevealDone=false,initialRevealTimer=0;
 let stockMap=null,stockMapAt=0,cache=new Map(),backfills=new Map(),candleRequests=new Map();
 
 try{
@@ -245,6 +245,19 @@ async function loadLayer(index,symbol,timeframe){
   setData(view,firstRows,!identityChanged);
   if(identityChanged)resetDefaultVisibleRange(view,firstRows);
   updateLayerStatus(index,symbol,firstRows);
+  if(index===activeLayer&&!initialRevealDone&&!hidden){
+   initialRevealDone=true;fadeState='initial-reveal';
+   const layer=layers[index];
+   layer.style.transition='none';layer.style.opacity='1';layer.style.filter='brightness(0.25)';
+   layer.getBoundingClientRect();
+   layer.style.transition=`filter ${INITIAL_REVEAL_MS}ms ease-out`;
+   requestAnimationFrame(()=>{if(!hidden&&!paused&&index===activeLayer)layer.style.filter='brightness(1)'});
+   clearTimeout(initialRevealTimer);
+   initialRevealTimer=setTimeout(()=>{
+    initialRevealTimer=0;layer.style.transition='';layer.style.filter='brightness(1)';
+    if(!manualSymbol)scheduleCycle(INITIAL_CLEAR_MS);
+   },INITIAL_REVEAL_MS);
+  }
   if(firstRows.length>=1200)return true;
   const backfillKey=symbol+'|'+timeframe;
   let backfill=backfills.get(backfillKey);
@@ -314,7 +327,7 @@ function applyLayerState(active=activeLayer){
  layers.forEach((layer,index)=>{
   layer.style.transition='none';
   layer.style.opacity=index===active?'1':'0';
-  layer.style.filter=index===active?'blur(0px)':'blur(12px)';
+  layer.style.filter=index===active?'brightness(1)':'brightness(0.25)';
   layer.classList.toggle('is-active',index===active);
   layer.style.pointerEvents=index===active?'auto':'none';
  });
@@ -343,7 +356,7 @@ async function beginTransition(){
  const token=++cycleToken;
  const outgoing=layers[activeLayer],incoming=layers[nextLayer];
  incoming.style.transition='none';
- incoming.style.opacity='0';incoming.style.filter='blur(12px)';
+ incoming.style.opacity='0';incoming.style.filter='brightness(0.25)';
  incoming.classList.remove('is-active');
  const nextView=views[nextLayer];
  const preloaded=nextView.symbol===nextSymbol&&nextView.period===nextPeriod&&nextView.hasData&&Date.now()-nextView.dataAt<15000;
@@ -351,24 +364,24 @@ async function beginTransition(){
  try{loaded=preloaded||await loadLayer(nextLayer,nextSymbol,nextPeriod)}catch{}
  if(token!==cycleToken||hidden||paused){transitioning=false;fadeState=paused?'paused':'idle';return}
  if(!loaded||!views[nextLayer].hasData){
-  incoming.style.transition='none';incoming.style.opacity='0';incoming.style.filter='blur(12px)';
+  incoming.style.transition='none';incoming.style.opacity='0';incoming.style.filter='brightness(0.25)';
   transitioning=false;fadeState='idle';scheduleCycle(1000);return;
  }
  fadeState='transitioning';
  setTransitionHint(true);
  incoming.style.pointerEvents='none';
  incoming.style.transition='none';outgoing.style.transition='none';
- incoming.style.opacity='0';incoming.style.filter='blur(12px)';
- outgoing.style.opacity='1';outgoing.style.filter='blur(0px)';
+ incoming.style.opacity='0';incoming.style.filter='brightness(0.25)';
+ outgoing.style.opacity='1';outgoing.style.filter='brightness(1)';
  incoming.getBoundingClientRect();
- const transitionStyle=`opacity ${TRANSITION_MS}ms linear,filter ${TRANSITION_MS}ms linear`;
+ const transitionStyle=`opacity ${TRANSITION_MS}ms ease-in-out,filter ${TRANSITION_MS}ms ease-in-out`;
  incoming.style.transition=transitionStyle;outgoing.style.transition=transitionStyle;
  incoming.classList.add('is-active');outgoing.classList.remove('is-active');
  transitionRaf=requestAnimationFrame(()=>{
   transitionRaf=0;
   if(token!==cycleToken||hidden||paused)return;
-  incoming.style.opacity='1';incoming.style.filter='blur(0px)';
-  outgoing.style.opacity='0';outgoing.style.filter='blur(12px)';
+  incoming.style.opacity='1';incoming.style.filter='brightness(1)';
+  outgoing.style.opacity='0';outgoing.style.filter='brightness(0.25)';
  });
  currentIndex=nextIndex;
  setActive(nextLayer);
@@ -388,6 +401,7 @@ function pauseForInteraction(event){
  if(event?.pointerId!==undefined)activePointers.add(event.pointerId);
  if(paused)return;
  paused=true;++cycleToken;clearTimeout(cycleTimer);cycleTimer=0;
+ clearTimeout(initialRevealTimer);initialRevealTimer=0;initialRevealDone=true;
  clearTransitionWork();
  layers.forEach(layer=>{layer.style.transition='none';});
  setTransitionHint(false);
@@ -416,7 +430,7 @@ function showManualSymbol(value){
  layers.forEach((layer,index)=>{
   layer.style.transition='none';
   layer.style.opacity=index===activeLayer?'1':'0';
-  layer.style.filter=index===activeLayer?'blur(0px)':'blur(12px)';
+  layer.style.filter=index===activeLayer?'brightness(1)':'brightness(0.25)';
   layer.classList.toggle('is-active',index===activeLayer);
   layer.style.pointerEvents=index===activeLayer?'auto':'none';
   layer.style.transition='';
@@ -457,7 +471,7 @@ function reconcile(symbols){
  layers.forEach((layer,index)=>{
   layer.style.transition='none';
   layer.style.opacity=index===activeLayer?'1':'0';
-  layer.style.filter=index===activeLayer?'blur(0px)':'blur(12px)';
+  layer.style.filter=index===activeLayer?'brightness(1)':'brightness(0.25)';
   layer.classList.toggle('is-active',index===activeLayer);
   layer.getBoundingClientRect();layer.style.transition='';
  });
@@ -476,7 +490,7 @@ function reconcile(symbols){
  setActive(activeLayer);
  if(!manualSymbol){
   if(queue.length>1)preloadNext();
-  scheduleCycle(CLEAR_MS);
+  if(initialRevealDone)scheduleCycle(CLEAR_MS);
  }else loadLayer(activeLayer,currentSymbol(),periodFor(currentSymbol()));
  scheduleRefresh();
 }
@@ -487,7 +501,7 @@ document.addEventListener('visibilitychange',()=>{
   settleTransition();
   const symbol=currentSymbol();
   if(symbol)loadLayer(activeLayer,symbol,periodFor(symbol));
-  scheduleCycle(CLEAR_MS);
+  if(initialRevealDone)scheduleCycle(CLEAR_MS);
   scheduleRefresh();
  }
 },{passive:true});
