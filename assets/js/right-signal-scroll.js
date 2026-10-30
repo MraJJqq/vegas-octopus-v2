@@ -263,6 +263,7 @@ function reconcile(symbols){
  const inactive=1-activeLayer;
  if(queue.length>1)loadLayer(inactive,queue[(currentIndex+1)%queue.length],periodFor(queue[(currentIndex+1)%queue.length]));
  scheduleCycle(CLEAR_MS);
+ scheduleRefresh();
 }
 document.addEventListener('visibilitychange',()=>{
  hidden=document.hidden;
@@ -271,6 +272,7 @@ document.addEventListener('visibilitychange',()=>{
   const symbol=currentSymbol();
   if(symbol)loadLayer(activeLayer,symbol,periodFor(symbol));
   scheduleCycle(CLEAR_MS);
+  scheduleRefresh();
  }
 },{passive:true});
 window.addEventListener('resize',()=>views.forEach(view=>view.chart.applyOptions({width:Math.max(1,view.host.clientWidth),height:Math.max(1,view.host.clientHeight)})),{passive:true});
