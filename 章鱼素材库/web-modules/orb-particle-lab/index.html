@@ -53,7 +53,6 @@ function pj(v,cs,sn,cp,spp,cx,cy,Rr){var x1=v[0]*cs+v[2]*sn,z1=-v[0]*sn+v[2]*cs,
 /* seven coloured fibre streams (orb-lab v1 pulses) */
 var SH=[0,28,52,150,190,245,320],F=[];
 for(i=0;i<150;i++)F.push({s:i%7,t:Math.floor(R()*N),o:R(),v:.18+R()*.25});
-function bz(a,b,c,s){var q=1-s;return[q*q*a[0]+2*q*s*b[0]+s*s*c[0],q*q*a[1]+2*q*s*b[1]+s*s*c[1]]}
 /* drag */
 var rot=0,pitB=.32,dn=false,lx=0,ly=0;
 cv.addEventListener("pointerdown",function(e){dn=true;lx=e.clientX;ly=e.clientY});
