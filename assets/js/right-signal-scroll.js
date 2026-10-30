@@ -368,7 +368,9 @@ function runManualScroll(now){
 }
 track.addEventListener('wheel',event=>{
  const target=event.target;
- if(event.ctrlKey&&target instanceof Element&&target.closest('.vr-chart'))return;
+ const chartTarget=target instanceof Element&&target.closest('.vr-chart');
+ // 普通滚轮在K线图内交给图表缩放；Ctrl+滚轮由右侧信号队列接管。
+ if(chartTarget&&!event.ctrlKey)return;
  if(Math.abs(event.deltaY)<.1)return;
  event.preventDefault();event.stopPropagation();
  const unit=event.deltaMode===1?16:event.deltaMode===2?track.clientHeight:1;
