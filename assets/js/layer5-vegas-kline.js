@@ -194,9 +194,8 @@ function draw(view={}){
   const next=[];
   for(let index=0;index<EMA_LINES.length;index++){
    const line=EMA_LINES[index],series=previous.emaData[index];
-   let prior=null;
-   for(let j=series.length-1;j>=0;j--){if(series[j].time===priorTime){prior=series[j];break;}}
-   if(!prior){emaData=null;break;}
+   const prior=series.length?series[series.length-1]:null;
+   if(!prior||prior.time!==priorTime){emaData=null;break;}
    const value=close*(2/(line.n+1))+prior.value*(1-2/(line.n+1));
    next.push([...series.slice(0,-1),{time:newData[newData.length-1].time,value}]);
   }
