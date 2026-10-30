@@ -46,7 +46,7 @@ const chart=LWC.createChart(host,{autoSize:true,attributionLogo:false,
  crosshair:{vertLine:{visible:false},horzLine:{visible:false}},
  handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:true},handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true,axisDoubleClickReset:true},kineticScroll:{touch:true,mouse:true}});
 const candle=chart.addSeries(LWC.CandlestickSeries,{upColor:'rgba(0,0,0,0)',downColor:'#ff5c7c',borderUpColor:'#2ee6a6',borderDownColor:'#ff5c7c',wickUpColor:'#2ee6a6',wickDownColor:'#ff5c7c',lastValueVisible:false,priceLineVisible:false});
-const lines=EMA_LINES.map((n,i)=>chart.addSeries(LWC.LineSeries,{color:EMA_COLORS[i],lineWidth:i===3||i===4?2:1,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false}));
+const lines=EMA_LINES.map((n,i)=>chart.addSeries(LWC.LineSeries,{color:EMA_COLORS[i],lineWidth:i===0?1:2,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false}));
 function renderPeriodButtons(){nav.replaceChildren();PERIODS.forEach(p=>{const b=document.createElement('button');b.type='button';b.textContent=p;b.dataset.period=p;b.classList.toggle('active',p===period);b.addEventListener('click',()=>{if(p===period)return;period=p;symbolSetting(current).period=p;saveSettings();renderPeriodButtons();loadCurrent(true)});nav.appendChild(b)})}
 function setChartData(rows,restore=false){
  data=rows;candle.setData(rows);const closes=rows.map(x=>x.close);
@@ -61,7 +61,7 @@ function clearTimers(){if(rotationTimer)clearTimeout(rotationTimer);if(refreshTi
 function scheduleRotation(){if(hidden||paused||queue.length<2||!current)return;if(rotationTimer)clearTimeout(rotationTimer);rotationTimer=setTimeout(()=>{rotationTimer=0;advance()},ROTATE_MS)}
 function advance(direction=1){if(hidden||paused||queue.length<2)return;index=(index+direction+queue.length)%queue.length;root.classList.remove('vr-enter-up');root.classList.add(direction>=0?'vr-leave-up':'vr-leave-down');setTimeout(()=>{if(hidden||paused)return;showSymbol(queue[index])},180)}
 function showSymbol(symbol){
- if(!symbol||hidden)return;current=symbol;period=symbolSetting(symbol).period;title.textContent=symbol;status.textContent='加载行情…';error.hidden=true;renderPeriodButtons();clearTimers();
+ if(!symbol||hidden)return;root.classList.remove('vr-leave-up','vr-leave-down');current=symbol;period=symbolSetting(symbol).period;title.textContent=symbol;status.textContent='加载行情…';error.hidden=true;renderPeriodButtons();clearTimers();
  const token=++requestToken;enqueue(async()=>{try{const rows=await getCandles(symbol,period);if(token!==requestToken||current!==symbol)return;setChartData(rows,true);root.classList.remove('vr-leave-up','vr-leave-down');root.classList.add('vr-enter-up');setTimeout(()=>root.classList.remove('vr-enter-up'),260);scheduleRotation();scheduleRefresh()}catch(e){if(token!==requestToken)return;status.textContent='数据异常';error.textContent='行情暂不可用 · '+String(e.message||e).slice(0,48);error.hidden=false;scheduleRotation()}})
 }
 function scheduleRefresh(){if(refreshTimer)clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>loadCurrent(false),REFRESH_MS)}
