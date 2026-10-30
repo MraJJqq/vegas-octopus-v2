@@ -13,7 +13,7 @@ const LWC=window.LightweightCharts;
 if(!root||!LWC){console.error('[Vegas Right Scroll] missing host or chart library');return;}
 const list=root.querySelector('.vr-list');
 const cache=new Map(),cards=new Map(),saved=readSaved();
-let queue=[],requestQueue=[],activeRequests=0,autoFrame=0,lastFrame=0,paused=false,pauseUntil=0,refreshTimer=0;
+let queue=[],requestQueue=[],activeRequests=0,autoFrame=0,lastFrame=0,paused=false,refreshTimer=0;
 const MAX_REQUESTS=2,REFRESH_MS=30000,AUTO_SPEED=7;
 function readSaved(){try{return JSON.parse(localStorage.getItem('vegas-right-scroll-v1')||'{}')}catch{return {}}}
 function persist(){try{localStorage.setItem('vegas-right-scroll-v1',JSON.stringify(saved))}catch{}}
@@ -97,10 +97,16 @@ function loadCard(card,force=false){
  if(card.disposed||card.refreshing||document.hidden)return;
  card.refreshing=true;
  enqueue(async()=>{
-  if(card.disposed||document.hidden)return;
-  try{const data=await getCandles(card.symbol,card.period);if(!card.disposed)setData(card,data,force)}
-  catch(e){if(!card.disposed){const err=card.el.querySelector('.vr-error');err.hidden=false;err.textContent='行情暂不可用 · '+String(e.message||e).slice(0,36);card.el.querySelector('.vr-status').textContent='数据异常'}}
-  finally{card.refreshing=false;if(!card.disposed){if(card.timer)clearTimeout(card.timer);card.timer=setTimeout(()=>loadCard(card),REFRESH_MS)}}
+  try{
+   if(card.disposed||document.hidden)return;
+   const data=await getCandles(card.symbol,card.period);
+   if(!card.disposed)setData(card,data,false);
+  }catch(e){
+   if(!card.disposed){const err=card.el.querySelector('.vr-error');err.hidden=false;err.textContent='行情暂不可用 · '+String(e.message||e).slice(0,36);card.el.querySelector('.vr-status').textContent='数据异常'}
+  }finally{
+   card.refreshing=false;
+   if(!card.disposed&&!document.hidden){if(card.timer)clearTimeout(card.timer);card.timer=setTimeout(()=>loadCard(card),REFRESH_MS)}
+  }
  });
 }
 function pauseScroll(){paused=true;if(autoFrame){cancelAnimationFrame(autoFrame);autoFrame=0}lastFrame=0}
@@ -108,7 +114,7 @@ function resumeChart(card){
  const data=card.data;if(!data.length)return;
  const ts=card.chart.timeScale(),targetFrom=Math.max(0,data.length-100),targetTo=data.length;
  let current;try{current=ts.getVisibleLogicalRange()}catch{}
- if(!current){ts.setVisibleLogicalRange({from:targetFrom,to:targetTo});return}
+ if(!current){ts.setVisibleLogicalRange({from:targetFrom,to:targetTo});paused=false;startScroll();return}
  const start=performance.now(),duration=1100,from=current.from,to=current.to;
  function step(now){if(card.disposed||card.interaction)return;const t=Math.min(1,(now-start)/duration),e=1-Math.pow(1-t,3);ts.setVisibleLogicalRange({from:from+(targetFrom-from)*e,to:to+(targetTo-to)*e});if(t<1)requestAnimationFrame(step)}
  requestAnimationFrame(step);
