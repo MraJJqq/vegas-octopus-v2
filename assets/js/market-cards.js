@@ -7,9 +7,12 @@ const REALITY_STOCKS=new Set(P.slice(0,23).map(x=>x[0]));
 const fmt=p=>p>=100?p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):p>=1?p.toFixed(3):p.toFixed(4);
 const S=P.map(([s,api],i)=>({s,api,i,p:0,o:0,flashTimer:0,ready:false}));
 const left=document.getElementById('mc-left');
+if(!left){console.warn('[Vegas Octopus] market-card root #mc-left is missing; layer 3 initialization skipped.');return;}
 S.forEach(d=>{
  left.insertAdjacentHTML('beforeend',`<div class="mc-slot"><div class="mc-float" style="--d:${-d.i*.9}s"><div class="mc-card" id="mc-c${d.i}" data-symbol="${d.s}"><div class="mc-bg"></div><i class="mc-g1"></i><i class="mc-g2"></i><i class="mc-gl"></i><div class="mc-row mc-l2"><span class="mc-coin">${d.s[0]}</span><b class="mc-sym">${d.s}</b></div><div class="mc-price mc-l4">加载中</div><div class="mc-l3"><span class="mc-pct">--</span></div></div></div><div class="mc-gshadow" style="--d:${-d.i*.9}s"></div></div>`);
- d.dom={card:left.querySelector('#mc-c'+d.i),price:left.querySelector('#mc-c'+d.i+' .mc-price'),pct:left.querySelector('#mc-c'+d.i+' .mc-pct'),symbol:left.querySelector('#mc-c'+d.i+' .mc-sym')};
+ const card=left.lastElementChild?.querySelector('.mc-card');
+ if(!card){console.warn('[Vegas Octopus] market card DOM creation failed:',d.s);return;}
+ d.dom={card,price:card.querySelector('.mc-price'),pct:card.querySelector('.mc-pct'),symbol:card.querySelector('.mc-sym')};
 
 });
 /* 在卡片DOM创建后立即绑定委托点击，不等待行情请求完成。 */
@@ -396,7 +399,7 @@ window.VegasApplyFormalSignals=function(){
  if(signature===lastFormalSignature)return;
  lastFormalSignature=signature;
  const formal=new Set(symbols);
- document.querySelectorAll('#market-cards-layer .mc-card[data-symbol]').forEach(card=>{
+ left.querySelectorAll('.mc-card[data-symbol]').forEach(card=>{
   const active=formal.has(String(card.dataset.symbol||'').toUpperCase());
   if(active){if(card.getAttribute('data-formal-signal')!=='true')card.setAttribute('data-formal-signal','true');}
   else if(card.hasAttribute('data-formal-signal'))card.removeAttribute('data-formal-signal');
