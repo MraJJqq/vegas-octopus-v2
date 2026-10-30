@@ -334,4 +334,5 @@ document.addEventListener('visibilitychange',()=>{
 },{passive:true});
 window.VegasLayer5SetAutoQueue=reconcile;
 reconcile(window.VegasFormalSignalSymbols||[]);
+if(window.__VEGAS_PENDING_LAYER5_SYMBOL){const pending=window.__VEGAS_PENDING_LAYER5_SYMBOL;delete window.__VEGAS_PENDING_LAYER5_SYMBOL;showManualSymbol(pending);}
 })();
