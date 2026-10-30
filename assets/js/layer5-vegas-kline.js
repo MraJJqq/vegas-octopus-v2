@@ -291,7 +291,18 @@ function scheduleAutoRotate(){
  },6000);
 }
 function close(){if(state.open&&state.candles.length)saveView();if(state.requestController){state.requestController.abort();state.requestController=null;}state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];if(state.rotateTimer)clearTimeout(state.rotateTimer);state.rotateTimer=0;if(state.refreshTimer)clearTimeout(state.refreshTimer);state.refreshTimer=0;win.classList.remove('is-open');}
-/* Escape 键用于退出全屏K线。 */
+/* 品种名称双击/触屏双击退出；周期按钮仍只响应单击。 */
+let lastTitleTap=0;
+title.addEventListener('touchend',e=>{
+ if(!state.open)return;
+ const now=Date.now();
+ if(now-lastTitleTap<380){e.preventDefault();lastTitleTap=0;close()}
+ else lastTitleTap=now;
+},{passive:false});
+title.addEventListener('dblclick',e=>{
+ if(state.open){e.preventDefault();close()}
+});
+/* Escape 键保留为全局退出方式。 */
 periodsHost.addEventListener('click',e=>{const button=e.target.closest&&e.target.closest('button[data-period]');if(!button||!state.symbol)return;const nextPeriod=button.dataset.period;if(nextPeriod===state.period)return;state.period=nextPeriod;renderControlBar();state.fetchAt=0;state.candles=[];const saved=currentSaved();saved.period=state.period;delete saved.visibleRange;state.loadedSymbol='';state.loadedPeriod='';save();loadCandles(true)});
 document.addEventListener('click',e=>{
  const card=e.target.closest&&e.target.closest('#market-cards-layer .mc-card[data-symbol]');
@@ -303,8 +314,7 @@ document.addEventListener('click',e=>{
  }
  /* 全屏画布覆盖整个可视屏幕，无法再定义窗口外区域；使用 Escape 退出。 */
 },true);
-/* Chart pan, pinch zoom and touch kinetic scrolling are owned by TradingView Lightweight Charts.
-   Full-screen exit remains available via header double-tap and Escape to avoid gesture conflicts. */
+/* Chart pan, pinch zoom and touch kinetic scrolling remain owned by Lightweight Charts; exit uses ticker-name double-tap or Escape. */
 document.addEventListener('keydown',e=>{if(state.open&&e.key==='Escape')close()});
 function scheduleRefresh(){
  if(state.refreshTimer)clearTimeout(state.refreshTimer);
