@@ -17,6 +17,7 @@ if(!root||!LWC)return;
 
 const track=document.createElement('div');
 track.className='vr-track';
+track.style.scrollBehavior='auto';
 root.querySelector('.vr-single').append(track);
 const host=document.createElement('div');
 host.className='vr-chart';
@@ -250,7 +251,7 @@ async function loadActive(){
 /* 左滚动控制器移植：原生 scrollTop、连续触屏、滚轮、缓动与循环校正 */
 let cachedPanelStep=0,autoFrame=0,manualTarget=0,manualVelocity=0,manualFrame=0,manualLastTime=0;
 let autoResumeAt=0,touchActive=false,touchDragging=false,touchStartY=0,touchLastY=0;
-let autoLastTime=0,autoEngageLastTime=0,autoEngage=1,autoRemainder=0,autoTimer=0,autoFrame=0;
+let autoLastTime=0,autoEngageLastTime=0,autoEngage=1,autoRemainder=0,autoTimer=0;
 let lastObservedScrollTop=0,normalizing=false,loopDirection=1;
 function panelStep(){
  if(cachedPanelStep>0)return cachedPanelStep;
