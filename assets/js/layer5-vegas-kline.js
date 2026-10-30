@@ -81,6 +81,12 @@ async function getJson(path,controller){
    if(!r.ok){
     const error=Error('HTTP '+r.status);
     error.retryable=r.status===429||r.status>=500;
+    if(r.status===429){
+     const retryAfter=r.headers.get('Retry-After');
+     const seconds=Number(retryAfter);
+     const dateDelay=retryAfter&&!Number.isFinite(seconds)?Date.parse(retryAfter)-Date.now():0;
+     error.retryAfterMs=Number.isFinite(seconds)&&seconds>0?seconds*1000:Math.max(0,dateDelay||0);
+    }
     if(!error.retryable||attempt===2)throw error;
     lastError=error;
    }else{
@@ -103,7 +109,8 @@ async function getJson(path,controller){
   }
   await new Promise((resolve,reject)=>{
    if(signal.aborted){reject(new DOMException('Aborted','AbortError'));return;}
-   const delay=setTimeout(done,500*(attempt+1));
+   const wait=Math.max(500*(attempt+1),Math.min(60000,lastError&&lastError.retryAfterMs||0));
+   const delay=setTimeout(done,wait);
    function done(){signal.removeEventListener('abort',abort);resolve()}
    function abort(){clearTimeout(delay);signal.removeEventListener('abort',abort);reject(new DOMException('Aborted','AbortError'))}
    signal.addEventListener('abort',abort,{once:true});
