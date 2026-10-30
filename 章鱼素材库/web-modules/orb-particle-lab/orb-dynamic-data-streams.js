@@ -300,12 +300,12 @@
       ctx.shadowBlur = 8;
       ctx.strokeStyle = groupColor;
       ctx.fillStyle = groupColor;
+      const c1y = start.y;
       for (let particleIndex = 0; particleIndex < F.length; particleIndex++) {
         const f = F[particleIndex];
         if (!f.valid || f.fa < .05) continue;
         const fa = f.fa, qx = f.qx, qy = f.qy;
         const c1x = start.x + (qx - start.x) * .42;
-        const c1y = start.y;
         ctx.globalAlpha = .22 * fa * start.visibleRatio;
         ctx.beginPath();
         ctx.moveTo(start.x, start.y);
