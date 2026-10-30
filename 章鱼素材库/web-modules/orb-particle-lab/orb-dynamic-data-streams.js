@@ -291,14 +291,16 @@
 
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineWidth = .8;
-    starts.forEach((start, groupIndex) => {
+    for (let groupIndex = 0; groupIndex < starts.length; groupIndex++) {
+      const start = starts[groupIndex];
       /* 同一组只连接当前卡片；每组独立配色，当前可见组之间不重复。 */
       const groupColor = getGroupColor(start.symbol);
       /* 每组统一设置粒子辉光状态，避免每个粒子反复写入相同 Canvas 属性。 */
       ctx.shadowColor = groupColor;
       ctx.shadowBlur = 8;
-      F.forEach(f => {
-        if (!f.valid || f.fa < .05) return;
+      for (let particleIndex = 0; particleIndex < F.length; particleIndex++) {
+        const f = F[particleIndex];
+        if (!f.valid || f.fa < .05) continue;
         const fa = f.fa, qx = f.qx, qy = f.qy;
         const c1x = start.x + (qx - start.x) * .42;
         const c1y = start.y;
@@ -317,10 +319,10 @@
         ctx.beginPath();
         ctx.arc(px, py, 1.6, 0, PI * 2);
         ctx.fill();
-      });
+      }
       ctx.shadowBlur = 0;
       drawCardEmission(start, t + groupIndex * .17);
-    });
+    }
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
     return true;
