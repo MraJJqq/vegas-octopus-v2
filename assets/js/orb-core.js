@@ -2,7 +2,7 @@
 
 var R=Math.random,PI=Math.PI,cv=document.getElementById("orb-core-canvas"),x=cv.getContext("2d"),W,H,i;
 var resizeFrame=0,lastPixelW=0,lastPixelH=0,lastDpr=0;
-function rs(){var d=Math.min(1.5,Math.max(1,window.devicePixelRatio||1)),r=cv.getBoundingClientRect(),nw=Math.max(1,r.width),nh=Math.max(1,r.height),pw=Math.round(nw*d),ph=Math.round(nh*d);W=nw;H=nh;if(pw!==lastPixelW||ph!==lastPixelH||d!==lastDpr){lastPixelW=pw;lastPixelH=ph;lastDpr=d;if(cv.width!==pw)cv.width=pw;if(cv.height!==ph)cv.height=ph;x.setTransform(d,0,0,d,0,0)}}
+function rs(){var coarse=window.matchMedia&&window.matchMedia('(pointer: coarse)').matches,d=Math.min(coarse?1.25:1.5,Math.max(1,window.devicePixelRatio||1)),r=cv.getBoundingClientRect(),nw=Math.max(1,r.width),nh=Math.max(1,r.height),pw=Math.round(nw*d),ph=Math.round(nh*d);W=nw;H=nh;if(pw!==lastPixelW||ph!==lastPixelH||d!==lastDpr){lastPixelW=pw;lastPixelH=ph;lastDpr=d;if(cv.width!==pw)cv.width=pw;if(cv.height!==ph)cv.height=ph;x.setTransform(d,0,0,d,0,0)}}
 function scheduleResize(){if(resizeFrame)return;resizeFrame=requestAnimationFrame(function(){resizeFrame=0;rs()})}
 rs();window.addEventListener("resize",scheduleResize,{passive:true});if(window.ResizeObserver)new ResizeObserver(scheduleResize).observe(cv.parentElement);
 var V={spd:.13,zm:.83,ln:2.5,ps:1.6,fl:3};
@@ -26,7 +26,7 @@ cv.addEventListener("pointermove",function(e){if(!dn)return;rot+=(e.clientX-lx)*
 var projectedPoints=Array.from({length:N},function(){return[0,0,0,0,0]});
 var glowGradient=null,glowCx=-1,glowCy=-1,glowRadius=-1;
 var last=0,orbFrame=0,frameTimer=0;
-var FRAME_INTERVAL=1000/((window.matchMedia&&window.matchMedia('(pointer: coarse)').matches)?24:30);
+var FRAME_INTERVAL=1000/((window.matchMedia&&window.matchMedia('(pointer: coarse)').matches)?20:30);
 /* 按目标帧率调度 RAF，避免每个显示器刷新周期都执行无效回调。 */
 function scheduleOrbFrame(){if(document.hidden||orbFrame||frameTimer)return;frameTimer=window.setTimeout(function(){frameTimer=0;if(!document.hidden)orbFrame=requestAnimationFrame(frame)},Math.max(0,FRAME_INTERVAL-1000/60))}
 function frame(ms){orbFrame=0;if(document.hidden)return;var t=ms/1000,dt=Math.max(0,Math.min(.05,t-last));last=t;if(!dn)rot+=dt*V.spd;
