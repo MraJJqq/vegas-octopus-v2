@@ -140,6 +140,9 @@ async function completeCandles(symbol,timeframe,firstRows){
   if(added===0||!Number.isFinite(oldest))break;
   endTime=oldest*1000-1;
  }
+ /* 分页期间可能已有15秒行情刷新；以当前缓存覆盖相同时间戳，避免旧分页结果回滚最新K线。 */
+ const current=cache.get(key);
+ if(current&&Array.isArray(current.rows))current.rows.forEach(row=>all.set(row.time,row));
  const result=[...all.values()].sort((a,b)=>a.time-b.time);
  cache.set(key,{rows:result,at:Date.now()});
  while(cache.size>30)cache.delete(cache.keys().next().value);
