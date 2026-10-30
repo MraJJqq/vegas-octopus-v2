@@ -22,12 +22,12 @@ state.saved=readSaved();
 const storedState=state.saved;state.saved=storedState.perSymbol||storedState;
 const root=document.createElement('div');root.id='vegas-layer5-root';
 root.innerHTML=`<section id="vegas-layer5-window" aria-label="Vegas 全屏 K线图">
-<header id="vegas-layer5-head"><button id="vegas-layer5-prev" class="vegas-l5-nav" type="button" aria-label="上一个正式信号">‹</button><button id="vegas-layer5-next" class="vegas-l5-nav" type="button" aria-label="下一个正式信号">›</button><span id="vegas-layer5-status" aria-live="polite"></span></header>
+<span id="vegas-layer5-status" aria-live="polite"></span>
 <div id="vegas-layer5-chart-wrap"><div id="vegas-layer5-chart" aria-label="K线与Vegas均线图"></div><div id="vegas-layer5-message">等待行情</div></div>
 <nav id="vegas-layer5-control" aria-label="当前品种与K线周期"><span id="vegas-layer5-title"></span><span class="vegas-l5-divider" aria-hidden="true">·</span><div id="vegas-layer5-periods"></div></nav>
 </section>`;
 document.body.appendChild(root);
-const win=root.querySelector('#vegas-layer5-window'),head=root.querySelector('#vegas-layer5-head'),chartHost=root.querySelector('#vegas-layer5-chart'),title=root.querySelector('#vegas-layer5-title'),status=root.querySelector('#vegas-layer5-status'),controlBar=root.querySelector('#vegas-layer5-control'),periodsHost=root.querySelector('#vegas-layer5-periods'),message=root.querySelector('#vegas-layer5-message');
+const win=root.querySelector('#vegas-layer5-window'),chartHost=root.querySelector('#vegas-layer5-chart'),title=root.querySelector('#vegas-layer5-title'),status=root.querySelector('#vegas-layer5-status'),periodsHost=root.querySelector('#vegas-layer5-periods'),message=root.querySelector('#vegas-layer5-message');
 if(!window.LightweightCharts){message.hidden=false;message.textContent='TradingView 图表组件加载失败';throw new Error('Lightweight Charts CDN did not load');}
 const LWC=window.LightweightCharts;
 const chart=LWC.createChart(chartHost,{
@@ -290,29 +290,8 @@ function scheduleAutoRotate(){
   scheduleAutoRotate();
  },6000);
 }
-function stepFormalSymbol(direction){
- const symbols=formalSymbols();
- if(!symbols.length){status.textContent='暂无正式信号';return}
- const current=symbols.indexOf(state.symbol);
- const index=current<0?(direction>0?0:symbols.length-1):(current+direction+symbols.length)%symbols.length;
- openSymbol(symbols[index]);
-}
-root.querySelector('#vegas-layer5-prev').addEventListener('click',()=>stepFormalSymbol(-1));
-root.querySelector('#vegas-layer5-next').addEventListener('click',()=>stepFormalSymbol(1));
 function close(){if(state.open&&state.candles.length)saveView();if(state.requestController){state.requestController.abort();state.requestController=null;}state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];if(state.rotateTimer)clearTimeout(state.rotateTimer);state.rotateTimer=0;if(state.refreshTimer)clearTimeout(state.refreshTimer);state.refreshTimer=0;win.classList.remove('is-open');}
-/* 触屏退出：顶部非控件区域双击；图表缩放和平移交由 Lightweight Charts 处理。 */
-let lastHeadTap=0;
-function isHeadControl(target){return !!(target&&target.closest&&target.closest('button,select,input,textarea,a'))}
-head.addEventListener('touchend',e=>{
- if(!state.open||isHeadControl(e.target))return;
- const now=Date.now();
- if(now-lastHeadTap<360){e.preventDefault();lastHeadTap=0;close()}
- else lastHeadTap=now;
-},{passive:false});
-head.addEventListener('dblclick',e=>{
- if(state.open&&!isHeadControl(e.target)){e.preventDefault();close()}
-});
-
+/* Escape 键用于退出全屏K线。 */
 periodsHost.addEventListener('click',e=>{const button=e.target.closest&&e.target.closest('button[data-period]');if(!button||!state.symbol)return;const nextPeriod=button.dataset.period;if(nextPeriod===state.period)return;state.period=nextPeriod;renderControlBar();state.fetchAt=0;state.candles=[];const saved=currentSaved();saved.period=state.period;delete saved.visibleRange;state.loadedSymbol='';state.loadedPeriod='';save();loadCandles(true)});
 document.addEventListener('click',e=>{
  const card=e.target.closest&&e.target.closest('#market-cards-layer .mc-card[data-symbol]');
