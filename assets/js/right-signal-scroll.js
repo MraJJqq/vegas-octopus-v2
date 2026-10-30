@@ -29,7 +29,7 @@ const error=root.querySelector('.vr-error');
 let queue=[],panels=[],current='',period='4H',data=[],sharedRange=null;
 let periodSettings={},cache=new Map(),stockMap=null,stockMapAt=0;
 let requestId=0;
-let hidden=document.hidden,refreshTimer=0,resumeTimer=0,wheelDelta=0,touchStart=null;
+let hidden=document.hidden,refreshTimer=0;
 let applyingRange=false,rangeApplyFrame=0;
 
 try{
