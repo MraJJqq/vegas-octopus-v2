@@ -99,7 +99,7 @@ function playScrollTransition(){
  },620);
 }
 function showSymbol(symbol){
- if(!symbol||hidden)return;root.classList.remove('vr-leave-up');current=symbol;period=symbolSetting(symbol).period;title.textContent=symbol;status.textContent='加载行情…';error.hidden=true;renderPeriodButtons();clearTimers();
+ if(!symbol||hidden)return;current=symbol;period=symbolSetting(symbol).period;title.textContent=symbol;status.textContent='加载行情…';error.hidden=true;renderPeriodButtons();clearTimers();
  const token=++requestToken;enqueue(async()=>{try{const rows=await getCandles(symbol,period);if(token!==requestToken||current!==symbol)return;setChartData(rows);if(pendingSnapshot)playScrollTransition();scheduleRotation();scheduleRefresh()}catch(e){if(token!==requestToken)return;status.textContent='数据异常';error.textContent='行情暂不可用 · '+String(e.message||e).slice(0,48);error.hidden=false;scheduleRotation()}})
 }
 function scheduleRefresh(){if(refreshTimer)clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>loadCurrent(false),REFRESH_MS)}
