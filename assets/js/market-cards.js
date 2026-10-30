@@ -138,18 +138,15 @@ function pauseAutoScroll(){
  if(autoTimer){clearTimeout(autoTimer);autoTimer=0}
  autoLastTime=0;autoEngageLastTime=0;
 }
-function applyManualDelta(delta,source){
+function applyWheelDelta(delta){
  if(Math.abs(delta)<.1)return;
  const now=performance.now();
- autoResumeAt=now+(source==='touch'?1600:180);
+ autoResumeAt=now+180;
  autoEngage=Math.min(autoEngage,.28);autoEngageLastTime=now;
  const direction=delta<0?-1:1;
  if(!manualFrame){manualTarget=left.scrollTop;manualVelocity=0;manualLastTime=0}
  const reversing=manualVelocity!==0&&Math.sign(manualVelocity)!==Math.sign(delta);
- if(source==='touch'){
-  manualTarget+=delta;
-  manualVelocity=Math.max(-1.2,Math.min(1.2,manualVelocity+delta*.018));
- }else if(reversing){
+ if(reversing){
   manualTarget=left.scrollTop+delta*1.12;manualVelocity=delta*.018;
  }else{
   manualTarget+=delta*1.28;manualVelocity=Math.max(-1.2,Math.min(1.2,manualVelocity+delta*.022));
@@ -183,7 +180,7 @@ left.addEventListener('wheel',e=>{
  if(Math.abs(e.deltaY)<.1)return;
  e.preventDefault();e.stopPropagation();
  const unit=e.deltaMode===1?16:e.deltaMode===2?left.clientHeight:1;
- applyManualDelta(e.deltaY*unit,'wheel');
+ applyWheelDelta(e.deltaY*unit);
 },{passive:false});
 left.addEventListener('scroll',()=>{
  if(normalizing)return;
@@ -413,7 +410,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{
  let pointerFrame=0,pendingX=0,pendingY=0,hasPending=false;
  const off=()=>{hasPending=false;if(pointerFrame){cancelAnimationFrame(pointerFrame);pointerFrame=0}c.style.setProperty('--rx','0deg');c.style.setProperty('--ry','0deg');c.classList.remove('hot')};
  const applyPointer=()=>{pointerFrame=0;if(!hasPending)return;hasPending=false;const r=el.getBoundingClientRect(),x=(pendingX-r.left)/Math.max(1,r.width),y=(pendingY-r.top)/Math.max(1,r.height);c.style.setProperty('--ry',((x-.5)*24)+'deg');c.style.setProperty('--rx',((.5-y)*20)+'deg');c.style.setProperty('--mx',x*100+'%');c.style.setProperty('--my',y*100+'%');c.classList.add('hot')};
- el.addEventListener('pointermove',e=>{pendingX=e.clientX;pendingY=e.clientY;hasPending=true;if(!pointerFrame)pointerFrame=requestAnimationFrame(applyPointer)},{passive:true});
+ el.addEventListener('pointermove',e=>{if(e.pointerType!=='mouse')return;pendingX=e.clientX;pendingY=e.clientY;hasPending=true;if(!pointerFrame)pointerFrame=requestAnimationFrame(applyPointer)},{passive:true});
  ['pointerleave','pointerup','pointercancel'].forEach(t=>el.addEventListener(t,off,{passive:true}));
 });
 })();
