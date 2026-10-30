@@ -50,7 +50,7 @@ const emaSeries=EMA_LINES.map(line=>chart.addSeries(LWC.LineSeries,{color:line.c
 
 
 let renderedSnapshot=null;
-let suppressRangeSaveUntil=0;
+let suppressRangeSaveUntil=0,chartAutoApplying=false;
 function currentSaved(){if(!state.saved[state.symbol])state.saved[state.symbol]={};return state.saved[state.symbol]}
 let saveTimer=0,rollInTimer=0,lastTitleTap=0,legacyRangesCleaned=false;
 function scheduleSave(){
@@ -62,7 +62,7 @@ function flushSave(){
  save();
 }
 chart.timeScale().subscribeVisibleTimeRangeChange(range=>{
- if(!range||!state.open||!state.candles.length||Date.now()<suppressRangeSaveUntil)return;
+ if(!range||!state.open||!state.candles.length||Date.now()<suppressRangeSaveUntil||chartAutoApplying)return;
  globalVisibleRange=range;scheduleSave();
 });
 function symbolFor(symbol){return symbol+'USDT'}
@@ -255,6 +255,7 @@ function draw(view={}){
  const last=state.candles[state.candles.length-1];
  title.textContent=state.symbol;
  status.textContent=last.close.toLocaleString('en-US',{maximumFractionDigits:6})+'  '+new Date(last.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+ scheduleChartAutoScroll();
 }
 function renderControlBar(){
  const options=PERIODS;
@@ -267,7 +268,7 @@ function renderControlBar(){
   return button;
  }));
 }
-function saveView(){const range=chart.timeScale().getVisibleRange();if(range)globalVisibleRange=range;flushSave()}
+function saveView(){flushSave()}
 function playRollIn(){
  win.classList.remove('is-closing','is-roll-out','is-roll-in');
  win.classList.add('is-open');
@@ -318,38 +319,99 @@ function openSymbol(symbol){
 }
 let autoQueue=[],autoIndex=0,autoTimer=0,autoTransitionTimer=0,autoMode=false,manualControl=false;
 const AUTO_DWELL=10000,ROLL_MS=240,FADE_MS=240;
-let chartHover=false,autoInteractionPaused=false;
+let autoInteractionPaused=false,lastChartInteractionType='mouse';
 const activeChartPointers=new Set();
+const CHART_AUTO_SPEED=.8;
+let chartAutoFrame=0,chartAutoTimer=0,chartAutoLastTime=0,chartAutoResumeAt=0,chartAutoEngage=1,chartAutoEngageLastTime=0;
+function scheduleChartAutoScroll(){
+ if(document.hidden||!state.open||!state.candles.length||chartAutoFrame||chartAutoTimer)return;
+ chartAutoTimer=window.setTimeout(()=>{chartAutoTimer=0;if(!document.hidden)chartAutoFrame=requestAnimationFrame(runChartAutoScroll)},50);
+}
+function runChartAutoScroll(now){
+ chartAutoFrame=0;
+ try{
+  if(!state.open||!state.candles.length||chartInteractionActive())return;
+  if(!chartAutoLastTime)chartAutoLastTime=now;
+  const dt=Math.min(40,Math.max(0,now-chartAutoLastTime))/1000;
+  chartAutoLastTime=now;
+  if(!chartAutoEngageLastTime)chartAutoEngageLastTime=now;
+  const engageDt=Math.min(40,Math.max(0,now-chartAutoEngageLastTime));
+  chartAutoEngageLastTime=now;
+  if(now>=chartAutoResumeAt){
+   chartAutoEngage=Math.min(1,chartAutoEngage+engageDt/1000);
+   const ts=chart.timeScale(),range=ts.getVisibleLogicalRange(),count=state.candles.length;
+   if(range&&count>1){
+    const width=Math.max(1,Math.min(count,range.to-range.from));
+    const advance=CHART_AUTO_SPEED*chartAutoEngage*dt;
+    if(advance>0){
+     let from=range.from+advance,to=range.to+advance;
+     if(to>=count-.5){from=0;to=width;}
+     chartAutoApplying=true;
+     try{ts.setVisibleLogicalRange({from,to})}
+     finally{chartAutoApplying=false}
+    }
+   }
+  }
+ }catch(error){console.warn('[Vegas Layer 5] auto-scroll frame recovered',error)}
+ finally{scheduleChartAutoScroll()}
+}
+function pauseChartAutoScroll(type){
+ lastChartInteractionType=type||lastChartInteractionType;
+ chartAutoResumeAt=Infinity;
+ if(chartAutoFrame){cancelAnimationFrame(chartAutoFrame);chartAutoFrame=0}
+ if(chartAutoTimer){clearTimeout(chartAutoTimer);chartAutoTimer=0}
+ chartAutoLastTime=0;chartAutoEngageLastTime=0;
+}
+function resumeChartAutoScroll(type){
+ lastChartInteractionType=type||lastChartInteractionType;
+ chartAutoResumeAt=performance.now()+(lastChartInteractionType==='touch'?1400:180);
+ chartAutoEngage=lastChartInteractionType==='touch'?0:.28;
+ chartAutoLastTime=0;chartAutoEngageLastTime=0;
+ scheduleChartAutoScroll();
+}
+function clearChartAutoScroll(){
+ if(chartAutoFrame)cancelAnimationFrame(chartAutoFrame);
+ if(chartAutoTimer)clearTimeout(chartAutoTimer);
+ chartAutoFrame=0;chartAutoTimer=0;chartAutoLastTime=0;chartAutoEngageLastTime=0;
+}
 function clearAutoTimers(){
  if(autoTimer){clearTimeout(autoTimer);autoTimer=0;}
  if(autoTransitionTimer){clearTimeout(autoTransitionTimer);autoTransitionTimer=0;}
  if(rollInTimer){clearTimeout(rollInTimer);rollInTimer=0;}
 }
-function chartInteractionActive(){return chartHover||activeChartPointers.size>0}
+function chartInteractionActive(){return activeChartPointers.size>0}
 function syncChartInteraction(){
  const paused=chartInteractionActive();
  if(paused===autoInteractionPaused)return;
  autoInteractionPaused=paused;
- if(paused){if(autoTimer){clearTimeout(autoTimer);autoTimer=0;}}
- else scheduleAutoStep();
+ if(paused){
+  pauseChartAutoScroll(lastChartInteractionType);
+  if(autoTimer){clearTimeout(autoTimer);autoTimer=0;}
+ }else{
+  resumeChartAutoScroll(lastChartInteractionType);
+  scheduleAutoStep();
+ }
 }
-chartHost.addEventListener('pointerenter',e=>{
- if(e.pointerType==='mouse'||e.pointerType==='pen'){chartHover=true;syncChartInteraction()}
-},{passive:true});
-chartHost.addEventListener('pointerleave',e=>{
- if(e.pointerType==='mouse'||e.pointerType==='pen'){chartHover=false;syncChartInteraction()}
-},{passive:true});
 chartHost.addEventListener('pointerdown',e=>{
- activeChartPointers.add(e.pointerId);syncChartInteraction();
+ activeChartPointers.add(e.pointerId);
+ pauseChartAutoScroll(e.pointerType==='touch'?'touch':e.pointerType);
+ syncChartInteraction();
 },{passive:true});
 window.addEventListener('pointerup',e=>{
- activeChartPointers.delete(e.pointerId);syncChartInteraction();
+ activeChartPointers.delete(e.pointerId);
+ lastChartInteractionType=e.pointerType==='touch'?'touch':e.pointerType;
+ syncChartInteraction();
 },{passive:true});
 window.addEventListener('pointercancel',e=>{
- activeChartPointers.delete(e.pointerId);syncChartInteraction();
+ activeChartPointers.delete(e.pointerId);
+ lastChartInteractionType=e.pointerType==='touch'?'touch':e.pointerType;
+ syncChartInteraction();
 },{passive:true});
 chartHost.addEventListener('lostpointercapture',e=>{
  activeChartPointers.delete(e.pointerId);syncChartInteraction();
+},{passive:true});
+chartHost.addEventListener('wheel',()=>{
+ resumeChartAutoScroll('mouse');
 },{passive:true});
 function hideWindow(){
  lastTitleTap=0;
@@ -451,7 +513,7 @@ if(typeof window.VegasLayer5BridgeReady==='function')window.VegasLayer5BridgeRea
 function close(){
  clearAutoTimers();
  manualControl=true;autoMode=false;
- activeChartPointers.clear();chartHover=false;autoInteractionPaused=false;
+ activeChartPointers.clear();autoInteractionPaused=false;clearChartAutoScroll();
  hideWindow();
 }
 /* 品种名称双击/触屏双击退出；周期按钮仍只响应单击。 */
@@ -507,7 +569,7 @@ function scheduleRefresh(){
 document.addEventListener('visibilitychange',()=>{
  if(document.hidden){
   clearAutoTimers();
-  activeChartPointers.clear();chartHover=false;autoInteractionPaused=false;
+  activeChartPointers.clear();autoInteractionPaused=false;clearChartAutoScroll();
   if(autoMode&&state.open){win.classList.remove('is-closing');win.classList.add('is-open');}
   if(state.open&&state.candles.length)saveView();
   if(state.refreshTimer)clearTimeout(state.refreshTimer);
@@ -515,7 +577,7 @@ document.addEventListener('visibilitychange',()=>{
   if(state.requestController){state.requestController.abort();state.requestController=null;requestVersion++;state.loading=false;}
   return;
  }
- if(state.open){loadCandles(true);scheduleRefresh();}
+ if(state.open){loadCandles(true);scheduleRefresh();resumeChartAutoScroll('touch');}
  if(!manualControl&&autoQueue.length){
   if(!state.open){autoMode=false;resumeAutoQueue();}
   else{autoMode=true;scheduleAutoStep();}
