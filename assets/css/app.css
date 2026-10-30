@@ -7,7 +7,7 @@ body{position:fixed;inset:0;background:#02040a}
 /* 第一层：全页面统一深邃黑暗背景；后续模块不得另建底色层。 */
 body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:#02040a}
 /* 页面容器透明，所有内容叠加在第一层背景之上。 */
-.app{position:relative;z-index:1;width:100%;height:100dvh;min-height:0;padding:0;background:transparent;overflow:hidden;overscroll-behavior:none;pointer-events:none;}
+.app{position:relative;z-index:3;width:100%;height:100dvh;min-height:0;padding:0;background:transparent;overflow:hidden;overscroll-behavior:none;pointer-events:none;}
 
 /* 第三层：小卡片行情模块，独立叠加，不改动第一、二层。 */
 #market-cards-layer{--up:#2ee6a6;--dn:#ff5c7c;--mute:#7f8db0;--ink:#e8f0ff;position:absolute;z-index:4;inset:0;min-width:0;min-height:0;pointer-events:none;overflow:visible}
