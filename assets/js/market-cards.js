@@ -241,6 +241,8 @@ if('IntersectionObserver' in window){
   entries.forEach(entry=>entry.target.classList.toggle('mc-in-view',entry.isIntersecting));
  },{root:left,threshold:0.01});
  focusSlots.forEach(slot=>cardMotionObserver.observe(slot));
+}else{
+ focusSlots.forEach(slot=>slot.classList.add('mc-in-view'));
 }
 const API='https://api.bitget.com';
 async function bitgetJson(path){
