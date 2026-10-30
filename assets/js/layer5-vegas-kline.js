@@ -27,32 +27,12 @@ root.innerHTML=`<section id="vegas-layer5-window" aria-label="Vegas 全屏 K线�
 </section>`;
 document.body.appendChild(root);
 const win=root.querySelector('#vegas-layer5-window'),chartHost=root.querySelector('#vegas-layer5-chart'),title=root.querySelector('#vegas-layer5-title'),status=root.querySelector('#vegas-layer5-status'),periodsHost=root.querySelector('#vegas-layer5-periods'),message=root.querySelector('#vegas-layer5-message');
-/* 先独立注册卡片点击；即使图表库初始化失败，也必须给出可见反馈。 */
-const marketLayer=document.getElementById('market-cards-layer');
-if(marketLayer){
- marketLayer.addEventListener('click',e=>{
-  const card=e.target instanceof Element?e.target.closest('.mc-card[data-symbol]'):null;
-  if(!card||!marketLayer.contains(card))return;
-  const symbol=String(card.dataset.symbol||'').trim().toUpperCase();
-  if(!symbol)return;
-  e.preventDefault();
-  e.stopPropagation();
-  if(!window.LightweightCharts){
-   win.classList.add('is-open');
-   message.hidden=false;
-   message.textContent='K线图表组件未加载，请检查网络后刷新页面';
-   return;
-  }
-  openSymbol(symbol);
- },true);
-}
-if(!window.LightweightCharts){
- message.hidden=false;
- message.textContent='K线图表组件加载失败；点击品种卡片可查看此提示';
- console.error('[Vegas Layer 5] Lightweight Charts CDN did not load');
-} 
 const LWC=window.LightweightCharts;
-if(!LWC)return;
+if(!LWC){
+ console.error('[Vegas Layer 5] Lightweight Charts CDN did not load');
+ if(typeof window.VegasLayer5BridgeFailed==='function')window.VegasLayer5BridgeFailed();
+ return;
+}
 const chart=LWC.createChart(chartHost,{
  autoSize:true,attributionLogo:true,
  layout:{background:{type:LWC.ColorType.Solid,color:'rgba(0,0,0,0)'},textColor:'rgba(210,232,255,.7)',fontFamily:'Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'},
@@ -309,6 +289,8 @@ function openSymbol(symbol){
  loadCandles(false);
  scheduleRefresh();
 }
+window.VegasLayer5Open=openSymbol;
+if(typeof window.VegasLayer5BridgeReady==='function')window.VegasLayer5BridgeReady();
 function close(){lastTitleTap=0;if(state.open&&state.candles.length)saveView();if(state.requestController){state.requestController.abort();state.requestController=null;}state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];if(state.refreshTimer)clearTimeout(state.refreshTimer);state.refreshTimer=0;win.classList.remove('is-open');}
 /* 品种名称双击/触屏双击退出；周期按钮仍只响应单击。 */
 let lastTitleTap=0;
