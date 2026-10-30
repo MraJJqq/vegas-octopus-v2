@@ -7,7 +7,7 @@ const API='https://api.bitget.com';
 const STOCKS=new Set(['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','QCOM','AMD','TSM','AVGO','ORCL','ARM','MU','ASML','SNDK','SKHYNIX','MRVL','GLW','HOOD','CBRS','SPCX']);
 const PERIODS=['1H','4H','1D'], EMA_LINES=[12,36,43,144,169,576,676];
 const EMA_COLORS=['#f5d76e','#54B8D0','#54B8D0','#f4d35e','#f4d35e','#ff4e5e','#ff4e5e'];
-const ROTATE_MS=9000, REFRESH_MS=30000, MAX_REQUESTS=2;
+const ROTATE_MS=9000, REFRESH_MS=15000, MAX_REQUESTS=2;
 const root=document.getElementById('vegas-right-scroll'), LWC=window.LightweightCharts;
 if(!root||!LWC){console.error('[Vegas Right Scroll] missing host or chart library');return;}
 const host=root.querySelector('.vr-chart'), title=root.querySelector('.vr-symbol'), status=root.querySelector('.vr-status');
@@ -41,8 +41,8 @@ function enqueue(task){requestQueue.push(task);pump()}
 function pump(){while(activeRequests<MAX_REQUESTS&&requestQueue.length){const task=requestQueue.shift();activeRequests++;task().catch(()=>{}).finally(()=>{activeRequests--;pump()})}}
 const chart=LWC.createChart(host,{autoSize:true,attributionLogo:false,
  layout:{background:{type:LWC.ColorType.Solid,color:'rgba(0,0,0,0)'},textColor:'rgba(210,232,255,.72)',fontSize:11,fontFamily:'Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'},
- grid:{vertLines:{visible:false},horzLines:{visible:false}},rightPriceScale:{visible:false,borderVisible:false,scaleMargins:{top:.09,bottom:.08}},leftPriceScale:{visible:false,borderVisible:false},
- timeScale:{visible:true,borderVisible:false,rightOffset:3,barSpacing:5,minBarSpacing:.5,shiftVisibleRangeOnNewBar:false,timeVisible:true,secondsVisible:false},
+ grid:{vertLines:{visible:false},horzLines:{visible:false}},rightPriceScale:{visible:false,borderVisible:false,scaleMargins:{top:.09,bottom:.08},autoScale:true},leftPriceScale:{visible:false,borderVisible:false,autoScale:true},
+ timeScale:{visible:false,borderVisible:false,rightOffset:3,barSpacing:5,minBarSpacing:.5,shiftVisibleRangeOnNewBar:false,timeVisible:false,secondsVisible:false},
  crosshair:{vertLine:{visible:true,color:'rgba(120,190,230,.18)'},horzLine:{visible:true,color:'rgba(120,190,230,.18)'}},
  handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:true},handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true,axisDoubleClickReset:true},kineticScroll:{touch:true,mouse:true}});
 const candle=chart.addSeries(LWC.CandlestickSeries,{upColor:'rgba(0,0,0,0)',downColor:'#ff5c7c',borderUpColor:'#2ee6a6',borderDownColor:'#ff5c7c',wickUpColor:'#2ee6a6',wickDownColor:'#ff5c7c',lastValueVisible:false,priceLineVisible:false});
@@ -58,7 +58,22 @@ function setChartData(rows,restore=false){
 }
 chart.timeScale().subscribeVisibleTimeRangeChange(range=>{if(!range||!current||!data.length)return;symbolSetting(current).range=range;saveSettings()});
 function clearTimers(){if(rotationTimer)clearTimeout(rotationTimer);if(refreshTimer)clearTimeout(refreshTimer);rotationTimer=refreshTimer=0}
-function scheduleRotation(){if(hidden||paused||queue.length<2||!current)return;if(rotationTimer)clearTimeout(rotationTimer);rotationTimer=setTimeout(()=>{rotationTimer=0;advance()},ROTATE_MS)}
+function scheduleRotation(){
+ if(hidden||paused||!current||!queue.length)return;
+ if(rotationTimer)clearTimeout(rotationTimer);
+ rotationTimer=setTimeout(()=>{
+  rotationTimer=0;
+  if(hidden||paused||!current)return;
+  if(queue.length>1)advance();
+  else autoFollowLatest();
+ },ROTATE_MS);
+}
+function autoFollowLatest(){
+ if(hidden||paused||!data.length){scheduleRotation();return}
+ const from=Math.max(0,data.length-110),to=data.length;
+ try{chart.timeScale().setVisibleLogicalRange({from,to})}catch{}
+ scheduleRotation();
+}
 function advance(){if(hidden||paused||queue.length<2)return;index=(index+1)%queue.length;showSymbol(queue[index])}
 function showSymbol(symbol){
  if(!symbol||hidden)return;current=symbol;period=symbolSetting(symbol).period;title.textContent=symbol;status.textContent='加载行情…';error.hidden=true;renderPeriodButtons();clearTimers();
@@ -79,6 +94,7 @@ function restoreLatest(){
 window.addEventListener('pointerup',()=>{if(paused){if(interactionTimer)clearTimeout(interactionTimer);interactionTimer=setTimeout(restoreLatest,1800)}},{passive:true});
 window.addEventListener('pointercancel',()=>{if(paused){if(interactionTimer)clearTimeout(interactionTimer);interactionTimer=setTimeout(restoreLatest,1800)}},{passive:true});
 function syncBoundary(){const left=document.querySelector('#market-cards-layer .mc-columns');if(!left)return;const apply=()=>{root.style.left=Math.round(left.getBoundingClientRect().right)+'px'};apply();if(window.ResizeObserver){const ro=new ResizeObserver(apply);ro.observe(left);ro.observe(document.documentElement)}window.addEventListener('resize',apply,{passive:true})}
+
 function reconcile(symbols){
  const next=Array.from(new Set((symbols||[]).map(s=>String(s||'').trim().toUpperCase()).filter(s=>/^[A-Z0-9.]+$/.test(s))));
  const old=current;queue=next;
