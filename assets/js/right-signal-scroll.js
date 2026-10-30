@@ -271,7 +271,6 @@ function scheduleCycle(delay=CLEAR_MS){
 async function beginTransition(){
  if(manualSymbol||transitioning||queue.length<2||hidden||paused)return;
  transitioning=true;
- setTransitionHint(true);
  const nextIndex=(currentIndex+1)%queue.length;
  const nextSymbol=queue[nextIndex];
  const nextLayer=1-activeLayer;
@@ -292,6 +291,7 @@ async function beginTransition(){
   scheduleCycle(1000);
   return;
  }
+ setTransitionHint(true);
  incoming.style.pointerEvents='none';
  incoming.style.transition='none';
  outgoing.style.transition='none';
@@ -425,7 +425,7 @@ function reconcile(symbols){
 }
 document.addEventListener('visibilitychange',()=>{
  hidden=document.hidden;
- if(hidden){++cycleToken;clearTimers()}
+ if(hidden){++cycleToken;clearTimers();setTransitionHint(false)}
  else{
   const symbol=currentSymbol();
   if(symbol)loadLayer(activeLayer,symbol,periodFor(symbol));
