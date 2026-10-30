@@ -52,7 +52,7 @@ const emaSeries=EMA_LINES.map(line=>chart.addSeries(LWC.LineSeries,{color:line.c
 let renderedSnapshot=null;
 let suppressRangeSaveUntil=0;
 function currentSaved(){if(!state.saved[state.symbol])state.saved[state.symbol]={};return state.saved[state.symbol]}
-let saveTimer=0,lastTitleTap=0,legacyRangesCleaned=false;
+let saveTimer=0,rollInTimer=0,lastTitleTap=0,legacyRangesCleaned=false;
 function scheduleSave(){
  if(saveTimer)clearTimeout(saveTimer);
  saveTimer=setTimeout(()=>{saveTimer=0;save()},220);
@@ -277,7 +277,8 @@ function playRollIn(){
  win.classList.add('is-open');
  void win.offsetWidth;
  win.classList.add('is-roll-in');
- requestAnimationFrame(()=>requestAnimationFrame(()=>win.classList.remove('is-roll-in')));
+ if(rollInTimer)clearTimeout(rollInTimer);
+ rollInTimer=window.setTimeout(()=>{rollInTimer=0;win.classList.remove('is-roll-in')},ROLL_MS+30);
 }
 function openSymbol(symbol){
  if(!symbol)return;
@@ -325,6 +326,7 @@ const activeChartPointers=new Set();
 function clearAutoTimers(){
  if(autoTimer){clearTimeout(autoTimer);autoTimer=0;}
  if(autoTransitionTimer){clearTimeout(autoTransitionTimer);autoTransitionTimer=0;}
+ if(rollInTimer){clearTimeout(rollInTimer);rollInTimer=0;}
 }
 function chartInteractionActive(){return chartHover||activeChartPointers.size>0}
 function syncChartInteraction(){
