@@ -12,6 +12,15 @@ S.forEach(d=>{
  d.dom={card:left.querySelector('#mc-c'+d.i),price:left.querySelector('#mc-c'+d.i+' .mc-price'),pct:left.querySelector('#mc-c'+d.i+' .mc-pct'),symbol:left.querySelector('#mc-c'+d.i+' .mc-sym')};
 
 });
+/* 在卡片DOM创建后立即绑定委托点击，不等待行情请求完成。 */
+left.addEventListener('click',event=>{
+ const card=event.target.closest('.mc-card[data-symbol]');
+ if(!card||!left.contains(card))return;
+ const symbol=String(card.dataset.symbol||'').trim().toUpperCase();
+ if(!symbol)return;
+ if(typeof window.VegasLayer5ShowSymbol==='function')window.VegasLayer5ShowSymbol(symbol);
+ else window.__VEGAS_PENDING_LAYER5_SYMBOL=symbol;
+});
 function paint(d){
  const el=d.dom,priceEl=el.price;
  if(!d.ready||!Number.isFinite(d.p)||d.p<=0){if(priceEl.textContent!=='加载中')priceEl.textContent='加载中';if(el.pct.textContent!=='--')el.pct.textContent='--';return}
@@ -354,12 +363,6 @@ window.VegasApplyFormalSignals();
 loadMarketData();scheduleMarketRefresh();
 document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{
  const c=el.querySelector('.mc-card');
- c.addEventListener('click',()=>{
-  const symbol=String(c.dataset.symbol||'').trim().toUpperCase();
-  if(!symbol)return;
-  if(typeof window.VegasLayer5ShowSymbol==='function')window.VegasLayer5ShowSymbol(symbol);
-  else window.__VEGAS_PENDING_LAYER5_SYMBOL=symbol;
- });
  let pointerFrame=0,pendingX=0,pendingY=0,hasPending=false;
  const off=()=>{hasPending=false;if(pointerFrame){cancelAnimationFrame(pointerFrame);pointerFrame=0}c.style.setProperty('--rx','0deg');c.style.setProperty('--ry','0deg');c.classList.remove('hot')};
  const applyPointer=()=>{pointerFrame=0;if(!hasPending)return;hasPending=false;const r=el.getBoundingClientRect(),x=(pendingX-r.left)/Math.max(1,r.width),y=(pendingY-r.top)/Math.max(1,r.height);c.style.setProperty('--ry',((x-.5)*24)+'deg');c.style.setProperty('--rx',((.5-y)*20)+'deg');c.style.setProperty('--mx',x*100+'%');c.style.setProperty('--my',y*100+'%');c.classList.add('hot')};
