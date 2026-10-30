@@ -68,7 +68,7 @@ function updateFocusScale(){
 }
 function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(updateFocusScale)}
 let manualTarget=left.scrollTop,manualVelocity=0,manualFrame=0,manualLastTime=0;
-let autoResumeAt=0,touchActive=false,touchDragging=false,touchStartY=0,touchLastY=0;
+let autoResumeAt=0,touchActive=false,touchDragging=false,touchStartY=0,touchLastY=0,touchLastTime=0,touchVelocity=0;
 let autoLastTime=0,autoEngageLastTime=0,autoEngage=1,autoRemainder=0;
 let autoFrame=0,autoTimer=0,loopDirection=1,lastObservedScrollTop=left.scrollTop;
 let normalizing=false;
@@ -193,26 +193,61 @@ left.addEventListener('scroll',()=>{
  lastObservedScrollTop=left.scrollTop;
  queueFocusScale();
 },{passive:true});
+/* 触摸拖动直接映射手指位移；松手后独立执行高质量惯性衰减。 */
+function runTouchInertia(now){
+ try{
+  if(!manualLastTime)manualLastTime=now;
+  const dt=Math.min(32,Math.max(1,now-manualLastTime));manualLastTime=now;
+  moveLoop(touchVelocity*dt,Math.sign(touchVelocity)||loopDirection,'manual');
+  touchVelocity*=Math.exp(-dt/520);
+  if(Math.abs(touchVelocity)<.025){
+   touchVelocity=0;manualFrame=0;manualLastTime=0;manualTarget=left.scrollTop;
+   autoResumeAt=Math.max(autoResumeAt,now+100);
+   return;
+  }
+  manualFrame=requestAnimationFrame(runTouchInertia);
+ }catch(error){
+  touchVelocity=0;manualFrame=0;manualLastTime=0;manualTarget=left.scrollTop;
+  autoResumeAt=performance.now()+120;
+  console.warn('[Vegas Octopus] touch inertia recovered:',error);
+  queueFocusScale();
+ }
+}
 left.addEventListener('touchstart',e=>{
  const touch=e.touches[0];if(!touch)return;
  if(manualFrame){cancelAnimationFrame(manualFrame);manualFrame=0}
- manualLastTime=0;manualVelocity=0;
- touchStartY=touchLastY=touch.clientY;touchActive=true;touchDragging=false;
+ manualLastTime=0;manualVelocity=0;touchVelocity=0;
+ touchStartY=touchLastY=touch.clientY;touchLastTime=performance.now();
+ touchActive=true;touchDragging=false;
  manualTarget=left.scrollTop;autoResumeAt=performance.now()+1600;autoEngage=0;
 },{passive:true});
 left.addEventListener('touchmove',e=>{
  const touch=e.touches[0];if(!touch||!touchActive)return;
- const y=touch.clientY,delta=touchLastY-y;
- if(!touchDragging&&Math.abs(y-touchStartY)<3){touchLastY=y;return}
+ const now=performance.now(),y=touch.clientY,delta=touchLastY-y,dt=Math.max(1,now-touchLastTime);
+ if(!touchDragging&&Math.abs(y-touchStartY)<3){touchLastY=y;touchLastTime=now;return}
  touchDragging=true;e.preventDefault();
- if(Math.abs(delta)>.1){touchLastY=y;applyManualDelta(delta,'touch')}else touchLastY=y;
+ if(Math.abs(delta)>.05){
+  /* 拖动阶段不做追赶缓动：一帧内完成与手指等量位移。 */
+  moveLoop(delta,Math.sign(delta),'manual');
+  const instant=Math.max(-3.6,Math.min(3.6,delta/dt));
+  touchVelocity=Math.max(-3.6,Math.min(3.6,touchVelocity*.35+instant*.65));
+  manualTarget=left.scrollTop;
+  autoResumeAt=now+1600;autoEngage=Math.min(autoEngage,.0);
+ }
+ touchLastY=y;touchLastTime=now;
 },{passive:false});
-function finishTouch(){
- touchActive=false;touchDragging=false;touchStartY=touchLastY=0;
+function finishTouch(cancelled){
+ touchActive=false;touchDragging=false;touchStartY=touchLastY=0;touchLastTime=0;
+ if(!cancelled&&Math.abs(touchVelocity)>.035){
+  /* 适度放大释放速度，520ms时间常数带来更长、更连贯的滑行。 */
+  touchVelocity=Math.max(-3.6,Math.min(3.6,touchVelocity*1.25));
+  manualLastTime=0;
+  if(!manualFrame)manualFrame=requestAnimationFrame(runTouchInertia);
+ }else touchVelocity=0;
  autoResumeAt=performance.now()+1400;
 }
-left.addEventListener('touchend',finishTouch,{passive:true});
-left.addEventListener('touchcancel',finishTouch,{passive:true});
+left.addEventListener('touchend',()=>finishTouch(false),{passive:true});
+left.addEventListener('touchcancel',()=>finishTouch(true),{passive:true});
 document.addEventListener('visibilitychange',()=>{
  if(document.hidden){
   pauseAutoScroll();
