@@ -15,3 +15,6 @@
 #vegas-right-scroll .vr-error[hidden]{display:none}
 @media(max-width:700px){#vegas-right-scroll{left:48vw}#vegas-right-scroll .vr-list{gap:7px;padding:8px 4px}#vegas-right-scroll .vr-card{flex-basis:clamp(150px,23vh,205px);border-radius:9px}#vegas-right-scroll .vr-head{left:6px;right:5px}#vegas-right-scroll .vr-head strong{font-size:10px}#vegas-right-scroll .vr-status{font-size:9px}#vegas-right-scroll .vr-periods{gap:4px}#vegas-right-scroll .vr-periods button{font-size:9px;min-width:20px}}
 @media(prefers-reduced-motion:reduce){#vegas-right-scroll .vr-list{scroll-behavior:auto}}
+
+/* 最新事件保持在右滚动卡片上方，避免顶部信息被K线遮挡。 */
+.topbar{z-index:5}
