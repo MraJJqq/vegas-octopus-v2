@@ -62,7 +62,7 @@ function renderPeriods(){
    loadActive();
   });
   nav.append(button);
- }
+ });
 }
 
 async function getJson(path){
