@@ -329,8 +329,9 @@ async function beginTransition(){
  outgoing.style.transition='none';
  incoming.style.opacity='0';incoming.style.filter='blur(12px)';
  incoming.getBoundingClientRect();
- incoming.style.transition='opacity 5s linear,filter 5s linear';
- outgoing.style.transition='opacity 5s linear,filter 5s linear';
+ const transitionStyle=`opacity ${TRANSITION_MS}ms linear,filter ${TRANSITION_MS}ms linear`;
+ incoming.style.transition=transitionStyle;
+ outgoing.style.transition=transitionStyle;
  incoming.classList.add('is-active');
  outgoing.classList.remove('is-active');
  requestAnimationFrame(()=>{
