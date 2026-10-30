@@ -403,7 +403,16 @@ function pauseForInteraction(event){
  paused=true;++cycleToken;clearTimeout(cycleTimer);cycleTimer=0;
  clearTimeout(initialRevealTimer);initialRevealTimer=0;initialRevealDone=true;
  clearTransitionWork();
- layers.forEach(layer=>{layer.style.transition='none';});
+ /* 先读取浏览器当前插值结果，再关闭 transition，确保按下时真正冻结在当前帧。 */
+ const frozen=layers.map(layer=>{
+  const style=getComputedStyle(layer);
+  return{opacity:style.opacity,filter:style.filter};
+ });
+ layers.forEach((layer,index)=>{
+  layer.style.transition='none';
+  layer.style.opacity=frozen[index].opacity;
+  layer.style.filter=frozen[index].filter;
+ });
  setTransitionHint(false);
  paused=true;fadeState='paused';
 }
