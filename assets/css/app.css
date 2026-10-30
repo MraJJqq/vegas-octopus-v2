@@ -92,7 +92,7 @@ html,body{touch-action:manipulation;}
   position:absolute;
   inset:4px;
   border:1px solid rgba(104,184,220,.12);
-  border-radius:calc(inherit - 4px);
+  border-radius:inherit;
   pointer-events:none;
   background:
     linear-gradient(rgba(125,218,255,.52),rgba(125,218,255,.52)) left top/13px 1px no-repeat,
