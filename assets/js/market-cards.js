@@ -187,7 +187,7 @@ let autoEngageLastTime=0,autoLoopErrorReported=false,autoScrollRemainder=0;
 let autoWaveFrame=0,autoWaveTimer=0;
 function scheduleAutoWave(){
  if(document.hidden||autoWaveFrame||autoWaveTimer)return;
- autoWaveTimer=window.setTimeout(()=>{autoWaveTimer=0;if(!document.hidden)autoWaveFrame=requestAnimationFrame(autoWaveScroll)},33);
+ autoWaveTimer=window.setTimeout(()=>{autoWaveTimer=0;if(!document.hidden)autoWaveFrame=requestAnimationFrame(autoWaveScroll)},50);
 }
 function autoWaveScroll(now){
  /* 回调已开始执行，释放上一帧 ID，否则 finally 中的调度会被误拦截。 */
