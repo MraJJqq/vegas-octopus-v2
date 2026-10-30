@@ -298,13 +298,14 @@
       /* 每组统一设置粒子辉光状态，避免每个粒子反复写入相同 Canvas 属性。 */
       ctx.shadowColor = groupColor;
       ctx.shadowBlur = 8;
+      ctx.strokeStyle = groupColor;
+      ctx.fillStyle = groupColor;
       for (let particleIndex = 0; particleIndex < F.length; particleIndex++) {
         const f = F[particleIndex];
         if (!f.valid || f.fa < .05) continue;
         const fa = f.fa, qx = f.qx, qy = f.qy;
         const c1x = start.x + (qx - start.x) * .42;
         const c1y = start.y;
-        ctx.strokeStyle = groupColor;
         ctx.globalAlpha = .22 * fa * start.visibleRatio;
         ctx.beginPath();
         ctx.moveTo(start.x, start.y);
@@ -315,7 +316,6 @@
         const px = v * v * start.x + 2 * v * u * c1x + u * u * qx;
         const py = v * v * start.y + 2 * v * u * c1y + u * u * qy;
         ctx.globalAlpha = .95 * fa * start.visibleRatio;
-        ctx.fillStyle = groupColor;
         ctx.beginPath();
         ctx.arc(px, py, 1.6, 0, PI * 2);
         ctx.fill();
