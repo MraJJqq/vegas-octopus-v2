@@ -90,6 +90,6 @@ function reconcile(symbols){
 }
 window.VegasLayer5SetAutoQueue=reconcile;
 document.addEventListener('visibilitychange',()=>{hidden=document.hidden;if(hidden){clearTimers();if(interactionTimer)clearTimeout(interactionTimer);}else if(current){loadCurrent();scheduleRotation()}},{passive:true});
-window.addEventListener('pagehide',()=>{clearTimers();if(interactionTimer)clearTimeout(interactionTimer);if(returnFrame)cancelAnimationFrame(returnFrame)});
+window.addEventListener('pagehide',()=>{clearTimers();if(interactionTimer)clearTimeout(interactionTimer);});
 reconcile(window.VegasFormalSignalSymbols||[]);
 })();
