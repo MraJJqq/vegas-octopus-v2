@@ -1,6 +1,6 @@
 /* 第五层全屏 K 线画布：屏幕本身就是显示容器。 */
 #vegas-layer5-root{position:fixed;inset:0;z-index:9999;pointer-events:none;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;color:#eaf4ff}
-#vegas-layer5-window{position:fixed;inset:0;display:none;width:100vw;height:100vh;height:100dvh;min-width:0;min-height:0;max-width:none;max-height:none;overflow:visible;pointer-events:none;opacity:0;transition:opacity .18s ease;touch-action:none;background:transparent!important;border:0!important;box-shadow:none!important}
+#vegas-layer5-window{position:fixed;top:0;left:0;right:0;bottom:auto;display:none;width:100vw;height:50vh;height:50dvh;min-width:0;min-height:0;max-width:none;max-height:none;overflow:visible;pointer-events:none;opacity:0;transition:opacity .18s ease;touch-action:none;background:transparent!important;border:0!important;box-shadow:none!important}
 #vegas-layer5-window.is-open{display:block;opacity:1;pointer-events:none}
 #vegas-layer5-head{position:fixed;z-index:3;top:max(6px,env(safe-area-inset-top));left:max(6px,env(safe-area-inset-left));right:max(6px,env(safe-area-inset-right));display:flex;align-items:center;gap:8px;min-height:34px;padding:2px 4px;pointer-events:auto;cursor:default;background:rgba(2,8,16,.24);border:0!important;box-shadow:none!important;touch-action:manipulation}
 #vegas-layer5-title{font-size:11px;font-weight:700;letter-spacing:.1em;white-space:nowrap;text-shadow:0 0 8px rgba(100,200,255,.5)}
@@ -11,7 +11,7 @@
 #vegas-layer5-period option{color:#dff7ff;background:#07111b}
 #vegas-layer5-chart-wrap{position:absolute;inset:0;min-width:0;min-height:0;background:transparent!important;border:0!important;pointer-events:none}
 #vegas-layer5-chart{position:absolute;inset:0;width:100%;height:100%;background:transparent!important;touch-action:none;pointer-events:auto;cursor:crosshair}
-#vegas-layer5-message{position:fixed;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);max-width:90%;font-size:11px;color:rgba(210,232,255,.8);white-space:nowrap;pointer-events:none;text-shadow:0 0 8px #000}
+#vegas-layer5-message{position:fixed;z-index:2;left:50%;top:25%;transform:translate(-50%,-50%);max-width:90%;font-size:11px;color:rgba(210,232,255,.8);white-space:nowrap;pointer-events:none;text-shadow:0 0 8px #000}
 #vegas-layer5-message[hidden]{display:none}
 @media(max-width:600px){#vegas-layer5-head{min-height:32px;gap:4px}#vegas-layer5-title{font-size:9px;letter-spacing:.04em}#vegas-layer5-status{font-size:9px}#vegas-layer5-period{max-width:52px;font-size:9px}#vegas-layer5-root .vegas-l5-nav{width:18px;flex-basis:18px;height:22px}}
 @media(prefers-reduced-motion:reduce){#vegas-layer5-window{transition:none}}
