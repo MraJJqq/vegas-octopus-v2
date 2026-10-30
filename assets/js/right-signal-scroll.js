@@ -32,7 +32,7 @@ let queue=[],currentIndex=0,period='4H',periodSettings={},manualSymbol='';
 let manualTimer=0;
 let activeLayer=0,cycleTimer=0,transitioning=false,paused=false;
 let cycleToken=0,hidden=document.hidden,refreshTimer=0;
-let stockMap=null,stockMapAt=0,cache=new Map();
+let stockMap=null,stockMapAt=0,cache=new Map(),backfills=new Map();
 
 try{
  const saved=JSON.parse(localStorage.getItem(PERIOD_KEY)||'{}');
@@ -192,7 +192,13 @@ async function loadLayer(index,symbol,timeframe){
   if(identityChanged)view.chart.timeScale().applyOptions({barSpacing:5,rightOffset:3});
   updateLayerStatus(index,symbol,firstRows);
   if(firstRows.length>=1200)return true;
-  completeCandles(symbol,timeframe,firstRows).then(rows=>{
+  const backfillKey=symbol+'|'+timeframe;
+  let backfill=backfills.get(backfillKey);
+  if(!backfill){
+   backfill=completeCandles(symbol,timeframe,firstRows).finally(()=>backfills.delete(backfillKey));
+   backfills.set(backfillKey,backfill);
+  }
+  backfill.then(rows=>{
    if(token!==view.request||view.symbol!==symbol||view.period!==timeframe)return;
    setData(view,rows);
    updateLayerStatus(index,symbol,rows);
