@@ -247,9 +247,7 @@ function resumeAfterInteraction(event){
  });
  scheduleCycle(CLEAR_MS);
 }
-layers.forEach(layer=>{
- layer.addEventListener('pointerdown',pauseForInteraction,{capture:true,passive:true});
-});
+root.addEventListener('pointerdown',pauseForInteraction,{capture:true,passive:true});
 window.addEventListener('pointerup',resumeAfterInteraction,{capture:true,passive:true});
 window.addEventListener('pointercancel',resumeAfterInteraction,{capture:true,passive:true});
 window.addEventListener('blur',()=>{
