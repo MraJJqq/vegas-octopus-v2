@@ -75,11 +75,14 @@ function makeCard(symbol){
  function setPeriod(p){if(!PERIODS.includes(p)||p===card.period)return;card.period=p;view.period=p;saved[symbol]=view;persist();nav.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.period===p));loadCard(card,true)}
  PERIODS.forEach(p=>{const b=document.createElement('button');b.type='button';b.textContent=p;b.dataset.period=p;b.classList.toggle('active',p===card.period);b.addEventListener('click',()=>setPeriod(p));nav.appendChild(b)});
  let pointerCount=0;
- el.querySelector('.vr-chart').addEventListener('pointerdown',()=>{pointerCount++;card.interaction=true;pauseScroll()},{passive:true});
- window.addEventListener('pointerup',()=>{if(pointerCount){pointerCount=0;card.interaction=false;resumeChart(card)}},{passive:true});
- window.addEventListener('pointercancel',()=>{pointerCount=0;card.interaction=false;resumeChart(card)},{passive:true});
+ const chartHost=el.querySelector('.vr-chart');
+ const onPointerDown=()=>{pointerCount++;card.interaction=true;pauseScroll()};
+ const onPointerEnd=()=>{if(pointerCount){pointerCount=0;card.interaction=false;resumeChart(card)}};
+ chartHost.addEventListener('pointerdown',onPointerDown,{passive:true});
+ window.addEventListener('pointerup',onPointerEnd,{passive:true});
+ window.addEventListener('pointercancel',onPointerEnd,{passive:true});
  chart.timeScale().subscribeVisibleTimeRangeChange(range=>{if(!range||card.disposed||!card.data.length)return;card.rangeSaved=range;view.range=range;saved[symbol]=view;persist()});
- card.destroy=()=>{card.disposed=true;if(card.timer)clearTimeout(card.timer);chart.remove();};
+ card.destroy=()=>{card.disposed=true;if(card.timer)clearTimeout(card.timer);chartHost.removeEventListener('pointerdown',onPointerDown);window.removeEventListener('pointerup',onPointerEnd);window.removeEventListener('pointercancel',onPointerEnd);chart.remove();};
  cards.set(symbol,card);return card;
 }
 function setData(card,data,initial=false){
@@ -118,7 +121,7 @@ function resumeChart(card){
  const start=performance.now(),duration=1100,from=current.from,to=current.to;
  function step(now){if(card.disposed||card.interaction)return;const t=Math.min(1,(now-start)/duration),e=1-Math.pow(1-t,3);ts.setVisibleLogicalRange({from:from+(targetFrom-from)*e,to:to+(targetTo-to)*e});if(t<1)requestAnimationFrame(step)}
  requestAnimationFrame(step);
- pauseUntil=performance.now()+1200;paused=false;startScroll();
+ paused=false;startScroll();
 }
 function startScroll(){if(document.hidden||autoFrame||paused)return;autoFrame=requestAnimationFrame(scrollStep)}
 function scrollStep(now){autoFrame=0;if(document.hidden||paused)return;if(!lastFrame)lastFrame=now;const dt=Math.min(50,now-lastFrame);lastFrame=now;const first=list.firstElementChild;if(first&&list.children.length>1){list.scrollTop+=AUTO_SPEED*dt/1000;const gap=parseFloat(getComputedStyle(list).rowGap)||0;const step=first.getBoundingClientRect().height+gap;if(step>0&&list.scrollTop>=step){list.appendChild(first);list.scrollTop-=step}}startScroll()}
