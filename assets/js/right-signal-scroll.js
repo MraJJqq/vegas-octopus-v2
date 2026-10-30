@@ -165,31 +165,37 @@ const emaSeries=EMAS.map((length,index)=>chart.addSeries(LWC.LineSeries,{
 
 function applySharedRange(){
  if(!data.length)return;
- const bars=Math.max(5,Math.min(data.length,Number(sharedRange?.bars)||110));
- const fromEnd=Math.max(0,Math.min(data.length-1,Number(sharedRange?.fromEnd)||0));
- const to=Math.max(1,data.length-fromEnd);
- const from=Math.max(0,to-bars);
+ const latest=data[data.length-1].time;
+ if(!sharedRange||!Number.isFinite(Number(sharedRange.from))||!Number.isFinite(Number(sharedRange.to))){
+  const intervalSeconds=({ '1H':3600,'4H':14400,'1D':86400 })[period]||14400;
+  const end=latest+intervalSeconds;
+  const start=data[Math.max(0,data.length-110)]?.time??data[0].time;
+  sharedRange={from:start,to:end};
+  saveRange();
+ }
  applyingRange=true;
- try{chart.timeScale().setVisibleLogicalRange({from,to})}catch{}
+ try{
+  chart.timeScale().setVisibleRange({
+   from:Math.floor(Number(sharedRange.from)),
+   to:Math.floor(Number(sharedRange.to))
+  });
+ }catch{}
  if(rangeApplyFrame)cancelAnimationFrame(rangeApplyFrame);
  rangeApplyFrame=requestAnimationFrame(()=>{
   applyingRange=false;
   rangeApplyFrame=0;
  });
 }
-chart.timeScale().subscribeVisibleLogicalRangeChange(range=>{
- if(!range||applyingRange||!data.length)return;
- sharedRange={
-  bars:Math.max(5,Math.min(data.length,Math.round(range.to-range.from))),
-  fromEnd:Math.max(0,Math.round(data.length-range.to))
- };
+chart.timeScale().subscribeVisibleTimeRangeChange(range=>{
+ if(!range||applyingRange||!Number.isFinite(Number(range.from))||!Number.isFinite(Number(range.to)))return;
+ if(Number(range.to)<=Number(range.from))return;
+ sharedRange={from:Number(range.from),to:Number(range.to)};
  saveRange();
 });
 function setChart(rows){
  data=rows;
  candle.setData(rows);
  emaSeries.forEach((series,index)=>series.setData(ema(EMAS[index])));
- if(!sharedRange)sharedRange={bars:Math.min(110,rows.length),fromEnd:0};
  applySharedRange();
 }
 
