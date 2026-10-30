@@ -16,7 +16,7 @@ const EMA_LINES=[
  {n:576,color:'#ff4e5e',width:1.8},
  {n:676,color:'#ff4e5e',width:1.8}
 ];
-const state={open:false,symbol:'',period:'4H',candles:[],loading:false,fetchAt:0,rotateTimer:0,loadedSymbol:'',loadedPeriod:'',saved:{},candleCache:new Map(),refreshTimer:0,requestController:null,requestFailures:0,retryAfter:0};
+const state={open:false,symbol:'',period:'4H',candles:[],loading:false,fetchAt:0,rotateTimer:0,loadedSymbol:'',loadedPeriod:'',saved:{},candleCache:new Map(),refreshTimer:0,requestController:null,requestFailures:0,retryAfter:0,pendingVisibleRange:null};
 const readSaved=()=>{try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}catch{return {}}};
 state.saved=readSaved();
 const storedState=state.saved;state.saved=storedState.perSymbol||storedState;
@@ -48,6 +48,17 @@ const emaSeries=EMA_LINES.map(line=>chart.addSeries(LWC.LineSeries,{color:line.c
 let renderedSnapshot=null;
 let suppressRangeSaveUntil=0;
 function currentSaved(){if(!state.saved[state.symbol])state.saved[state.symbol]={};return state.saved[state.symbol]}
+function savedRange(saved,period){
+ if(saved&&saved.visibleRanges&&saved.visibleRanges[period])return saved.visibleRanges[period];
+ return saved&&saved.period===period?saved.visibleRange||null:null;
+}
+function rememberRange(saved,period,range){
+ if(!saved||!range)return;
+ if(!saved.visibleRanges||typeof saved.visibleRanges!=='object')saved.visibleRanges={};
+ saved.visibleRanges[period]=range;
+ saved.visibleRange=range;
+ saved.period=period;
+}
 let saveTimer=0;
 function scheduleSave(){
  if(saveTimer)clearTimeout(saveTimer);
@@ -59,7 +70,7 @@ function flushSave(){
 }
 chart.timeScale().subscribeVisibleTimeRangeChange(range=>{
  if(!range||!state.open||!state.candles.length||Date.now()<suppressRangeSaveUntil)return;
- const saved=currentSaved();saved.visibleRange=range;saved.period=state.period;scheduleSave();
+ const saved=currentSaved();rememberRange(saved,state.period,range);scheduleSave();
 });
 function symbolFor(symbol){return symbol+'USDT'}
 function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({perSymbol:state.saved,defaultPeriodMigration:'4H'}))}catch{}}
@@ -163,7 +174,7 @@ async function loadCandles(force=false){
   while(state.candleCache.size>8)state.candleCache.delete(state.candleCache.keys().next().value);
   message.hidden=true;
   let range=previousRange,follow=wasFollowing,initial=false;
-  if(!sameView){const saved=state.saved[symbolAtRequest]||{};range=(saved.period===period&&saved.visibleRange)?saved.visibleRange:null;follow=false;initial=!range}
+  if(!sameView){const saved=state.saved[symbolAtRequest]||{};range=state.pendingVisibleRange||savedRange(saved,period);follow=false;initial=!range}
   draw({range,follow,initial});
   state.loadedSymbol=symbolAtRequest;state.loadedPeriod=period;
  }catch(e){if(requestId===requestVersion){if(e.name!=='AbortError'){state.requestFailures=Math.min(5,state.requestFailures+1);const cooldown=Math.min(300000,30000*Math.pow(2,state.requestFailures-1));state.retryAfter=Date.now()+cooldown;}message.hidden=false;message.textContent='行情读取失败 · '+String(e.message||e).slice(0,48);status.textContent='数据异常';console.warn('[Vegas Layer 5] candle load failed',e)}}
@@ -227,8 +238,11 @@ function draw(view={}){
  renderedSnapshot={symbol:state.symbol,period:state.period,chartCandles:newData,emaData};
  const ts=chart.timeScale();
  if(!incremental){
-  if(view.range){try{ts.setVisibleRange(view.range)}catch{ts.setVisibleLogicalRange({from:Math.max(0,newData.length-120),to:newData.length})}}
-  else if(view.follow)ts.scrollToRealTime();
+  if(view.range){
+   try{ts.setVisibleRange(view.range)}
+   catch{ts.setVisibleLogicalRange({from:Math.max(0,newData.length-120),to:newData.length})}
+   if(state.pendingVisibleRange){rememberRange(currentSaved(),state.period,view.range);state.pendingVisibleRange=null;save();}
+  }else if(view.follow)ts.scrollToRealTime();
   else if(view.initial)ts.setVisibleLogicalRange({from:Math.max(0,newData.length-120),to:newData.length});
  }
  const last=state.candles[state.candles.length-1];
@@ -247,7 +261,7 @@ function renderControlBar(){
   return button;
  }));
 }
-function saveView(){const s=currentSaved();s.period=state.period;const range=chart.timeScale().getVisibleRange();if(range)s.visibleRange=range;flushSave()}
+function saveView(){const s=currentSaved();const range=chart.timeScale().getVisibleRange();if(range)rememberRange(s,state.period,range);else s.period=state.period;flushSave()}
 function openSymbol(symbol){
  if(!symbol)return;
  lastTitleTap=0;
@@ -265,7 +279,7 @@ function openSymbol(symbol){
  if(!cached){candleSeries.setData([]);emaSeries.forEach(s=>s.setData([]));}
  renderControlBar();win.classList.add('is-open');
  message.hidden=!cached;message.textContent='读取历史行情…';
- if(cached)draw({range:saved.period===state.period?saved.visibleRange:null,initial:!(saved.period===state.period&&saved.visibleRange),restore:true});
+ if(cached){const range=savedRange(saved,state.period);draw({range,initial:!range,restore:true});}
  loadCandles(false);
  scheduleAutoRotate();
  scheduleRefresh();
@@ -306,7 +320,29 @@ title.addEventListener('dblclick',e=>{
  if(state.open){e.preventDefault();close()}
 });
 /* Escape 键保留为全局退出方式。 */
-periodsHost.addEventListener('click',e=>{const button=e.target.closest&&e.target.closest('button[data-period]');if(!button||!state.symbol)return;const nextPeriod=button.dataset.period;if(nextPeriod===state.period)return;state.period=nextPeriod;renderControlBar();state.fetchAt=0;state.candles=[];const saved=currentSaved();saved.period=state.period;delete saved.visibleRange;state.loadedSymbol='';state.loadedPeriod='';save();loadCandles(true)});
+periodsHost.addEventListener('click',e=>{
+ const button=e.target.closest&&e.target.closest('button[data-period]');
+ if(!button||!state.symbol)return;
+ const nextPeriod=button.dataset.period;
+ if(nextPeriod===state.period)return;
+ const saved=currentSaved();
+ const currentRange=chart.timeScale().getVisibleRange();
+ if(currentRange){
+  rememberRange(saved,state.period,currentRange);
+  state.pendingVisibleRange=currentRange;
+ }else{
+  state.pendingVisibleRange=savedRange(saved,state.period);
+ }
+ state.period=nextPeriod;
+ saved.period=state.period;
+ renderControlBar();
+ state.fetchAt=0;
+ state.candles=[];
+ state.loadedSymbol='';
+ state.loadedPeriod='';
+ save();
+ loadCandles(true);
+});
 document.addEventListener('click',e=>{
  /* 底部空白带作为单击退出区；周期栏优先保留自身点击，不拦截图表区域。 */
  if(state.open&&e.clientY>=window.innerHeight-56&&!(e.target.closest&&e.target.closest('#vegas-layer5-control'))){
