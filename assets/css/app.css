@@ -8,21 +8,7 @@ body{position:fixed;inset:0;background:#02040a}
 body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:#02040a}
 /* 页面容器透明，所有内容叠加在第一层背景之上。 */
 .app{position:relative;z-index:1;width:100%;height:100dvh;min-height:0;padding:0;background:transparent;overflow:hidden;overscroll-behavior:none;}
-/* 第二层：最新事件悬浮模块。 */
-.topbar{background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;position:absolute;z-index:3;top:clamp(12px,2.2vh,28px);right:clamp(12px,2.2vw,32px);width:clamp(150px,22vw,320px);min-width:0;max-height:calc(100dvh - 24px);overflow:hidden;pointer-events:none}
-.event-top-card{width:100%;min-width:0;min-height:0;max-height:100%;padding:0;display:flex;flex-direction:column;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;pointer-events:auto}
-.panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 0 7px}
-.panel-title{display:flex;align-items:center;gap:7px;font-size:clamp(11px,.8vw,15px);font-weight:750;letter-spacing:.03em}
-.panel-note{font-family:'Avenir Next','Montserrat','Segoe UI',sans-serif;font-size:clamp(8px,.62vw,10px);font-weight:500;letter-spacing:.12em;color:inherit;white-space:nowrap;flex-shrink:0}
 .panel-title .icon{display:inline-grid;place-items:center;width:clamp(20px,1.45vw,27px);height:clamp(20px,1.45vw,27px);border-radius:0;background:transparent!important;border:0!important;box-shadow:none!important;color:var(--cyan)}
-
-.v9-notification{background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;display:flex;flex-direction:column;gap:clamp(8px,1.4vh,20px);flex:1;min-width:0;min-height:0;max-height:calc(100dvh - 76px);overflow:auto;overscroll-behavior:contain}
-.v9-group{min-width:0;background:transparent!important;box-shadow:none!important;border-left:1px solid rgba(85,155,214,.18);padding-left:9px}
-.v9-group-title{font-size:clamp(9px,.65vw,11px);font-weight:750;color:#a9d9ff;white-space:nowrap;margin-bottom:5px}
-.v9-symbols{display:flex;flex-wrap:wrap;align-content:flex-start;gap:4px 7px;min-width:0}
-.v9-symbol{font-size:clamp(8px,.62vw,10px);color:#8fe9ff;white-space:nowrap;text-shadow:0 0 8px rgba(49,217,255,.14)}
-.v9-nochange{font-size:clamp(8px,.62vw,10px);color:#8ba4be;white-space:nowrap}
-@media(max-width:600px){.topbar{top:12px;right:12px;width:clamp(132px,42vw,250px);max-height:calc(100dvh - 24px)}.v9-notification{gap:10px;max-height:calc(100dvh - 64px)}.v9-group{padding-left:6px}.panel-head{padding-bottom:5px}.v9-symbols{gap:4px 5px}}
 
 /* 第三层：小卡片行情模块，独立叠加，不改动第一、二层。 */
 #market-cards-layer{--up:#2ee6a6;--dn:#ff5c7c;--mute:#7f8db0;--ink:#e8f0ff;position:absolute;z-index:4;inset:0;min-width:0;min-height:0;pointer-events:none;overflow:visible}
@@ -94,6 +80,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
   box-shadow:none!important;
 }
 .panel-title{min-width:0}
+.panel-title .icon{display:inline-grid;place-items:center;width:clamp(20px,1.45vw,27px);height:clamp(20px,1.45vw,27px);border-radius:0;background:transparent!important;border:0!important;box-shadow:none!important;color:var(--cyan)}
 .panel-note{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .v9-notification{
   display:flex!important;
