@@ -392,11 +392,11 @@ window.VegasLayer5Open=function(symbol){
 };
 if(typeof window.VegasLayer5BridgeReady==='function')window.VegasLayer5BridgeReady();
 function close(){
- const wasManual=manualControl;
+ const shouldResume=manualControl||autoMode;
  clearAutoTimers();
  manualControl=false;autoMode=false;
  hideWindow();
- if(wasManual)window.setTimeout(resumeAutoQueue,FADE_MS+40);
+ if(shouldResume)window.setTimeout(resumeAutoQueue,FADE_MS+40);
 }
 /* 品种名称双击/触屏双击退出；周期按钮仍只响应单击。 */
 let lastTitleTap=0;
