@@ -5,7 +5,7 @@ const API='https://api.bitget.com';
 const STORAGE_KEY='vegas-octopus-layer5-kline-v1';
 const STOCKS=new Set(['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','QCOM','AMD','TSM','AVGO','ORCL','ARM','MU','ASML','SNDK','SKHYNIX','MRVL','GLW','HOOD','CBRS','SPCX']);
 const PERIODS=['15m','30m','1H','2H','4H','6H','12H','1D','1W'];
-const STOCK_PERIODS=['4H','1D','1W'];
+const STOCK_PERIODS=['4H','1D'];
 let requestVersion=0;
 const EMA_LINES=[
  {n:12,color:'#f5d76e',width:1.2},
