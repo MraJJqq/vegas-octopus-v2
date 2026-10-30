@@ -117,7 +117,7 @@ async function fetchCandlePage(context,timeframe,endTime){
 }
 async function getCandles(symbol,timeframe){
  const key=symbol+'|'+timeframe,cached=cache.get(key);
- if(cached&&Date.now()-cached.at<15000)return cached.rows;
+ if(cached&&Date.now()-cached.at<12000)return cached.rows;
  const pending=candleRequests.get(key);
  if(pending)return pending;
  const request=(async()=>{
