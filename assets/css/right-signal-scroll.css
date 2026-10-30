@@ -7,8 +7,18 @@
 #vegas-right-scroll .vr-periods{display:flex;gap:8px;margin-left:auto;pointer-events:auto}
 #vegas-right-scroll .vr-periods button{border:0;background:transparent;color:rgba(173,204,226,.58);font:600 11px Inter,sans-serif;padding:4px;min-width:28px;min-height:28px}
 #vegas-right-scroll .vr-periods button.active{color:#e8f8ff;text-shadow:0 0 7px rgba(92,198,255,.7)}
-#vegas-right-scroll .vr-chart{position:absolute;inset:0;width:100%;height:100%;touch-action:pan-x pan-y;pointer-events:auto}
+#vegas-right-scroll .vr-chart{position:absolute;inset:0;width:100%;height:100%;touch-action:none;pointer-events:auto}
 #vegas-right-scroll .vr-error{position:absolute;z-index:3;left:8px;bottom:7px;font-size:10px;color:#ff9aab;pointer-events:none}
 #vegas-right-scroll .vr-error[hidden]{display:none}
 @media(max-width:700px){#vegas-right-scroll{left:48vw}#vegas-right-scroll .vr-head{left:3px;right:3px;top:2px;gap:4px}#vegas-right-scroll .vr-periods{gap:3px}#vegas-right-scroll .vr-periods button{font-size:9px;min-width:22px;padding:2px}}
 .topbar{z-index:5}
+
+/* 轮播必须有明确的上下移动反馈；手指上下滑动也可切换正式信号品种。 */
+#vegas-right-scroll .vr-single{will-change:transform,opacity}
+#vegas-right-scroll.vr-leave-up .vr-single{animation:vr-slide-out-up .18s ease-in both}
+#vegas-right-scroll.vr-leave-down .vr-single{animation:vr-slide-out-down .18s ease-in both}
+#vegas-right-scroll.vr-enter-up .vr-single{animation:vr-slide-in-up .26s cubic-bezier(.22,1,.36,1) both}
+@keyframes vr-slide-out-up{to{transform:translateY(-18px);opacity:0}}
+@keyframes vr-slide-out-down{to{transform:translateY(18px);opacity:0}}
+@keyframes vr-slide-in-up{from{transform:translateY(18px);opacity:0}to{transform:translateY(0);opacity:1}}
+@media(prefers-reduced-motion:reduce){#vegas-right-scroll.vr-leave-up .vr-single,#vegas-right-scroll.vr-leave-down .vr-single,#vegas-right-scroll.vr-enter-up .vr-single{animation:none}}
