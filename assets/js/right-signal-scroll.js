@@ -31,7 +31,7 @@ let queue=[],panels=[],current='',period='4H',data=[],sharedRange=null;
 let periodSettings={},cache=new Map(),stockMap=null,stockMapAt=0;
 let requestId=0;
 let hidden=document.hidden,refreshTimer=0;
-let applyingRange=false,rangeApplyFrame=0;
+let applyingRange=false,applyingRangeTarget=null,rangeApplyTimer=0,resizeFrame=0;
 
 try{
  const saved=JSON.parse(localStorage.getItem(PERIOD_KEY)||'{}');
@@ -40,6 +40,10 @@ try{
   .map(([symbol,v])=>[symbol,{period:v.period}]));
 }catch{}
 try{sharedRange=JSON.parse(localStorage.getItem(RANGE_KEY)||'null')}catch{}
+function validRange(range){
+ return !!range&&Number.isFinite(Number(range.from))&&Number.isFinite(Number(range.to))&&Number(range.to)>Number(range.from);
+}
+if(!validRange(sharedRange))sharedRange=null;
 
 const periodFor=s=>PERIODS.includes(periodSettings[s]?.period)?periodSettings[s].period:'4H';
 function savePeriods(){
@@ -166,41 +170,42 @@ const emaSeries=EMAS.map((length,index)=>chart.addSeries(LWC.LineSeries,{
 function applySharedRange(){
  if(!data.length)return;
  const latest=data[data.length-1].time;
- if(!sharedRange||!Number.isFinite(Number(sharedRange.from))||!Number.isFinite(Number(sharedRange.to))){
+ if(!validRange(sharedRange)){
   const intervalSeconds=({ '1H':3600,'4H':14400,'1D':86400 })[period]||14400;
   const end=latest+intervalSeconds;
   const start=data[Math.max(0,data.length-110)]?.time??data[0].time;
   sharedRange={from:start,to:end};
   saveRange();
  }
- applyingRange=true;
- try{
-  chart.timeScale().setVisibleRange({
-   from:Math.floor(Number(sharedRange.from)),
-   to:Math.floor(Number(sharedRange.to))
-  });
- }catch{}
- if(rangeApplyFrame)cancelAnimationFrame(rangeApplyFrame);
- rangeApplyFrame=requestAnimationFrame(()=>{
-  applyingRange=false;
-  rangeApplyFrame=0;
- });
+ const target={from:Math.floor(Number(sharedRange.from)),to:Math.floor(Number(sharedRange.to))};
+ applyingRange=true;applyingRangeTarget=target;
+ if(rangeApplyTimer)clearTimeout(rangeApplyTimer);
+ rangeApplyTimer=setTimeout(()=>{
+  applyingRange=false;applyingRangeTarget=null;rangeApplyTimer=0;
+ },350);
+ try{chart.timeScale().setVisibleRange(target)}catch{
+  if(rangeApplyTimer)clearTimeout(rangeApplyTimer);
+  rangeApplyTimer=0;applyingRange=false;applyingRangeTarget=null;
+ }
 }
 chart.timeScale().subscribeVisibleTimeRangeChange(range=>{
- if(!range||applyingRange||!Number.isFinite(Number(range.from))||!Number.isFinite(Number(range.to)))return;
- if(Number(range.to)<=Number(range.from))return;
+ if(!validRange(range))return;
+ if(applyingRange){
+  const target=applyingRangeTarget;
+  if(target&&Math.abs(Number(range.from)-target.from)<=1&&Math.abs(Number(range.to)-target.to)<=1){
+   if(rangeApplyTimer)clearTimeout(rangeApplyTimer);
+   rangeApplyTimer=0;applyingRange=false;applyingRangeTarget=null;
+  }
+  return;
+ }
  sharedRange={from:Number(range.from),to:Number(range.to)};
  saveRange();
 });
 function setChart(rows){
- applyingRange=true;
- try{
-  data=rows;
-  candle.setData(rows);
-  emaSeries.forEach((series,index)=>series.setData(ema(EMAS[index])));
- }finally{
-  applySharedRange();
- }
+ data=rows;
+ candle.setData(rows);
+ emaSeries.forEach((series,index)=>series.setData(ema(EMAS[index])));
+ applySharedRange();
 }
 
 function createPanel(symbol){
@@ -417,19 +422,18 @@ document.addEventListener('visibilitychange',()=>{
   autoResumeAt=performance.now()+250;scheduleAutoScroll();
  }
 },{passive:true});
-window.addEventListener('resize',()=>{
- cachedPanelStep=0;
- if(host.isConnected&&chart)requestAnimationFrame(()=>chart.applyOptions({
-  width:Math.max(1,host.clientWidth),height:Math.max(1,host.clientHeight)
- }));
-},{passive:true});
-if('ResizeObserver' in window){
- const rightResizeObserver=new ResizeObserver(()=>{
-  cachedPanelStep=0;
-  if(host.isConnected&&chart)chart.applyOptions({
-   width:Math.max(1,host.clientWidth),height:Math.max(1,host.clientHeight)
-  });
+function scheduleChartResize(){
+ if(resizeFrame)cancelAnimationFrame(resizeFrame);
+ resizeFrame=requestAnimationFrame(()=>{
+  resizeFrame=0;cachedPanelStep=0;
+  if(!host.isConnected||!chart)return;
+  chart.applyOptions({width:Math.max(1,host.clientWidth),height:Math.max(1,host.clientHeight)});
+  applySharedRange();
  });
+}
+window.addEventListener('resize',scheduleChartResize,{passive:true});
+if('ResizeObserver' in window){
+ const rightResizeObserver=new ResizeObserver(scheduleChartResize);
  rightResizeObserver.observe(track);
  rightResizeObserver.observe(root);
 }
