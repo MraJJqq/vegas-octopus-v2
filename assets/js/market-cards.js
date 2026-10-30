@@ -26,33 +26,6 @@ function paint(d){
  if(el.pct.textContent!==nextPct)el.pct.textContent=nextPct;
  
 }
-window.addEventListener('resize',()=>{
- cachedCardStep=0;
- queueFocusScale();
-},{passive:true});
-let focusSlots=Array.from(left.querySelectorAll('.mc-slot'));
-let focusFrame=0;
-const focusStyleCache=new WeakMap();
-function updateFocusScale(){
- focusFrame=0;
- const height=left.clientHeight,scrollTop=left.scrollTop,center=scrollTop+height/2,range=Math.max(1,height*.58),fadeRange=Math.max(1,height*.50),available=Math.max(1,left.clientWidth-8);
- const first=focusSlots[0],step=cardStep();
- if(!first||!step){return}
- /* 卡片统一尺寸且按固定 gap 排列：只读取首卡几何信息，后续位置用步长推算，减少逐卡布局读取。 */
- const baseTop=first.offsetTop,slotHeight=first.offsetHeight,slotWidth=Math.max(1,first.offsetWidth),visibleBottom=scrollTop+height;
- const scaleMax=Math.min(1.34,available/slotWidth);
- for(let index=0;index<focusSlots.length;index++){
-  const slot=focusSlots[index],top=baseTop+index*step,bottom=top+slotHeight,distance=Math.abs((top+slotHeight/2)-center),t=Math.min(1,distance/range),ease=t*t*(3-2*t),fadeT=Math.min(1,distance/fadeRange),fadeEase=fadeT*fadeT*(3-2*fadeT);
-  const visible=Math.max(0,Math.min(bottom,visibleBottom)-Math.max(top,scrollTop)),ratio=Math.min(1,visible/Math.max(1,slotHeight)),focused=distance<height*.23&&ratio>=.98;
-  const scale=1+(scaleMax-1)*(1-ease),opacity=focused?1:(1-.72*fadeEase)*Math.min(1,ratio*1.8);
-  const scaleText=scale.toFixed(3),opacityText=Math.max(.025,opacity).toFixed(3);
-  let previous=focusStyleCache.get(slot);
-  if(!previous){previous={scale:'',opacity:''};focusStyleCache.set(slot,previous)}
-  if(previous.scale!==scaleText){slot.style.setProperty('--mc-focus-scale',scaleText);previous.scale=scaleText}
-  if(previous.opacity!==opacityText){slot.style.setProperty('--mc-page-opacity',opacityText);previous.opacity=opacityText}
- }
-}
-function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(updateFocusScale)}
 /* 统一滚动控制器：自动、滚轮、触屏共用唯一位移与循环校正入口。
    卡片 DOM、悬浮层结构、尺寸和视觉样式保持不变。 */
 let cachedCardStep=0;
@@ -246,18 +219,7 @@ if('ResizeObserver' in window){
 }
 queueFocusScale();
 scheduleAutoScroll();
-/* resize 主监听器已统一负责缓存失效、K线重绘与焦点缩放刷新。 */
-left.style.scrollBehavior='auto';
-/* 容器/卡片尺寸变化时使步长缓存失效，兼顾旋转屏幕和响应式布局。 */
-if('ResizeObserver' in window){
- const stepObserver=new ResizeObserver(()=>{
-  cachedCardStep=0;
-  queueFocusScale();
-});
- stepObserver.observe(left);
- if(left.firstElementChild)stepObserver.observe(left.firstElementChild);
-}
-queueFocusScale();
+/* 统一控制器已完成尺寸监听与焦点初始化。 */
 /* 只让视口附近的卡片运行浮动与阴影动画，减少平板 GPU 合成开销。 */
 if('IntersectionObserver' in window){
  const cardMotionObserver=new IntersectionObserver(entries=>{
