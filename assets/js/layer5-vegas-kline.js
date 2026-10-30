@@ -224,6 +224,8 @@ function draw(view={}){
   emaData.forEach((data,index)=>{if(data.length)emaSeries[index].update(data[data.length-1]);});
  }else{
   suppressRangeSaveUntil=Date.now()+250;
+  /* 品种/周期切换时清除上一次动画留下的自定义价格范围，先让新数据重新自动定标。 */
+  candleSeries.priceScale().setAutoScale(true);
   candleSeries.setData(newData);
   emaData.forEach((data,index)=>emaSeries[index].setData(data));
  }
