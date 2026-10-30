@@ -132,7 +132,7 @@ async function loadCandles(force=false){
   const wasFollowing=sameView&&chart.timeScale().scrollPosition()<=1.5;
   state.candles=unique;state.fetchAt=Date.now();
   const cacheKey=symbolAtRequest+'|'+period;state.candleCache.delete(cacheKey);state.candleCache.set(cacheKey,{candles:unique,fetchAt:state.fetchAt});
-  while(state.candleCache.size>12)state.candleCache.delete(state.candleCache.keys().next().value);
+  while(state.candleCache.size>8)state.candleCache.delete(state.candleCache.keys().next().value);
   message.hidden=true;
   let range=previousRange,follow=wasFollowing,initial=false;
   if(!sameView){const saved=state.saved[symbolAtRequest]||{};range=(saved.period===period&&saved.visibleRange)?saved.visibleRange:null;follow=false;initial=!range}
@@ -219,7 +219,7 @@ function openSymbol(symbol){
  state.period=saved.period||'4H';
  state.loading=false;requestVersion++;
  if(STOCKS.has(symbol)&&!STOCK_PERIODS.includes(state.period))state.period='1H';
- const cached=state.candleCache.get(symbol+'|'+state.period);
+ const cacheKey=symbol+'|'+state.period;const cached=state.candleCache.get(cacheKey);if(cached){state.candleCache.delete(cacheKey);state.candleCache.set(cacheKey,cached);}
  state.candles=cached?cached.candles:[];state.fetchAt=cached?cached.fetchAt:0;
  state.loadedSymbol=cached?symbol:'';state.loadedPeriod=cached?state.period:'';
  if(!cached){candleSeries.setData([]);emaSeries.forEach(s=>s.setData([]));}
