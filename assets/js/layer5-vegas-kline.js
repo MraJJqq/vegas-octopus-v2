@@ -234,7 +234,20 @@ function draw(view={}){
   if(view.range){
    let restored=false;
    try{ts.setVisibleRange(view.range);restored=true}
-   catch{ts.setVisibleLogicalRange({from:Math.max(0,newData.length-120),to:newData.length})}
+   catch{
+    const interval=state.period==='1H'?3600:state.period==='4H'?14400:86400;
+    const toLogical=time=>{
+     let lo=0,hi=newData.length;
+     while(lo<hi){const mid=(lo+hi)>>1;if(newData[mid].time<time)lo=mid+1;else hi=mid;}
+     if(lo===0)return (time-newData[0].time)/interval;
+     if(lo>=newData.length)return newData.length-1+(time-newData[newData.length-1].time)/interval;
+     const before=newData[lo-1],after=newData[lo];
+     return lo-1+(time-before.time)/Math.max(1,after.time-before.time);
+    };
+    const from=toLogical(view.range.from),to=toLogical(view.range.to);
+    if(Number.isFinite(from)&&Number.isFinite(to)&&to>from)ts.setVisibleLogicalRange({from,to});
+    else ts.setVisibleLogicalRange({from:Math.max(0,newData.length-120),to:newData.length});
+   }
    if(state.pendingVisibleRange){
     if(restored)globalVisibleRange=view.range;
     state.pendingVisibleRange=null;
