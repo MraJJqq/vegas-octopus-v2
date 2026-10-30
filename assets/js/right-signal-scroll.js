@@ -195,8 +195,11 @@ chart.timeScale().subscribeVisibleTimeRangeChange(range=>{
   if(target&&Math.abs(Number(range.from)-target.from)<=1&&Math.abs(Number(range.to)-target.to)<=1){
    if(rangeApplyTimer)clearTimeout(rangeApplyTimer);
    rangeApplyTimer=0;applyingRange=false;applyingRangeTarget=null;
+   return;
   }
-  return;
+  // 锁定期间出现不同于程序目标的范围，视为用户拖动/缩放，立即接管并保存。
+  if(rangeApplyTimer)clearTimeout(rangeApplyTimer);
+  rangeApplyTimer=0;applyingRange=false;applyingRangeTarget=null;
  }
  sharedRange={from:Number(range.from),to:Number(range.to)};
  saveRange();
