@@ -1,19 +1,46 @@
-/* 右侧连续纵向轨道：非焦点品种用静态K线预览，唯一活动图表可交互。 */
-#vegas-right-scroll{position:fixed;z-index:2;inset:0;width:100vw;height:100vh;overflow:hidden;pointer-events:none;background:transparent}
+/* 右滚动：全屏纵向轨道，单一活动K线图表 */
+#vegas-right-scroll{
+ position:fixed;z-index:2;inset:0;width:100vw;height:100vh;
+ overflow:hidden;pointer-events:none;background:transparent
+}
 #vegas-right-scroll[hidden]{display:none}
-#vegas-right-scroll .vr-single{position:absolute;inset:0;overflow:hidden;pointer-events:none}
-#vegas-right-scroll .vr-track{position:absolute;inset:0;will-change:transform;pointer-events:none}
-#vegas-right-scroll .vr-panel{position:relative;width:100%;height:100vh;min-height:100vh;overflow:hidden;pointer-events:none;background:transparent}
-#vegas-right-scroll .vr-preview-title{position:absolute;z-index:2;top:7px;left:8px;font:600 12px Inter,sans-serif;color:rgba(190,220,242,.68)}
-#vegas-right-scroll .vr-preview{position:absolute;inset:0;width:100%;height:100%;opacity:.34;pointer-events:none}
-#vegas-right-scroll .vr-panel.active .vr-preview{display:none}
-#vegas-right-scroll .vr-chart{position:absolute;inset:0;width:100%;height:100%;pointer-events:auto;touch-action:none}
-#vegas-right-scroll .vr-head{position:absolute;z-index:5;top:5px;left:5px;right:5px;height:28px;display:flex;align-items:center;pointer-events:none}
-#vegas-right-scroll .vr-symbol,#vegas-right-scroll .vr-status{display:none}
-#vegas-right-scroll .vr-periods{display:flex;gap:8px;margin-left:auto;pointer-events:auto}
-#vegas-right-scroll .vr-periods button{border:0;background:transparent;color:rgba(173,204,226,.58);font:600 11px Inter,sans-serif;padding:4px;min-width:28px;min-height:28px}
-#vegas-right-scroll .vr-periods button.active{color:#e8f8ff;text-shadow:0 0 7px rgba(92,198,255,.7)}
+#vegas-right-scroll .vr-single{
+ position:absolute;inset:0;overflow:hidden;pointer-events:none
+}
+#vegas-right-scroll .vr-track{
+ position:absolute;inset:0;will-change:transform;pointer-events:none
+}
+#vegas-right-scroll .vr-panel{
+ position:relative;width:100%;height:100vh;min-height:100vh;
+ overflow:hidden;pointer-events:none;background:transparent
+}
+#vegas-right-scroll .vr-chart{
+ position:absolute;inset:0;width:100%;height:100%;
+ pointer-events:auto;touch-action:none
+}
+#vegas-right-scroll .vr-head{
+ position:absolute;z-index:5;top:5px;left:5px;right:5px;height:28px;
+ display:flex;align-items:center;pointer-events:none
+}
+#vegas-right-scroll .vr-symbol,
+#vegas-right-scroll .vr-status{display:none}
+#vegas-right-scroll .vr-periods{
+ display:flex;gap:8px;margin-left:auto;pointer-events:auto
+}
+#vegas-right-scroll .vr-periods button{
+ min-width:28px;min-height:28px;padding:4px;border:0;background:transparent;
+ color:rgba(173,204,226,.58);font:600 11px Inter,sans-serif
+}
+#vegas-right-scroll .vr-periods button.active{
+ color:#e8f8ff;text-shadow:0 0 7px rgba(92,198,255,.7)
+}
 #vegas-right-scroll .vr-error{display:none}
-#vegas-right-scroll .vr-error:not([hidden]){display:block;position:absolute;z-index:6;left:8px;bottom:8px;color:#ff9aab;font-size:10px}
+#vegas-right-scroll .vr-error:not([hidden]){
+ display:block;position:absolute;z-index:6;left:8px;bottom:8px;
+ color:#ff9aab;font-size:10px
+}
 .topbar{z-index:5}
-@media(max-width:700px){#vegas-right-scroll .vr-periods{gap:3px}#vegas-right-scroll .vr-periods button{font-size:9px;min-width:22px;padding:2px}}
+@media(max-width:700px){
+ #vegas-right-scroll .vr-periods{gap:3px}
+ #vegas-right-scroll .vr-periods button{min-width:22px;padding:2px;font-size:9px}
+}
