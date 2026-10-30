@@ -27,8 +27,32 @@ root.innerHTML=`<section id="vegas-layer5-window" aria-label="Vegas 全屏 K线�
 </section>`;
 document.body.appendChild(root);
 const win=root.querySelector('#vegas-layer5-window'),chartHost=root.querySelector('#vegas-layer5-chart'),title=root.querySelector('#vegas-layer5-title'),status=root.querySelector('#vegas-layer5-status'),periodsHost=root.querySelector('#vegas-layer5-periods'),message=root.querySelector('#vegas-layer5-message');
-if(!window.LightweightCharts){message.hidden=false;message.textContent='TradingView 图表组件加载失败';throw new Error('Lightweight Charts CDN did not load');}
+/* 先独立注册卡片点击；即使图表库初始化失败，也必须给出可见反馈。 */
+const marketLayer=document.getElementById('market-cards-layer');
+if(marketLayer){
+ marketLayer.addEventListener('click',e=>{
+  const card=e.target instanceof Element?e.target.closest('.mc-card[data-symbol]'):null;
+  if(!card||!marketLayer.contains(card))return;
+  const symbol=String(card.dataset.symbol||'').trim().toUpperCase();
+  if(!symbol)return;
+  e.preventDefault();
+  e.stopPropagation();
+  if(!window.LightweightCharts){
+   win.classList.add('is-open');
+   message.hidden=false;
+   message.textContent='K线图表组件未加载，请检查网络后刷新页面';
+   return;
+  }
+  openSymbol(symbol);
+ },true);
+}
+if(!window.LightweightCharts){
+ message.hidden=false;
+ message.textContent='K线图表组件加载失败；点击品种卡片可查看此提示';
+ console.error('[Vegas Layer 5] Lightweight Charts CDN did not load');
+} 
 const LWC=window.LightweightCharts;
+if(!LWC)return;
 const chart=LWC.createChart(chartHost,{
  autoSize:true,attributionLogo:true,
  layout:{background:{type:LWC.ColorType.Solid,color:'rgba(0,0,0,0)'},textColor:'rgba(210,232,255,.7)',fontFamily:'Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'},
@@ -297,19 +321,6 @@ title.addEventListener('touchend',e=>{
 title.addEventListener('dblclick',e=>{
  if(state.open){e.preventDefault();close()}
 });
-/* 将品种点击绑定在卡片容器上，避免全局捕获监听被其他层级干扰。 */
-const marketLayer=document.getElementById('market-cards-layer');
-if(marketLayer){
- marketLayer.addEventListener('click',e=>{
-  const card=e.target instanceof Element?e.target.closest('.mc-card[data-symbol]'):null;
-  if(!card||!marketLayer.contains(card))return;
-  const symbol=String(card.dataset.symbol||'').trim().toUpperCase();
-  if(!symbol)return;
-  e.preventDefault();
-  e.stopPropagation();
-  openSymbol(symbol);
- },true);
-}
 /* Escape 键保留为全局退出方式。 */
 periodsHost.addEventListener('click',e=>{
  const button=e.target.closest&&e.target.closest('button[data-period]');
