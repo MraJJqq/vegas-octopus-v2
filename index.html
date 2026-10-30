@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#02040a">
 <title>Vegas 章鱼</title>
-<link rel="stylesheet" href="./assets/css/app.css?v=20261030-57">
+<link rel="stylesheet" href="./assets/css/app.css?v=20261030-58">
 <link rel="stylesheet" href="./assets/css/right-signal-scroll.css?v=20261030-19">
 <link rel="stylesheet" href="./assets/css/bottom-signal-ticker.css?v=20261030-3">
 </head>
@@ -29,7 +29,7 @@
 </section>
 <div id="vegas-signal-ticker" aria-label="正式信号底部横向滚动播报"><div class="vst-track"><span class="vst-empty">等待正式信号</span></div></div>
 <script src="./assets/js/v9-events.js?v=20261030-4"></script>
-<script src="./assets/js/market-cards.js?v=20261030-23"></script>
+<script src="./assets/js/market-cards.js?v=20261030-24"></script>
 <script>
 (function(){
  const sources=[
@@ -39,7 +39,7 @@
  function loadSource(index){
   if(index>=sources.length){console.error('[Vegas Right Scroll] chart library failed to load');return;}
   const script=document.createElement('script');script.src=sources[index];
-  script.onload=function(){const app=document.createElement('script');app.src='./assets/js/right-signal-scroll.js?v=20261030-41';app.onerror=function(){console.error('[Vegas Right Scroll] K-line module failed to load');};document.body.appendChild(app);};
+  script.onload=function(){const app=document.createElement('script');app.src='./assets/js/right-signal-scroll.js?v=20261030-42';app.onerror=function(){console.error('[Vegas Right Scroll] K-line module failed to load');};document.body.appendChild(app);};
   script.onerror=function(){script.remove();loadSource(index+1);};document.head.appendChild(script);
  }
  loadSource(0);
