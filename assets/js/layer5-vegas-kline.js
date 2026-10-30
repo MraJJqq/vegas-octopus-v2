@@ -305,7 +305,13 @@ function scheduleRefresh(){
  },30000);
 }
 document.addEventListener('visibilitychange',()=>{
- if(document.hidden){if(state.open&&state.candles.length)saveView();if(state.refreshTimer)clearTimeout(state.refreshTimer);state.refreshTimer=0;return;}
+ if(document.hidden){
+  if(state.open&&state.candles.length)saveView();
+  if(state.refreshTimer)clearTimeout(state.refreshTimer);
+  state.refreshTimer=0;
+  if(state.requestController){state.requestController.abort();state.requestController=null;requestVersion++;state.loading=false;}
+  return;
+ }
  if(state.open){loadCandles(true);scheduleRefresh();}
 });
 window.addEventListener('pagehide',()=>{
