@@ -96,7 +96,7 @@ host.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(t)swip
 host.addEventListener('touchend',e=>{if(!swipeStart)return;const t=e.changedTouches&&e.changedTouches[0];if(!t){swipeStart=null;return}const dy=t.clientY-swipeStart.y,dx=t.clientX-swipeStart.x,dt=performance.now()-swipeStart.at;swipeStart=null;if(Math.abs(dy)>58&&Math.abs(dy)>Math.abs(dx)*1.2&&dt<650&&queue.length>1){if(interactionTimer)clearTimeout(interactionTimer);paused=false;clearTimers();advance(dy<0?1:-1)}},{passive:true});
 window.addEventListener('pointerup',()=>{if(paused){if(interactionTimer)clearTimeout(interactionTimer);interactionTimer=setTimeout(restoreLatest,1800)}},{passive:true});
 window.addEventListener('pointercancel',()=>{if(paused){if(interactionTimer)clearTimeout(interactionTimer);interactionTimer=setTimeout(restoreLatest,1800)}},{passive:true});
-function syncBoundary(){const left=document.querySelector('#market-cards-layer .mc-columns');if(!left)return;const apply=()=>{root.style.left=Math.round(left.getBoundingClientRect().right)+'px'};apply();if(window.ResizeObserver){const ro=new ResizeObserver(apply);ro.observe(left);ro.observe(document.documentElement)}window.addEventListener('resize',apply,{passive:true})}
+function syncBoundary(){root.style.left='0px';root.style.right='0px';root.style.top='0px';root.style.bottom='0px';root.style.width='100vw';root.style.height='100vh'}
 
 function reconcile(symbols){
  const next=Array.from(new Set((symbols||[]).map(s=>String(s||'').trim().toUpperCase()).filter(s=>/^[A-Z0-9.]+$/.test(s))));
