@@ -273,6 +273,7 @@ function saveView(){const s=currentSaved();const range=chart.timeScale().getVisi
 function openSymbol(symbol){
  if(!symbol)return;
  lastTitleTap=0;
+ win.classList.remove('is-closing');
  if(state.requestController){state.requestController.abort();state.requestController=null;}
  state.open=true;state.symbol=symbol;
  const saved=state.saved[symbol]||{};
@@ -289,9 +290,114 @@ function openSymbol(symbol){
  loadCandles(false);
  scheduleRefresh();
 }
-window.VegasLayer5Open=openSymbol;
+let autoQueue=[],autoIndex=0,autoTimer=0,autoTransitionTimer=0,autoMode=false,manualControl=false;
+const AUTO_DWELL=10000,FADE_MS=190;
+function clearAutoTimers(){
+ if(autoTimer){clearTimeout(autoTimer);autoTimer=0;}
+ if(autoTransitionTimer){clearTimeout(autoTransitionTimer);autoTransitionTimer=0;}
+}
+function hideWindow(){
+ lastTitleTap=0;
+ if(state.open&&state.candles.length)saveView();
+ if(state.requestController){state.requestController.abort();state.requestController=null;}
+ state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];
+ if(state.refreshTimer)clearTimeout(state.refreshTimer);
+ state.refreshTimer=0;
+ win.classList.remove('is-open');
+ win.classList.add('is-closing');
+ window.setTimeout(()=>{if(!state.open)win.classList.remove('is-closing')},FADE_MS+30);
+}
+function scheduleAutoStep(){
+ if(manualControl||document.hidden||!autoMode||!autoQueue.length)return;
+ if(autoTimer)clearTimeout(autoTimer);
+ autoTimer=window.setTimeout(()=>{autoTimer=0;advanceAutoQueue()},AUTO_DWELL);
+}
+function showAutoSymbol(symbol){
+ if(!symbol||manualControl||document.hidden)return;
+ if(state.open&&state.symbol===symbol){
+  autoMode=true;scheduleAutoStep();return;
+ }
+ autoMode=true;
+ if(state.open){
+  win.classList.remove('is-open');
+  win.classList.add('is-closing');
+  autoTransitionTimer=window.setTimeout(()=>{
+   autoTransitionTimer=0;
+   if(manualControl||document.hidden)return;
+   openSymbol(symbol);
+   scheduleAutoStep();
+  },FADE_MS);
+ }else{
+  openSymbol(symbol);
+  scheduleAutoStep();
+ }
+}
+function advanceAutoQueue(){
+ if(manualControl||document.hidden||!autoQueue.length)return;
+ if(autoQueue.length===1){
+  if(!state.open)showAutoSymbol(autoQueue[0]);
+  else scheduleAutoStep();
+  return;
+ }
+ autoIndex=(autoIndex+1)%autoQueue.length;
+ showAutoSymbol(autoQueue[autoIndex]);
+}
+function resumeAutoQueue(){
+ if(manualControl||document.hidden||!autoQueue.length)return;
+ autoMode=true;
+ if(state.open){
+  const current=autoQueue.indexOf(state.symbol);
+  if(current>=0)autoIndex=current;
+  advanceAutoQueue();
+ }else{
+  autoIndex=Math.min(autoIndex,autoQueue.length-1);
+  showAutoSymbol(autoQueue[autoIndex]);
+ }
+}
+window.VegasLayer5SetAutoQueue=function(symbols){
+ const next=Array.from(new Set((symbols||[]).map(s=>String(s||'').trim().toUpperCase()).filter(Boolean)));
+ const previous=autoQueue;
+ autoQueue=next;
+ if(!autoQueue.length){
+  clearAutoTimers();
+  if(!manualControl&&autoMode&&state.open){autoMode=false;hideWindow();}
+  else autoMode=false;
+  autoIndex=0;
+  return;
+ }
+ if(autoIndex>=autoQueue.length)autoIndex=0;
+ if(manualControl)return;
+ if(state.open&&autoMode&&!autoQueue.includes(state.symbol)){
+  clearAutoTimers();
+  autoIndex=0;
+  showAutoSymbol(autoQueue[autoIndex]);
+  return;
+ }
+ if(!state.open&&!autoMode){
+  autoIndex=0;
+  showAutoSymbol(autoQueue[autoIndex]);
+  return;
+ }
+ if(!previous.length&&!state.open){
+  autoIndex=0;
+  showAutoSymbol(autoQueue[0]);
+ }
+};
+window.VegasLayer5Open=function(symbol){
+ clearAutoTimers();
+ manualControl=true;autoMode=false;
+ const manualIndex=autoQueue.indexOf(String(symbol||'').trim().toUpperCase());
+ if(manualIndex>=0&&autoQueue.length)autoIndex=(manualIndex+1)%autoQueue.length;
+ openSymbol(symbol);
+};
 if(typeof window.VegasLayer5BridgeReady==='function')window.VegasLayer5BridgeReady();
-function close(){lastTitleTap=0;if(state.open&&state.candles.length)saveView();if(state.requestController){state.requestController.abort();state.requestController=null;}state.open=false;requestVersion++;state.loading=false;state.symbol='';state.candles=[];if(state.refreshTimer)clearTimeout(state.refreshTimer);state.refreshTimer=0;win.classList.remove('is-open');}
+function close(){
+ const wasManual=manualControl;
+ clearAutoTimers();
+ manualControl=false;autoMode=false;
+ hideWindow();
+ if(wasManual)window.setTimeout(resumeAutoQueue,FADE_MS+40);
+}
 /* 品种名称双击/触屏双击退出；周期按钮仍只响应单击。 */
 let lastTitleTap=0;
 title.addEventListener('touchend',e=>{
@@ -349,6 +455,8 @@ function scheduleRefresh(){
 }
 document.addEventListener('visibilitychange',()=>{
  if(document.hidden){
+  clearAutoTimers();
+  if(autoMode&&state.open){win.classList.remove('is-closing');win.classList.add('is-open');}
   if(state.open&&state.candles.length)saveView();
   if(state.refreshTimer)clearTimeout(state.refreshTimer);
   state.refreshTimer=0;
@@ -356,8 +464,14 @@ document.addEventListener('visibilitychange',()=>{
   return;
  }
  if(state.open){loadCandles(true);scheduleRefresh();}
+ if(!manualControl&&autoQueue.length){
+  if(!state.open){autoMode=false;resumeAutoQueue();}
+  else{autoMode=true;scheduleAutoStep();}
+ }
 });
 window.addEventListener('pagehide',()=>{
  if(state.open&&state.candles.length)saveView();
 });
+
+window.VegasLayer5SetAutoQueue(window.VegasFormalSignalSymbols||[]);
 })();
