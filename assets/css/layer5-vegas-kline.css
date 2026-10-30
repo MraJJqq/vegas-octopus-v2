@@ -2,10 +2,6 @@
 #vegas-layer5-root{position:fixed;inset:0;z-index:9999;pointer-events:none;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;color:#eaf4ff}
 #vegas-layer5-window{position:fixed;inset:0;display:none;width:100vw;height:100vh;height:100dvh;min-width:0;min-height:0;max-width:none;max-height:none;overflow:visible;pointer-events:none;opacity:0;transition:opacity .18s ease;touch-action:none;background:transparent!important;border:0!important;box-shadow:none!important}
 #vegas-layer5-window.is-open{display:block;opacity:1;pointer-events:none}
-#vegas-layer5-head{position:fixed;z-index:3;top:max(6px,env(safe-area-inset-top));left:max(6px,env(safe-area-inset-left));display:flex;align-items:center;gap:6px;min-height:30px;padding:2px 4px;pointer-events:auto;cursor:default;background:transparent;border:0!important;box-shadow:none!important;touch-action:manipulation}
-#vegas-layer5-title{font-size:15px;font-weight:650;letter-spacing:.12em;white-space:nowrap;color:rgba(226,242,255,.94);text-shadow:0 0 9px rgba(100,200,255,.24)}
-#vegas-layer5-root .vegas-l5-nav{width:20px;height:24px;flex:0 0 20px;padding:0;border:1px solid rgba(120,205,255,.28);border-radius:4px;background:rgba(4,14,24,.18);color:#dff7ff;font-size:18px;line-height:18px;cursor:pointer;pointer-events:auto;touch-action:manipulation}
-#vegas-layer5-root .vegas-l5-nav:active{background:rgba(80,180,255,.22)}
 #vegas-layer5-status{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 #vegas-layer5-control{position:fixed;z-index:5;left:50%;bottom:max(8px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center;justify-content:center;gap:12px;max-width:calc(100vw - 24px);min-height:38px;padding:2px 4px;white-space:nowrap;pointer-events:auto;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;touch-action:manipulation}
 #vegas-layer5-control #vegas-layer5-title{font-size:15px;font-weight:650;letter-spacing:.12em;color:rgba(226,242,255,.96);text-shadow:0 0 9px rgba(100,200,255,.26)}
@@ -18,5 +14,5 @@
 #vegas-layer5-chart{position:absolute;inset:0;width:100%;height:100%;background:transparent!important;touch-action:none;pointer-events:auto;cursor:crosshair}
 #vegas-layer5-message{position:fixed;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);max-width:90%;font-size:11px;color:rgba(210,232,255,.8);white-space:nowrap;pointer-events:none;text-shadow:0 0 8px #000}
 #vegas-layer5-message[hidden]{display:none}
-@media(max-width:600px){#vegas-layer5-head{min-height:28px;gap:4px}#vegas-layer5-control{gap:9px;min-height:36px;bottom:max(6px,env(safe-area-inset-bottom))}#vegas-layer5-control #vegas-layer5-title{font-size:13px;letter-spacing:.09em}#vegas-layer5-periods{gap:9px}#vegas-layer5-root .vegas-l5-period{min-width:25px;min-height:32px;font-size:12px}#vegas-layer5-chart-wrap{inset:0 0 44px}#vegas-layer5-root .vegas-l5-nav{width:18px;flex-basis:18px;height:22px}}
+@media(max-width:600px){#vegas-layer5-control{gap:9px;min-height:36px;bottom:max(6px,env(safe-area-inset-bottom))}#vegas-layer5-control #vegas-layer5-title{font-size:13px;letter-spacing:.09em}#vegas-layer5-periods{gap:9px}#vegas-layer5-root .vegas-l5-period{min-width:25px;min-height:32px;font-size:12px}#vegas-layer5-chart-wrap{inset:0 0 44px}}
 @media(prefers-reduced-motion:reduce){#vegas-layer5-window{transition:none}}
