@@ -241,11 +241,23 @@ function resumeAfterInteraction(){
  },5000);
 }
 layers.forEach(layer=>{
- layer.addEventListener('pointerdown',()=>{pauseForInteraction();resumeAfterInteraction()},{capture:true,passive:true});
+ layer.addEventListener('pointerdown',pauseForInteraction,{capture:true,passive:true});
+ layer.addEventListener('pointerup',resumeAfterInteraction,{capture:true,passive:true});
+ layer.addEventListener('pointercancel',resumeAfterInteraction,{capture:true,passive:true});
  layer.addEventListener('wheel',()=>{pauseForInteraction();resumeAfterInteraction()},{capture:true,passive:true});
- layer.addEventListener('touchstart',()=>{pauseForInteraction();resumeAfterInteraction()},{capture:true,passive:true});
+ layer.addEventListener('touchstart',pauseForInteraction,{capture:true,passive:true});
+ layer.addEventListener('touchend',resumeAfterInteraction,{capture:true,passive:true});
+ layer.addEventListener('touchcancel',resumeAfterInteraction,{capture:true,passive:true});
 });
 function reconcile(symbols){
+ ++cycleToken;clearTimeout(cycleTimer);transitioning=false;
+ layers.forEach((layer,index)=>{
+  layer.style.transition='none';
+  layer.style.opacity=index===activeLayer?'1':'0';
+  layer.style.filter=index===activeLayer?'blur(0px)':'blur(12px)';
+  layer.classList.toggle('is-active',index===activeLayer);
+  layer.getBoundingClientRect();layer.style.transition='';
+ });
  const next=[...new Set((symbols||[]).map(value=>String(value||'').trim().toUpperCase()).filter(value=>/^[A-Z0-9.]+$/.test(value)))];
  const previous=currentSymbol();
  queue=next;
