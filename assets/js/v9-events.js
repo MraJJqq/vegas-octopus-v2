@@ -49,9 +49,18 @@
     });
   }
   async function fetchStateJson(){
-    const response=await fetch(STATE_URL+"?t="+Date.now(),{cache:"no-store"});
-    if(!response.ok)throw new Error("公开信号镜像 HTTP "+response.status);
-    return await response.json();
+    const controller=new AbortController();
+    const timeout=window.setTimeout(()=>controller.abort(),10000);
+    try{
+      const response=await fetch(STATE_URL+"?t="+Date.now(),{cache:"no-store",signal:controller.signal});
+      if(!response.ok)throw new Error("公开信号镜像 HTTP "+response.status);
+      return await response.json();
+    }catch(error){
+      if(error&&error.name==="AbortError")throw new Error("公开信号镜像请求超时（10秒）");
+      throw error;
+    }finally{
+      window.clearTimeout(timeout);
+    }
   }
   function syncDataStreamSignals(symbols){
     if(window.VegasDataStreamLayer&&typeof window.VegasDataStreamLayer.setFormalSignals==="function"){
@@ -92,9 +101,21 @@
       refreshInProgress=false;
     }
   }
-  refreshV9State();
+  let refreshTimer=0;
+  function scheduleRefresh(){
+    if(document.hidden||refreshTimer)return;
+    refreshTimer=window.setTimeout(()=>{
+      refreshTimer=0;
+      refreshV9State().finally(scheduleRefresh);
+    },30*1000);
+  }
+  refreshV9State().finally(scheduleRefresh);
   document.addEventListener("visibilitychange",()=>{
-    if(!document.hidden)refreshV9State();
+    if(document.hidden){
+      if(refreshTimer)window.clearTimeout(refreshTimer);
+      refreshTimer=0;
+      return;
+    }
+    refreshV9State().finally(scheduleRefresh);
   },{passive:true});
-  window.setInterval(refreshV9State,30*1000);
 })();
