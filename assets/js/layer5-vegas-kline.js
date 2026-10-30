@@ -8,8 +8,8 @@ const PERIODS=['1H','4H','1D'];
 let requestVersion=0;
 const EMA_LINES=[
  {n:12,color:'#f5d76e',width:1.2},
- {n:36,color:'#42A5F5',width:1.5},
- {n:43,color:'#42A5F5',width:1.5},
+ {n:36,color:'#54B8D0',width:1.5},
+ {n:43,color:'#54B8D0',width:1.5},
  {n:144,color:'#f4d35e',width:1.7},
  {n:169,color:'#f4d35e',width:1.7},
  {n:576,color:'#ff4e5e',width:1.8},
