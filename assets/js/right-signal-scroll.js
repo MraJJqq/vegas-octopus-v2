@@ -14,7 +14,7 @@ const host=root.querySelector('.vr-chart'), title=root.querySelector('.vr-symbol
 const nav=root.querySelector('.vr-periods'), error=root.querySelector('.vr-error');
 const cache=new Map(), settings=readSettings();
 let queue=[],index=0,current='',period='4H',data=[],requestToken=0,rotationTimer=0,refreshTimer=0,interactionTimer=0,returnFrame=0;
-let paused=false,hidden=false,activeRequests=0,requestQueue=[];
+let paused=false,hidden=false,activeRequests=0,requestQueue=[],transitionTimer=0;
 function readSettings(){try{return JSON.parse(localStorage.getItem('vegas-right-single-v1')||'{}')}catch{return {}}}
 function saveSettings(){try{localStorage.setItem('vegas-right-single-v1',JSON.stringify(settings))}catch{}}
 function symbolSetting(s){if(!settings[s])settings[s]={period:'4H'};if(!PERIODS.includes(settings[s].period))settings[s].period='4H';return settings[s]}
@@ -74,10 +74,10 @@ function autoFollowLatest(){
  try{chart.timeScale().setVisibleLogicalRange({from,to})}catch{}
  scheduleRotation();
 }
-function advance(direction=1){if(hidden||paused||queue.length<2)return;index=(index+direction+queue.length)%queue.length;root.classList.remove('vr-enter-up','vr-enter-down');root.classList.add(direction>=0?'vr-leave-up':'vr-leave-down');setTimeout(()=>{if(hidden||paused)return;showSymbol(queue[index])},180)}
-function showSymbol(symbol){
+function advance(direction=1){if(hidden||paused||queue.length<2)return;index=(index+direction+queue.length)%queue.length;if(transitionTimer)clearTimeout(transitionTimer);root.classList.remove('vr-enter-up','vr-enter-down','vr-leave-up','vr-leave-down');root.classList.add(direction>=0?'vr-leave-up':'vr-leave-down');transitionTimer=setTimeout(()=>{transitionTimer=0;if(hidden||paused)return;showSymbol(queue[index],direction)},320)}
+function showSymbol(symbol,direction=1){
  if(!symbol||hidden)return;root.classList.remove('vr-leave-up','vr-leave-down');current=symbol;period=symbolSetting(symbol).period;title.textContent=symbol;status.textContent='加载行情…';error.hidden=true;renderPeriodButtons();clearTimers();
- const token=++requestToken;enqueue(async()=>{try{const rows=await getCandles(symbol,period);if(token!==requestToken||current!==symbol)return;setChartData(rows,true);root.classList.remove('vr-leave-up','vr-leave-down');root.classList.add('vr-enter-up');setTimeout(()=>root.classList.remove('vr-enter-up'),260);scheduleRotation();scheduleRefresh()}catch(e){if(token!==requestToken)return;status.textContent='数据异常';error.textContent='行情暂不可用 · '+String(e.message||e).slice(0,48);error.hidden=false;scheduleRotation()}})
+ const token=++requestToken;enqueue(async()=>{try{const rows=await getCandles(symbol,period);if(token!==requestToken||current!==symbol)return;setChartData(rows,true);root.classList.remove('vr-leave-up','vr-leave-down','vr-enter-up','vr-enter-down');root.classList.add(direction>=0?'vr-enter-up':'vr-enter-down');setTimeout(()=>root.classList.remove('vr-enter-up','vr-enter-down'),420);scheduleRotation();scheduleRefresh()}catch(e){if(token!==requestToken)return;status.textContent='数据异常';error.textContent='行情暂不可用 · '+String(e.message||e).slice(0,48);error.hidden=false;scheduleRotation()}})
 }
 function scheduleRefresh(){if(refreshTimer)clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>loadCurrent(false),REFRESH_MS)}
 function loadCurrent(force){if(!current||hidden)return;const symbol=current,p=period,token=++requestToken;enqueue(async()=>{try{const rows=await getCandles(symbol,p);if(token!==requestToken||current!==symbol||period!==p)return;setChartData(rows,true)}catch(e){if(token===requestToken){status.textContent='数据异常';error.textContent='行情暂不可用 · '+String(e.message||e).slice(0,48);error.hidden=false}}finally{if(!hidden&&current===symbol)scheduleRefresh()}})}
