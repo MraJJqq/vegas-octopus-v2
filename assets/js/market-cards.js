@@ -244,46 +244,7 @@ document.addEventListener('visibilitychange',()=>{
 },{passive:true});
 scheduleAutoWave();
 
-/* 自动滚动看门狗：页面隐藏时彻底停止定时器，回到前台后再恢复。 */
-let autoWatchPosition=left.scrollTop,autoWatchChangedAt=performance.now(),autoWatchTimer=0;
-function startAutoWatch(){
- if(autoWatchTimer||document.hidden)return;
- autoWatchTimer=window.setInterval(()=>{
-  try{
-   const now=performance.now(),position=left.scrollTop;
-   if(Math.abs(position-autoWatchPosition)>.05){
-    autoWatchPosition=position;
-    autoWatchChangedAt=now;
-    return;
-   }
-   if(wheelFrame||now<autoResumeAt)return;
-   if(now-autoWatchChangedAt<1600)return;
-   const step=cardStep();
-   if(focusSlots.length<2||step<1)return;
-   loopDirection=1;
-   left.scrollTop=position+1;
-   normalizeLoopPosition();
-   wheelTarget=left.scrollTop;
-   queueFocusScale();
-   autoWatchPosition=left.scrollTop;
-   autoWatchChangedAt=now;
-  }catch(error){
-   console.warn('[Vegas Octopus] auto-scroll watchdog recovered:',error);
-  }
- },1000);
-}
-function stopAutoWatch(){
- if(autoWatchTimer){clearInterval(autoWatchTimer);autoWatchTimer=0;}
-}
-document.addEventListener('visibilitychange',()=>{
- if(document.hidden)stopAutoWatch();
- else{
-  autoWatchPosition=left.scrollTop;
-  autoWatchChangedAt=performance.now();
-  startAutoWatch();
- }
-},{passive:true});
-startAutoWatch();
+
 
 /* resize 主监听器已统一负责缓存失效、K线重绘与焦点缩放刷新。 */
 left.style.scrollBehavior='auto';
