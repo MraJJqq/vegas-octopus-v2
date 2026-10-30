@@ -309,11 +309,11 @@ async function loadMarketData(){
   if(!futuresDone)return;
   S.forEach(d=>{
    if(REALITY_STOCKS.has(d.s))return;
-   if(!futures){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='行情暂不可用';return}
+   if(!futures){if(!d.ready)d.dom.price.textContent='行情暂不可用';return}
    const ticker=futures.get(d.api.toUpperCase());
-   if(!ticker){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='暂无行情';return}
+   if(!ticker){if(!d.ready)d.dom.price.textContent='暂无行情';return}
    const last=Number(ticker.lastPr),open=Number(ticker.open24h);
-   if(!(last>0&&open>0)){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='数据无效';return}
+   if(!(last>0&&open>0)){if(!d.ready)d.dom.price.textContent='数据无效';return}
    d.p=last;d.o=open;d.ready=true;paint(d);
   });
  }
@@ -322,11 +322,11 @@ async function loadMarketData(){
   stocksProcessed=true;
   S.forEach(d=>{
    if(!REALITY_STOCKS.has(d.s))return;
-   if(!spots||!realitySymbols){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='行情暂不可用';return}
+   if(!spots||!realitySymbols){if(!d.ready)d.dom.price.textContent='行情暂不可用';return}
    const symbol=realitySymbols.get(d.s),ticker=symbol&&spots.get(symbol.toUpperCase());
-   if(!ticker){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='暂无行情';return}
+   if(!ticker){if(!d.ready)d.dom.price.textContent='暂无行情';return}
    const last=Number(ticker.lastPrice),open=Number(ticker.openPrice24h);
-   if(!(last>0&&open>0)){if(!d.ready)document.querySelector('#mc-c'+d.i+' .mc-price').textContent='数据无效';return}
+   if(!(last>0&&open>0)){if(!d.ready)d.dom.price.textContent='数据无效';return}
    d.api=symbol;d.p=last;d.o=open;d.ready=true;paint(d);
   });
  }
