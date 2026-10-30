@@ -275,7 +275,6 @@ function updateLayerStatus(index,symbol,rows){
  if(index!==activeLayer||symbol!==currentSymbol())return;
  status.textContent=rows.at(-1).close.toLocaleString('en-US',{maximumFractionDigits:5})+' · '+rows.length+'根K线';
  if(rows.length<676){error.textContent='历史K线不足676根，EMA576/EMA676红峰无法完整显示（当前'+rows.length+'根）';error.hidden=false;}
- else if(rows.length<1200){error.textContent='历史K线正在补齐：'+rows.length+'根';error.hidden=false;}
  else error.hidden=true;
 }
 async function loadLayer(index,symbol,timeframe){
@@ -416,7 +415,10 @@ async function beginTransition(){
  if(token!==cycleToken||hidden||paused){transitioning=false;fadeState=paused?'paused':'idle';return}
  if(!loaded||!views[nextLayer].hasData){
   incoming.style.transition='none';incoming.style.opacity='0';incoming.style.filter='brightness(0.25)';
-  transitioning=false;fadeState='idle';scheduleCycle(1000);return;
+  transitioning=false;fadeState='idle';
+  /* 下一品种加载失败时，不能丢弃渐变期间延后的当前品种刷新。 */
+  if(refreshDeferred&&!paused&&!hidden){refreshDeferred=false;scheduleRefresh(0);}
+  scheduleCycle(1000);return;
  }
  /* 切换规则：渐变开始前，将当前图的 barSpacing 与 rightOffset 同步到下一张图。
     只同步缩放比例和右侧偏移，不复制 visible/logical range，避免不同品种历史长度差异造成K线异常放大。 */
