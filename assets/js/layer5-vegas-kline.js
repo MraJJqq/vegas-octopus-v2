@@ -5,7 +5,7 @@ const API='https://api.bitget.com';
 const STORAGE_KEY='vegas-octopus-layer5-kline-v1';
 const STOCKS=new Set(['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','QCOM','AMD','TSM','AVGO','ORCL','ARM','MU','ASML','SNDK','SKHYNIX','MRVL','GLW','HOOD','CBRS','SPCX']);
 const PERIODS=['15m','30m','1H','2H','4H','6H','12H','1D','1W'];
-const STOCK_PERIODS=['15m','1H','4H','1D'];
+const STOCK_PERIODS=['4H','1D','1W'];
 let requestVersion=0;
 const EMA_LINES=[
  {n:12,color:'#f5d76e',width:1.2},
@@ -22,12 +22,12 @@ state.saved=readSaved();
 const storedState=state.saved;state.saved=storedState.perSymbol||storedState;
 const root=document.createElement('div');root.id='vegas-layer5-root';
 root.innerHTML=`<section id="vegas-layer5-window" aria-label="Vegas 全屏 K线图">
-<header id="vegas-layer5-head"><span id="vegas-layer5-title">VEGAS · KLINE</span><button id="vegas-layer5-prev" class="vegas-l5-nav" type="button" aria-label="上一个正式信号">‹</button><button id="vegas-layer5-next" class="vegas-l5-nav" type="button" aria-label="下一个正式信号">›</button><span id="vegas-layer5-status" aria-live="polite"></span><select id="vegas-layer5-period" aria-label="K线周期"></select></header>
+<header id="vegas-layer5-head"><button id="vegas-layer5-prev" class="vegas-l5-nav" type="button" aria-label="上一个正式信号">‹</button><button id="vegas-layer5-next" class="vegas-l5-nav" type="button" aria-label="下一个正式信号">›</button><span id="vegas-layer5-status" aria-live="polite"></span></header>
 <div id="vegas-layer5-chart-wrap"><div id="vegas-layer5-chart" aria-label="K线与Vegas均线图"></div><div id="vegas-layer5-message">等待行情</div></div>
-
+<nav id="vegas-layer5-control" aria-label="当前品种与K线周期"><span id="vegas-layer5-title"></span><span class="vegas-l5-divider" aria-hidden="true">·</span><div id="vegas-layer5-periods"></div></nav>
 </section>`;
 document.body.appendChild(root);
-const win=root.querySelector('#vegas-layer5-window'),head=root.querySelector('#vegas-layer5-head'),chartHost=root.querySelector('#vegas-layer5-chart'),title=root.querySelector('#vegas-layer5-title'),status=root.querySelector('#vegas-layer5-status'),periodSelect=root.querySelector('#vegas-layer5-period'),message=root.querySelector('#vegas-layer5-message');
+const win=root.querySelector('#vegas-layer5-window'),head=root.querySelector('#vegas-layer5-head'),chartHost=root.querySelector('#vegas-layer5-chart'),title=root.querySelector('#vegas-layer5-title'),status=root.querySelector('#vegas-layer5-status'),controlBar=root.querySelector('#vegas-layer5-control'),periodsHost=root.querySelector('#vegas-layer5-periods'),message=root.querySelector('#vegas-layer5-message');
 if(!window.LightweightCharts){message.hidden=false;message.textContent='TradingView 图表组件加载失败';throw new Error('Lightweight Charts CDN did not load');}
 const LWC=window.LightweightCharts;
 const chart=LWC.createChart(chartHost,{
@@ -230,8 +230,20 @@ function draw(view={}){
   else if(view.initial)ts.setVisibleLogicalRange({from:Math.max(0,newData.length-120),to:newData.length});
  }
  const last=state.candles[state.candles.length-1];
- title.textContent=state.symbol+' · '+state.period+' · VEGAS';
+ title.textContent=state.symbol;
  status.textContent=last.close.toLocaleString('en-US',{maximumFractionDigits:6})+'  '+new Date(last.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+function renderControlBar(){
+ title.textContent=state.symbol||'';
+ const options=STOCKS.has(state.symbol)?STOCK_PERIODS: ['4H','1D','1W'];
+ periodsHost.replaceChildren(...options.map(period=>{
+  const button=document.createElement('button');
+  button.type='button';button.className='vegas-l5-period';
+  button.dataset.period=period;button.textContent=period;
+  button.setAttribute('aria-pressed',String(period===state.period));
+  if(period===state.period)button.classList.add('is-active');
+  return button;
+ }));
 }
 function saveView(){const s=currentSaved();s.period=state.period;const range=chart.timeScale().getVisibleRange();if(range)s.visibleRange=range;flushSave()}
 function openSymbol(symbol){
@@ -243,13 +255,12 @@ function openSymbol(symbol){
  const saved=state.saved[symbol]||{};
  state.period=saved.period||'4H';
  state.loading=false;requestVersion++;
- if(STOCKS.has(symbol)&&!STOCK_PERIODS.includes(state.period))state.period='1H';
+ if(STOCKS.has(symbol)&&!STOCK_PERIODS.includes(state.period))state.period='4H';
  const cacheKey=symbol+'|'+state.period;const cached=state.candleCache.get(cacheKey);if(cached){state.candleCache.delete(cacheKey);state.candleCache.set(cacheKey,cached);}
  state.candles=cached?cached.candles:[];state.fetchAt=cached?cached.fetchAt:0;
  state.loadedSymbol=cached?symbol:'';state.loadedPeriod=cached?state.period:'';
  if(!cached){candleSeries.setData([]);emaSeries.forEach(s=>s.setData([]));}
- periodSelect.replaceChildren(...(STOCKS.has(symbol)?STOCK_PERIODS:PERIODS).map(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;return o}));
- periodSelect.value=state.period;win.classList.add('is-open');
+ renderControlBar();win.classList.add('is-open');
  message.hidden=!cached;message.textContent='读取历史行情…';
  if(cached)draw({range:saved.period===state.period?saved.visibleRange:null,initial:!(saved.period===state.period&&saved.visibleRange),restore:true});
  loadCandles(false);
@@ -302,7 +313,7 @@ head.addEventListener('dblclick',e=>{
  if(state.open&&!isHeadControl(e.target)){e.preventDefault();close()}
 });
 
-periodSelect.addEventListener('change',()=>{if(!state.symbol)return;state.period=periodSelect.value;state.fetchAt=0;state.candles=[];const saved=currentSaved();saved.period=state.period;delete saved.visibleRange;state.loadedSymbol='';state.loadedPeriod='';save();loadCandles(true)});
+periodsHost.addEventListener('click',e=>{const button=e.target.closest&&e.target.closest('button[data-period]');if(!button||!state.symbol)return;const nextPeriod=button.dataset.period;if(nextPeriod===state.period)return;state.period=nextPeriod;renderControlBar();state.fetchAt=0;state.candles=[];const saved=currentSaved();saved.period=state.period;delete saved.visibleRange;state.loadedSymbol='';state.loadedPeriod='';save();loadCandles(true)});
 document.addEventListener('click',e=>{
  const card=e.target.closest&&e.target.closest('#market-cards-layer .mc-card[data-symbol]');
  if(card){
