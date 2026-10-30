@@ -44,7 +44,7 @@ const chart=LWC.createChart(host,{autoSize:true,attributionLogo:false,
  grid:{vertLines:{visible:false},horzLines:{visible:false}},rightPriceScale:{visible:false,borderVisible:false,scaleMargins:{top:.09,bottom:.08}},leftPriceScale:{visible:false,borderVisible:false},
  timeScale:{visible:true,borderVisible:false,rightOffset:3,barSpacing:5,minBarSpacing:.5,shiftVisibleRangeOnNewBar:false,timeVisible:true,secondsVisible:false},
  crosshair:{vertLine:{visible:true,color:'rgba(120,190,230,.18)'},horzLine:{visible:true,color:'rgba(120,190,230,.18)'}},
- handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true,axisDoubleClickReset:true},kineticScroll:{touch:true,mouse:true}});
+ handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:true},handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true,axisDoubleClickReset:true},kineticScroll:{touch:true,mouse:true}});
 const candle=chart.addSeries(LWC.CandlestickSeries,{upColor:'rgba(0,0,0,0)',downColor:'#ff5c7c',borderUpColor:'#2ee6a6',borderDownColor:'#ff5c7c',wickUpColor:'#2ee6a6',wickDownColor:'#ff5c7c',lastValueVisible:false,priceLineVisible:false});
 const lines=EMA_LINES.map((n,i)=>chart.addSeries(LWC.LineSeries,{color:EMA_COLORS[i],lineWidth:i===3||i===4?2:1,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false}));
 function renderPeriodButtons(){nav.replaceChildren();PERIODS.forEach(p=>{const b=document.createElement('button');b.type='button';b.textContent=p;b.dataset.period=p;b.classList.toggle('active',p===period);b.addEventListener('click',()=>{if(p===period)return;period=p;symbolSetting(current).period=p;saveSettings();renderPeriodButtons();loadCurrent(true)});nav.appendChild(b)})}
@@ -83,7 +83,7 @@ function reconcile(symbols){
  const next=Array.from(new Set((symbols||[]).map(s=>String(s||'').trim().toUpperCase()).filter(s=>/^[A-Z0-9.]+$/.test(s))));
  const old=current;queue=next;
  if(!queue.length){current='';++requestToken;clearTimers();paused=true;title.textContent='';status.textContent='';error.hidden=true;root.hidden=true;candle.setData([]);lines.forEach(x=>x.setData([]));data=[];return}
- root.hidden=false;let keep=queue.indexOf(old);if(keep>=0)index=keep;else index=Math.min(index,queue.length-1);
+ root.hidden=false;paused=false;if(interactionTimer){clearTimeout(interactionTimer);interactionTimer=0}let keep=queue.indexOf(old);if(keep>=0)index=keep;else index=Math.min(index,queue.length-1);
  if(old!==queue[index])showSymbol(queue[index]);else if(!old)showSymbol(queue[index]);else scheduleRotation();
 }
 window.VegasLayer5SetAutoQueue=reconcile;
