@@ -45,7 +45,7 @@
   script.onload=function(){
    const app=document.createElement('script');
    app.src='./assets/js/layer5-vegas-kline.js?v=20261030-35';
-   app.onerror=function(){console.error('[Vegas Layer 5] K-line module failed to load');};
+   app.onerror=function(){console.error('[Vegas Layer 5] K-line module failed to load');if(typeof window.VegasLayer5BridgeFailed==='function')window.VegasLayer5BridgeFailed();};
    document.body.appendChild(app);
   };
   script.onerror=function(){script.remove();loadSource(index+1);};
