@@ -170,7 +170,7 @@ function setActive(index){
 }
 function clearTimers(){
  clearTimeout(cycleTimer);clearTimeout(refreshTimer);
- cycleTimer=refreshTimer=resumeTimer=0;
+ cycleTimer=refreshTimer=0;
 }
 function scheduleRefresh(){
  clearTimeout(refreshTimer);
