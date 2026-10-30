@@ -59,9 +59,8 @@ function tex(cv){var t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.pix
 var tB=tex(BODY),tT=tex(TENT),NV=(G+1)*(G+1),pos=new Float32Array(NV*2),uv=new Float32Array(NV*2),idx=new Uint16Array(G*G*6),q=0;
 for(var j=0;j<=G;j++)for(var i=0;i<=G;i++){uv[(j*(G+1)+i)*2]=i/G;uv[(j*(G+1)+i)*2+1]=j/G}
 for(j=0;j<G;j++)for(i=0;i<G;i++){var a=j*(G+1)+i;idx[q++]=a;idx[q++]=a+1;idx[q++]=a+G+1;idx[q++]=a+1;idx[q++]=a+G+2;idx[q++]=a+G+1}
-var bP=gl.createBuffer(),bB=gl.createBuffer(),bU=gl.createBuffer(),bI=gl.createBuffer(),qP=gl.createBuffer(),qU=gl.createBuffer(),posB=new Float32Array(NV*2);
+var bP=gl.createBuffer(),bB=gl.createBuffer(),bU=gl.createBuffer(),bI=gl.createBuffer(),posB=new Float32Array(NV*2);
 gl.bindBuffer(gl.ARRAY_BUFFER,bU);gl.bufferData(gl.ARRAY_BUFFER,uv,gl.STATIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,bI);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,idx,gl.STATIC_DRAW);
-gl.bindBuffer(gl.ARRAY_BUFFER,qP);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,S,0,0,S,S,S]),gl.STATIC_DRAW);gl.bindBuffer(gl.ARRAY_BUFFER,qU);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,1,1]),gl.STATIC_DRAW);
 gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
 function computeFit(){var x0=1e9,y0=1e9,x1=-1e9,y1=-1e9,c=Math.cos(TH0),s=Math.sin(TH0);function acc(px,py){var dx=px-700,dy=py-420,X=700+dx*c-dy*s,Y=420+dx*s+dy*c;x0=Math.min(x0,X);y0=Math.min(y0,Y);x1=Math.max(x1,X);y1=Math.max(y1,Y)}
 var sv=F.c;F.c=0;F.vx=F.vy=0;for(var j=0;j<=G;j++)for(var i=0;i<=G;i++){if(ACT[Math.min(G-1,j)*G+Math.min(G-1,i)]){var d=disp(i*T,j*T,0);acc(i*T+d[0],j*T+d[1])}}F.c=sv;[[480,170],[940,170],[940,500],[480,500]].forEach(function(p){acc(p[0],p[1])});
@@ -107,6 +106,6 @@ x.restore();x.save();x.setTransform(DPR*M[0],DPR*M[1],DPR*M[2],DPR*M[3],DPR*M[4]
 NODES.forEach(function(n){if(n.m>=.5)return;var d=disp(n.x,n.y,t),tw=Math.pow(Math.sin(t*n.f+n.ph)*.5+.5,3);blit(x,n.h+14*Math.sin(t*.5+n.ph),n.x+d[0]-Math.sin(Z.yaw)*45*ss(430,640,n.y),n.y+d[1],2+n.sz*4,.05+.45*tw)});
 x.restore();x.globalCompositeOperation="source-over";
 if(run)raf=requestAnimationFrame(frame)}
-var raf=requestAnimationFrame(frame);return{destroy:function(){if(!run)return;run=false;cancelAnimationFrame(raf);window.removeEventListener("resize",rs);window.removeEventListener("pointermove",onPointerMove);window.removeEventListener("pointerup",onPointerUp);if(ro)ro.disconnect();[tB,tT].forEach(function(t){if(t)gl.deleteTexture(t)});[bP,bB,bU,bI,qP,qU].forEach(function(b){if(b)gl.deleteBuffer(b)});if(pg)gl.deleteProgram(pg);[cf,cg,co].forEach(function(c){if(c.parentNode)c.parentNode.removeChild(c)})}}}
+var raf=requestAnimationFrame(frame);return{destroy:function(){if(!run)return;run=false;cancelAnimationFrame(raf);window.removeEventListener("resize",rs);window.removeEventListener("pointermove",onPointerMove);window.removeEventListener("pointerup",onPointerUp);if(ro)ro.disconnect();[tB,tT].forEach(function(t){if(t)gl.deleteTexture(t)});[bP,bB,bU,bI].forEach(function(b){if(b)gl.deleteBuffer(b)});if(pg)gl.deleteProgram(pg);[cf,cg,co].forEach(function(c){if(c.parentNode)c.parentNode.removeChild(c)})}}}
 window.MechJelly={load:load,mount:mount};
 })();
