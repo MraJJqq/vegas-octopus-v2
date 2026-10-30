@@ -27,8 +27,9 @@
 <script src="./assets/js/orb-core.js?v=20261030-4"></script>
 <script src="./assets/js/v9-events.js?v=20261030-1"></script>
 <script src="./assets/js/market-cards.js?v=20261030-11"></script>
+<script src="./assets/js/layer5-kline-bridge.js?v=20261030-1"></script>
 <script>
-/* 先确保图表依赖加载成功，再初始化第五层，避免 CDN 失败导致整个点击监听未注册。 */
+/* K线依赖异步加载；点击桥接已提前就绪。 */
 (function(){
  const sources=[
   'https://cdn.jsdelivr.net/npm/lightweight-charts@5.2.1/dist/lightweight-charts.standalone.production.js',
@@ -36,18 +37,14 @@
  ];
  function loadSource(index){
   if(index>=sources.length){
-   const root=document.createElement('div');
-   root.id='vegas-layer5-load-error';
-   root.textContent='K线组件加载失败，请检查网络后刷新页面';
-   root.style.cssText='position:fixed;z-index:10000;left:50%;bottom:56px;transform:translateX(-50%);color:#ffd9df;font:12px sans-serif;pointer-events:none;text-shadow:0 1px 6px #000';
-   document.body.appendChild(root);
+   if(typeof window.VegasLayer5BridgeFailed==='function')window.VegasLayer5BridgeFailed();
    return;
   }
   const script=document.createElement('script');
   script.src=sources[index];
   script.onload=function(){
    const app=document.createElement('script');
-   app.src='./assets/js/layer5-vegas-kline.js?v=20261030-34';
+   app.src='./assets/js/layer5-vegas-kline.js?v=20261030-35';
    app.onerror=function(){console.error('[Vegas Layer 5] K-line module failed to load');};
    document.body.appendChild(app);
   };
