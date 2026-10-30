@@ -154,11 +154,14 @@ function setData(view,rows){
 async function loadLayer(index,symbol,timeframe){
  if(!symbol)return false;
  const view=views[index],token=++view.request;
+ const identityChanged=view.symbol!==symbol||view.period!==timeframe;
  view.symbol=symbol;view.period=timeframe;
  try{
   const rows=await getCandles(symbol,timeframe);
   if(token!==view.request)return false;
   setData(view,rows);
+  /* 新品种或新周期统一恢复标准K线宽度；不读取、不保存用户缩放状态。 */
+  if(identityChanged)view.chart.timeScale().applyOptions({barSpacing:5,rightOffset:3});
   if(index===activeLayer&&symbol===currentSymbol()){
    status.textContent=rows.at(-1).close.toLocaleString('en-US',{maximumFractionDigits:5})+' · '+rows.length+'根K线';
    if(rows.length<676){error.textContent='历史K线不足676根，EMA576/EMA676红峰无法完整显示（当前'+rows.length+'根）';error.hidden=false;}
