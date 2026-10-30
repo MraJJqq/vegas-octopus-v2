@@ -121,3 +121,44 @@ html,body{touch-action:manipulation;}
 #market-cards-layer .mc-card[data-formal-signal="true"] .mc-g1{
   border-color:rgba(93,220,255,.42);
 }
+
+
+/* 方案A：全息玻璃边框；保留原有B方案结构，仅替换视觉材质。 */
+#market-cards-layer .mc-bg{
+  background:
+    linear-gradient(135deg,rgba(30,65,91,.34),rgba(7,16,35,.82) 42%,rgba(17,39,63,.58)),
+    rgba(8,14,32,.76);
+  border:1px solid rgba(133,211,244,.48);
+  box-shadow:
+    0 0 12px -7px rgba(111,211,255,.52),
+    inset 0 1px 0 rgba(226,249,255,.20),
+    inset 0 0 18px -11px rgba(111,211,255,.46);
+  transition:border-color .32s ease,box-shadow .32s ease,background .32s ease;
+}
+#market-cards-layer .mc-bg::after{
+  border-color:rgba(155,221,247,.20);
+  background:
+    linear-gradient(rgba(190,237,255,.78),rgba(190,237,255,.78)) left top/15px 1px no-repeat,
+    linear-gradient(rgba(190,237,255,.78),rgba(190,237,255,.78)) left top/1px 15px no-repeat,
+    linear-gradient(rgba(190,237,255,.78),rgba(190,237,255,.78)) right top/15px 1px no-repeat,
+    linear-gradient(rgba(190,237,255,.78),rgba(190,237,255,.78)) right top/1px 15px no-repeat,
+    linear-gradient(rgba(190,237,255,.78),rgba(190,237,255,.78)) left bottom/15px 1px no-repeat,
+    linear-gradient(rgba(190,237,255,.78),rgba(190,237,255,.78)) left bottom/1px 15px no-repeat,
+    linear-gradient(rgba(190,237,255,.78),rgba(190,237,255,.78)) right bottom/15px 1px no-repeat,
+    linear-gradient(rgba(190,237,255,.78),rgba(190,237,255,.78)) right bottom/1px 15px no-repeat;
+  opacity:.86;
+}
+/* 加深前后层距与内容景深；不改卡片主体旋转角度及鼠标/触摸事件。 */
+#market-cards-layer .mc-g1{transform:translateZ(-22px);opacity:.62}
+#market-cards-layer .mc-g2{transform:translateZ(-44px);opacity:.34}
+#market-cards-layer .mc-l1{transform:translateZ(16px)}
+#market-cards-layer .mc-l2{transform:translateZ(33px)}
+#market-cards-layer .mc-l3{transform:translateZ(43px)}
+#market-cards-layer .mc-l4{transform:translateZ(54px)}
+#market-cards-layer .mc-gl{
+  background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(225,248,255,.38),rgba(125,210,245,.08) 27%,transparent 58%);
+}
+#market-cards-layer .mc-card[data-formal-signal="true"] .mc-bg{
+  border-color:rgba(157,232,255,.88);
+  box-shadow:0 0 18px -7px rgba(111,220,255,.78),inset 0 1px 0 rgba(235,251,255,.30),inset 0 0 20px -10px rgba(111,220,255,.58);
+}
