@@ -9,7 +9,7 @@ function render(){
  const unique=[...new Set([...normalize(document.getElementById('v9Stocks')),...normalize(document.getElementById('v9Core'))])];
  track.replaceChildren();track.style.animation='none';track.style.transform='translateX(0)';
  if(!unique.length){const e=document.createElement('span');e.className='vst-empty';e.textContent='等待正式信号';track.append(e);root.dataset.active='false';return}
- const makeGroup=()=>{const g=document.createElement('div');g.className='vst-group';unique.forEach((label,i)=>{const item=document.createElement('span');item.className='vst-item';item.textContent=label;g.append(item);if(i<unique.length-1){const sep=document.createElement('span');sep.className='vst-sep';sep.textContent='◆';g.append(sep)}});return g};
+ const makeGroup=()=>{const g=document.createElement('div');g.className='vst-group';unique.forEach((label,i)=>{const item=document.createElement('span');item.className='vst-item';item.textContent=label;g.append(item);if(i<unique.length-1){const sep=document.createElement('span');sep.className='vst-sep';sep.textContent='▰';g.append(sep)}});return g};
  const first=makeGroup();track.append(first);
  const width=()=>first.getBoundingClientRect().width;
  let cycleWidth=width();
