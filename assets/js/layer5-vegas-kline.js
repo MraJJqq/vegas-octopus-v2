@@ -16,7 +16,7 @@ const EMA_LINES=[
  {n:576,color:'#ff4e5e',width:1.8},
  {n:676,color:'#ff4e5e',width:1.8}
 ];
-const state={open:false,symbol:'',period:'4H',candles:[],loading:false,fetchAt:0,rotateTimer:0,loadedSymbol:'',loadedPeriod:'',saved:{},candleCache:new Map(),refreshTimer:0,requestController:null};
+const state={open:false,symbol:'',period:'4H',candles:[],loading:false,fetchAt:0,rotateTimer:0,loadedSymbol:'',loadedPeriod:'',saved:{},candleCache:new Map(),refreshTimer:0,requestController:null,requestFailures:0,retryAfter:0};
 const readSaved=()=>{try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}catch{return {}}};
 state.saved=readSaved();
 const storedState=state.saved;state.saved=storedState.perSymbol||storedState;
@@ -72,23 +72,38 @@ async function getJson(path,controller){
  let lastError;
  for(let attempt=0;attempt<3;attempt++){
   if(signal.aborted)throw new DOMException('Aborted','AbortError');
-  const timeout=setTimeout(()=>controller.abort(),10000);
+  const attemptController=new AbortController();
+  const abortAttempt=()=>attemptController.abort();
+  signal.addEventListener('abort',abortAttempt,{once:true});
+  const timeout=setTimeout(()=>attemptController.abort(),10000);
   try{
-   const r=await fetch(API+path,{cache:'no-store',signal});
-   if(!r.ok){const error=Error('HTTP '+r.status);error.retryable=r.status===429||r.status>=500;if(!error.retryable||attempt===2)throw error;lastError=error}
-   else{
+   const r=await fetch(API+path,{cache:'no-store',signal:attemptController.signal});
+   if(!r.ok){
+    const error=Error('HTTP '+r.status);
+    error.retryable=r.status===429||r.status>=500;
+    if(!error.retryable||attempt===2)throw error;
+    lastError=error;
+   }else{
     const j=await r.json();
     if(j.code!=='00000'||!Array.isArray(j.data))throw Error(j.msg||'行情响应无效');
     return j.data;
    }
   }catch(error){
-   if(signal.aborted||error.name==='AbortError')throw error;
-   if(!error.retryable&&!(error instanceof TypeError))throw error;
-   lastError=error;if(attempt===2)throw error;
-  }finally{clearTimeout(timeout)}
+   if(signal.aborted)throw new DOMException('Aborted','AbortError');
+   if(attemptController.signal.aborted){lastError=Error('行情请求超时');lastError.retryable=true;}
+   else{
+    if(error.name==='AbortError')throw error;
+    if(!error.retryable&&!(error instanceof TypeError))throw error;
+    lastError=error;
+   }
+   if(attempt===2)throw lastError;
+  }finally{
+   clearTimeout(timeout);
+   signal.removeEventListener('abort',abortAttempt);
+  }
   await new Promise((resolve,reject)=>{
    if(signal.aborted){reject(new DOMException('Aborted','AbortError'));return;}
-   const delay=setTimeout(done,350*(attempt+1));
+   const delay=setTimeout(done,500*(attempt+1));
    function done(){signal.removeEventListener('abort',abort);resolve()}
    function abort(){clearTimeout(delay);signal.removeEventListener('abort',abort);reject(new DOMException('Aborted','AbortError'))}
    signal.addEventListener('abort',abort,{once:true});
@@ -112,6 +127,7 @@ async function getStockSymbol(symbol,controller){
 async function loadCandles(force=false){
  if(!state.open||!state.symbol)return;
  if(state.loading&&!force)return;
+ if(!force&&Date.now()<state.retryAfter)return;
  if(!force&&Date.now()-state.fetchAt<25000)return;
  if(force&&state.requestController){state.requestController.abort();state.requestController=null;}
  state.loading=true;const requestId=++requestVersion;const symbolAtRequest=state.symbol;const controller=new AbortController();state.requestController=controller;message.hidden=false;message.textContent=state.candles.length?'更新行情…':'读取历史行情…';
@@ -133,7 +149,7 @@ async function loadCandles(force=false){
   const sameView=state.loadedSymbol===symbolAtRequest&&state.loadedPeriod===period&&state.candles.length>0;
   const previousRange=sameView?chart.timeScale().getVisibleRange():null;
   const wasFollowing=sameView&&chart.timeScale().scrollPosition()<=1.5;
-  state.candles=unique;state.fetchAt=Date.now();
+  state.candles=unique;state.fetchAt=Date.now();state.requestFailures=0;state.retryAfter=0;
   const cacheKey=symbolAtRequest+'|'+period;state.candleCache.delete(cacheKey);state.candleCache.set(cacheKey,{candles:unique,fetchAt:state.fetchAt});
   while(state.candleCache.size>8)state.candleCache.delete(state.candleCache.keys().next().value);
   message.hidden=true;
@@ -141,7 +157,7 @@ async function loadCandles(force=false){
   if(!sameView){const saved=state.saved[symbolAtRequest]||{};range=(saved.period===period&&saved.visibleRange)?saved.visibleRange:null;follow=false;initial=!range}
   draw({range,follow,initial});
   state.loadedSymbol=symbolAtRequest;state.loadedPeriod=period;
- }catch(e){if(requestId===requestVersion){message.hidden=false;message.textContent='行情读取失败 · '+String(e.message||e).slice(0,48);status.textContent='数据异常';console.warn('[Vegas Layer 5] candle load failed',e)}}
+ }catch(e){if(requestId===requestVersion){if(e.name!=='AbortError'){state.requestFailures=Math.min(5,state.requestFailures+1);const cooldown=Math.min(300000,30000*Math.pow(2,state.requestFailures-1));state.retryAfter=Date.now()+cooldown;}message.hidden=false;message.textContent='行情读取失败 · '+String(e.message||e).slice(0,48);status.textContent='数据异常';console.warn('[Vegas Layer 5] candle load failed',e)}}
  finally{if(state.requestController===controller)state.requestController=null;if(requestId===requestVersion)state.loading=false}
 }
 function ema(values,n){
@@ -298,11 +314,12 @@ function scheduleRefresh(){
  if(state.refreshTimer)clearTimeout(state.refreshTimer);
  state.refreshTimer=0;
  if(!state.open||document.hidden)return;
+ const wait=state.retryAfter>Date.now()?state.retryAfter-Date.now():30000;
  state.refreshTimer=setTimeout(()=>{
   state.refreshTimer=0;
   if(state.open&&!document.hidden)loadCandles(false);
   scheduleRefresh();
- },30000);
+ },wait);
 }
 document.addEventListener('visibilitychange',()=>{
  if(document.hidden){
