@@ -1,44 +1,29 @@
-/* 底部正式信号板块：复用最新事件模块的数据，不独立判断或制造信号。 */
+/* 底部正式信号播报：正式信号有内容时始终连续横向循环。 */
 (()=>{'use strict';
 if(window.__VEGAS_BOTTOM_SIGNAL_TICKER__)return;
 window.__VEGAS_BOTTOM_SIGNAL_TICKER__=true;
-const root=document.getElementById('vegas-signal-ticker');
-const track=root&&root.querySelector('.vst-track');
+const root=document.getElementById('vegas-signal-ticker'),track=root&&root.querySelector('.vst-track');
 if(!root||!track)return;
-const normalize=el=>Array.from(el?el.querySelectorAll('.v9-symbol'):[])
- .map(x=>x.textContent.replace(/[▰]/g,'').trim()).filter(Boolean);
+const normalize=el=>Array.from(el?el.querySelectorAll('.v9-symbol'):[]).map(x=>x.textContent.replace(/[▰]/g,'').trim()).filter(Boolean);
 function render(){
- const unique=[...new Set([
-  ...normalize(document.getElementById('v9Stocks')),
-  ...normalize(document.getElementById('v9Core'))
- ])];
- track.replaceChildren();
- if(!unique.length){
-  const empty=document.createElement('span');empty.className='vst-empty';
-  empty.textContent='等待正式信号';track.appendChild(empty);
-  root.dataset.active='false';return;
- }
- const group=document.createElement('div');group.className='vst-group';
- unique.forEach((label,i)=>{
-  const item=document.createElement('span');item.className='vst-item';item.textContent=label;group.appendChild(item);
-  if(i<unique.length-1){const sep=document.createElement('span');sep.className='vst-sep';sep.textContent='◆';group.appendChild(sep)}
- });
- track.appendChild(group);
- const width=group.getBoundingClientRect().width;
- if(width<=root.clientWidth){
-  track.style.width='100%';track.style.justifyContent='center';
-  track.style.animation='none';root.dataset.active='false';return;
- }
- const clone=group.cloneNode(true);clone.setAttribute('aria-hidden','true');track.appendChild(clone);
+ const unique=[...new Set([...normalize(document.getElementById('v9Stocks')),...normalize(document.getElementById('v9Core'))])];
+ track.replaceChildren();track.style.animation='none';track.style.transform='translateX(0)';
+ if(!unique.length){const e=document.createElement('span');e.className='vst-empty';e.textContent='等待正式信号';track.append(e);root.dataset.active='false';return}
+ const makeGroup=()=>{const g=document.createElement('div');g.className='vst-group';unique.forEach((label,i)=>{const item=document.createElement('span');item.className='vst-item';item.textContent=label;g.append(item);if(i<unique.length-1){const sep=document.createElement('span');sep.className='vst-sep';sep.textContent='◆';g.append(sep)}});return g};
+ const first=makeGroup();track.append(first);
+ const width=()=>first.getBoundingClientRect().width;
+ let cycleWidth=width();
+ if(cycleWidth<1){root.dataset.active='false';return}
+ const repeats=Math.max(2,Math.ceil((root.clientWidth*2)/cycleWidth));
+ for(let i=1;i<repeats;i++)track.append(makeGroup());
  track.style.width='max-content';track.style.justifyContent='initial';
- track.style.setProperty('--vst-duration',Math.max(18,width/36)+'s');
- track.style.animation='';root.dataset.active='true';
+ track.style.setProperty('--vst-distance',cycleWidth+'px');
+ track.style.setProperty('--vst-duration',Math.max(18,cycleWidth/36)+'s');
+ track.style.animation='vst-marquee var(--vst-duration) linear infinite';
+ root.dataset.active='true';
 }
-const observer=new MutationObserver(render);
-['v9Stocks','v9Core'].forEach(id=>{
- const el=document.getElementById(id);
- if(el)observer.observe(el,{childList:true,subtree:true,characterData:true});
-});
-window.addEventListener('resize',render,{passive:true});
-render();
+let queued=false;function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;render()})}
+const observer=new MutationObserver(schedule);
+['v9Stocks','v9Core'].forEach(id=>{const el=document.getElementById(id);if(el)observer.observe(el,{childList:true,subtree:true,characterData:true})});
+window.addEventListener('resize',schedule,{passive:true});render();
 })();
