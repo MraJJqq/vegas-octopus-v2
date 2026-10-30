@@ -43,7 +43,10 @@ try{
 const currentSymbol=()=>manualSymbol||queue[currentIndex]||'';
 const periodFor=s=>PERIODS.includes(periodSettings[s]?.period)?periodSettings[s].period:'4H';
 function savePeriods(){try{localStorage.setItem(PERIOD_KEY,JSON.stringify(periodSettings))}catch{}}
+let renderedPeriod=null;
 function renderPeriods(){
+ if(renderedPeriod===period)return;
+ renderedPeriod=period;
  nav.replaceChildren();
  PERIODS.forEach(value=>{
   const button=document.createElement('button');
@@ -183,13 +186,14 @@ function createChart(layer){
  const lines=EMAS.map((length,index)=>chart.addSeries(LWC.LineSeries,{
   color:EMA_COLORS[index],lineWidth:index?2:1,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false
  }));
- return{layer,host,chart,candle,lines,symbol:'',period:'4H',request:0,hasData:false};
+ return{layer,host,chart,candle,lines,symbol:'',period:'4H',request:0,hasData:false,dataAt:0};
 }
 const views=layers.map(createChart);
 function setData(view,rows){
  view.candle.setData(rows);
  view.lines.forEach((series,index)=>series.setData(ema(rows,EMAS[index])));
  view.hasData=true;
+ view.dataAt=Date.now();
 }
 function updateLayerStatus(index,symbol,rows){
  if(index!==activeLayer||symbol!==currentSymbol())return;
@@ -202,6 +206,7 @@ async function loadLayer(index,symbol,timeframe){
  if(!symbol)return false;
  const view=views[index],token=++view.request;
  const identityChanged=view.symbol!==symbol||view.period!==timeframe;
+ if(identityChanged){view.hasData=false;view.dataAt=0;}
  view.symbol=symbol;view.period=timeframe;
  try{
   /* 首屏只等待最近一页；先画出K线，再在后台补齐EMA所需历史。 */
@@ -267,8 +272,9 @@ function scheduleRefresh(){
 function preloadNext(){
  if(manualSymbol||queue.length<2||hidden)return;
  const nextIndex=(currentIndex+1)%queue.length;
- const symbol=queue[nextIndex];
- loadLayer(1-activeLayer,symbol,periodFor(symbol));
+ const symbol=queue[nextIndex],timeframe=periodFor(symbol),view=views[1-activeLayer];
+ if(view.symbol===symbol&&view.period===timeframe&&view.hasData&&Date.now()-view.dataAt<15000)return;
+ loadLayer(1-activeLayer,symbol,timeframe);
 }
 function scheduleCycle(delay=CLEAR_MS){
  clearTimeout(cycleTimer);
@@ -289,7 +295,9 @@ async function beginTransition(){
  incoming.classList.remove('is-active');
  incoming.style.opacity='0';
  incoming.style.filter='blur(12px)';
- const loaded=await loadLayer(nextLayer,nextSymbol,nextPeriod);
+ const nextView=views[nextLayer];
+ const preloaded=nextView.symbol===nextSymbol&&nextView.period===nextPeriod&&nextView.hasData&&Date.now()-nextView.dataAt<15000;
+ const loaded=preloaded||await loadLayer(nextLayer,nextSymbol,nextPeriod);
  if(token!==cycleToken||hidden||paused){transitioning=false;return}
  /* 数据未真正绘制完成时不启动交接，避免空图层闪入。 */
  if(!loaded||!views[nextLayer].hasData){
