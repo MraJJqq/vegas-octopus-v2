@@ -283,6 +283,7 @@ function normalizeLoopPosition(direction){
  if(manualFrame&&shift)manualTarget+=shift;
  lastObservedScrollTop=track.scrollTop;
  normalizing=false;
+ if(shift&&panels[0]?.symbol)focus(panels[0].symbol);
  return shift;
 }
 function moveLoop(delta,direction,source){
@@ -381,6 +382,33 @@ function finishTouch(){
 }
 track.addEventListener('touchend',finishTouch,{passive:true});
 track.addEventListener('touchcancel',finishTouch,{passive:true});
+document.addEventListener('visibilitychange',()=>{
+ hidden=document.hidden;
+ if(hidden){
+  stopAnimation();clearTimeout(refreshTimer);
+  if(manualFrame){cancelAnimationFrame(manualFrame);manualFrame=0}
+  manualLastTime=0;manualVelocity=0;manualTarget=track.scrollTop;
+ }else{
+  loadActive();autoLastTime=0;autoEngageLastTime=0;
+  autoResumeAt=performance.now()+250;scheduleAutoScroll();
+ }
+},{passive:true});
+window.addEventListener('resize',()=>{
+ cachedPanelStep=0;
+ if(host.isConnected&&chart)requestAnimationFrame(()=>chart.applyOptions({
+  width:Math.max(1,host.clientWidth),height:Math.max(1,host.clientHeight)
+ }));
+},{passive:true});
+if('ResizeObserver' in window){
+ const rightResizeObserver=new ResizeObserver(()=>{
+  cachedPanelStep=0;
+  if(host.isConnected&&chart)chart.applyOptions({
+   width:Math.max(1,host.clientWidth),height:Math.max(1,host.clientHeight)
+  });
+ });
+ rightResizeObserver.observe(track);
+ rightResizeObserver.observe(root);
+}
 track.addEventListener('scroll',()=>{
  if(normalizing)return;
  const current=track.scrollTop,delta=current-lastObservedScrollTop;
