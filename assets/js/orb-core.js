@@ -24,6 +24,8 @@ cv.addEventListener("pointerdown",function(e){dn=true;lx=e.clientX;ly=e.clientY;
 window.addEventListener("pointerup",function(){dn=false});cv.addEventListener("pointercancel",function(){dn=false});cv.addEventListener("lostpointercapture",function(){dn=false});
 cv.addEventListener("pointermove",function(e){if(!dn)return;rot+=(e.clientX-lx)*.008;pitB=Math.max(-1.2,Math.min(1.2,pitB+(e.clientY-ly)*.006));lx=e.clientX;ly=e.clientY},{passive:true});
 var projectedPoints=Array.from({length:N},function(){return[0,0,0,0,0]});
+/* 投影数组只发布一次；后续逐帧原地更新，避免重复写入全局属性。 */
+window.VegasOrbProjectedPoints=projectedPoints;
 var glowGradient=null,glowCx=-1,glowCy=-1,glowRadius=-1;
 var last=0,orbFrame=0,frameTimer=0;
 var FRAME_INTERVAL=1000/((window.matchMedia&&window.matchMedia('(pointer: coarse)').matches)?20:30);
@@ -34,7 +36,7 @@ var cx=W*.66,cy=H*.5,roomX=Math.min(cx-8,W-cx-8),roomY=Math.max(1,H*.46),Rr=Math
 x.clearRect(0,0,W,H);
 var pr=projectedPoints;
 for(var n=0;n<N;n++){var p=P[n],tc=trigPair(rot*p.rotFactor,trigOut),q=pj(p,tc[0],tc[1],cp,spp,cx,cy,Rr,pr[n]),u=(q[0]-(cx-Rr))/(2*Rr);q[3]=Math.max(0,Math.min(1,(.6-u)/.22));q[4]=(q[2]+1)/2}
-window.VegasOrbProjectedPoints=pr;
+
 x.globalCompositeOperation="lighter";x.globalAlpha=1;
 if(!glowGradient||cx!==glowCx||cy!==glowCy||Rr!==glowRadius){glowGradient=x.createRadialGradient(cx,cy,0,cx,cy,Rr*.22);glowGradient.addColorStop(0,"rgba(255,225,160,.45)");glowGradient.addColorStop(1,"rgba(255,200,100,0)");glowCx=cx;glowCy=cy;glowRadius=Rr}x.fillStyle=glowGradient;x.fillRect(cx-Rr*.22,cy-Rr*.22,Rr*.44,Rr*.44);
 x.lineWidth=.6;
