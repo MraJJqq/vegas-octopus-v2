@@ -32,6 +32,7 @@ window.addEventListener('resize',()=>{
 },{passive:true});
 let focusSlots=Array.from(left.querySelectorAll('.mc-slot'));
 let focusFrame=0;
+const focusStyleCache=new WeakMap();
 function updateFocusScale(){
  focusFrame=0;
  const height=left.clientHeight,scrollTop=left.scrollTop,center=scrollTop+height/2,range=Math.max(1,height*.58),fadeRange=Math.max(1,height*.50),available=Math.max(1,left.clientWidth-8);
@@ -44,8 +45,11 @@ function updateFocusScale(){
   const slot=focusSlots[index],top=baseTop+index*step,bottom=top+slotHeight,distance=Math.abs((top+slotHeight/2)-center),t=Math.min(1,distance/range),ease=t*t*(3-2*t),fadeT=Math.min(1,distance/fadeRange),fadeEase=fadeT*fadeT*(3-2*fadeT);
   const visible=Math.max(0,Math.min(bottom,visibleBottom)-Math.max(top,scrollTop)),ratio=Math.min(1,visible/Math.max(1,slotHeight)),focused=distance<height*.23&&ratio>=.98;
   const scale=1+(scaleMax-1)*(1-ease),opacity=focused?1:(1-.72*fadeEase)*Math.min(1,ratio*1.8);
-  slot.style.setProperty('--mc-focus-scale',scale.toFixed(3));
-  slot.style.setProperty('--mc-page-opacity',Math.max(.025,opacity).toFixed(3));
+  const scaleText=scale.toFixed(3),opacityText=Math.max(.025,opacity).toFixed(3);
+  let previous=focusStyleCache.get(slot);
+  if(!previous){previous={scale:'',opacity:''};focusStyleCache.set(slot,previous)}
+  if(previous.scale!==scaleText){slot.style.setProperty('--mc-focus-scale',scaleText);previous.scale=scaleText}
+  if(previous.opacity!==opacityText){slot.style.setProperty('--mc-page-opacity',opacityText);previous.opacity=opacityText}
  }
 }
 function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(updateFocusScale)}
