@@ -74,10 +74,14 @@ async function getJson(path){
 }
 async function getStockMap(){
  if(stockMap&&Date.now()-stockMapAt<300000)return stockMap;
- const rows=await getJson('/api/v3/reality/market/stock-info');
- stockMap=new Map(rows.filter(x=>x?.code&&x?.symbol).map(x=>[String(x.code).toUpperCase(),String(x.symbol)]));
- const special=rows.find(x=>x?.symbol&&(/SKHYNIX/i.test(String(x.code||''))||/SK\s*HYNIX/i.test(String(x.name||''))||/RSKHYUSDT/i.test(String(x.symbol||''))));
- if(special)stockMap.set('SKHYNIX',String(special.symbol));
+ if(typeof window.VegasGetRealityStockMap==='function'){
+  stockMap=await window.VegasGetRealityStockMap();
+ }else{
+  const rows=await getJson('/api/v3/reality/market/stock-info');
+  stockMap=new Map(rows.filter(x=>x?.code&&x?.symbol).map(x=>[String(x.code).toUpperCase(),String(x.symbol)]));
+  const special=rows.find(x=>x?.symbol&&(/SKHYNIX/i.test(String(x.code||''))||/SK\s*HYNIX/i.test(String(x.name||''))||/RSKHYUSDT/i.test(String(x.symbol||''))));
+  if(special)stockMap.set('SKHYNIX',String(special.symbol));
+ }
  stockMapAt=Date.now();return stockMap;
 }
 function normalizeCandles(rows){
