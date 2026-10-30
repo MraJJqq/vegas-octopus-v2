@@ -144,13 +144,8 @@ function applyManualDelta(delta,source){
  if(!manualFrame){manualTarget=left.scrollTop;manualVelocity=0;manualLastTime=0}
  const reversing=manualVelocity!==0&&Math.sign(manualVelocity)!==Math.sign(delta);
  if(source==='touch'){
-  /* 触屏拖动直接按本次手指位移更新，取消跟随缓动；速度只用于松手后的惯性。 */
-  if(manualFrame){cancelAnimationFrame(manualFrame);manualFrame=0}
-  manualTarget=left.scrollTop+delta;
+  manualTarget+=delta;
   manualVelocity=Math.max(-1.2,Math.min(1.2,manualVelocity+delta*.018));
-  moveLoop(delta,direction,'touch');
-  manualTarget=left.scrollTop;
-  return;
  }else if(reversing){
   manualTarget=left.scrollTop+delta*1.12;manualVelocity=delta*.018;
  }else{
@@ -215,10 +210,6 @@ left.addEventListener('touchmove',e=>{
 function finishTouch(){
  touchActive=false;touchDragging=false;touchStartY=touchLastY=0;
  autoResumeAt=performance.now()+1400;
- if(Math.abs(manualVelocity)>.025&&!manualFrame){
-  manualTarget=left.scrollTop;manualLastTime=0;
-  manualFrame=requestAnimationFrame(runManualScroll);
- }
 }
 left.addEventListener('touchend',finishTouch,{passive:true});
 left.addEventListener('touchcancel',finishTouch,{passive:true});
