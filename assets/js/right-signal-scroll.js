@@ -6,7 +6,7 @@ window.__VEGAS_RIGHT_SCROLL_INIT__=true;
 const API='https://api.bitget.com';
 const STOCKS=new Set(['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','INTC','QCOM','AMD','TSM','AVGO','ORCL','ARM','MU','ASML','SNDK','SKHYNIX','MRVL','GLW','HOOD','CBRS','SPCX']);
 const PERIODS=['1H','4H','1D'], EMA_LINES=[12,36,43,144,169,576,676];
-const EMA_COLORS=['#f5d76e','#54B8D0','#54B8D0','#f4d35e','#f4d35e','#ff4e5e','#ff4e5e'];
+const EMA_COLORS=['#f5d76e','#f3f6ff','#f3f6ff','#f4d35e','#f4d35e','#ff4e5e','#ff4e5e'];
 const ROTATE_MS=9000, REFRESH_MS=15000, MAX_REQUESTS=2;
 const root=document.getElementById('vegas-right-scroll'), LWC=window.LightweightCharts;
 if(!root||!LWC){console.error('[Vegas Right Scroll] missing host or chart library');return;}
@@ -46,7 +46,7 @@ const chart=LWC.createChart(host,{autoSize:true,attributionLogo:false,
  crosshair:{vertLine:{visible:true,color:'rgba(120,190,230,.18)'},horzLine:{visible:true,color:'rgba(120,190,230,.18)'}},
  handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:true},handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true,axisDoubleClickReset:true},kineticScroll:{touch:true,mouse:true}});
 const candle=chart.addSeries(LWC.CandlestickSeries,{upColor:'rgba(0,0,0,0)',downColor:'#ff5c7c',borderUpColor:'#2ee6a6',borderDownColor:'#ff5c7c',wickUpColor:'#2ee6a6',wickDownColor:'#ff5c7c',lastValueVisible:false,priceLineVisible:false});
-const lines=EMA_LINES.map((n,i)=>chart.addSeries(LWC.LineSeries,{color:EMA_COLORS[i],lineWidth:i===3||i===4?2:1,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false}));
+const lines=EMA_LINES.map((n,i)=>chart.addSeries(LWC.LineSeries,{color:EMA_COLORS[i],lineWidth:i===0?1:2,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false}));
 function renderPeriodButtons(){nav.replaceChildren();PERIODS.forEach(p=>{const b=document.createElement('button');b.type='button';b.textContent=p;b.dataset.period=p;b.classList.toggle('active',p===period);b.addEventListener('click',()=>{if(p===period)return;period=p;symbolSetting(current).period=p;saveSettings();renderPeriodButtons();loadCurrent(true)});nav.appendChild(b)})}
 function setChartData(rows,restore=false){
  data=rows;candle.setData(rows);const closes=rows.map(x=>x.close);
@@ -74,10 +74,10 @@ function autoFollowLatest(){
  try{chart.timeScale().setVisibleLogicalRange({from,to})}catch{}
  scheduleRotation();
 }
-function advance(){if(hidden||paused||queue.length<2)return;index=(index+1)%queue.length;showSymbol(queue[index])}
+function advance(direction=1){if(hidden||paused||queue.length<2)return;index=(index+direction+queue.length)%queue.length;root.classList.remove('vr-enter-up','vr-enter-down');root.classList.add(direction>=0?'vr-leave-up':'vr-leave-down');setTimeout(()=>{if(hidden||paused)return;showSymbol(queue[index])},180)}
 function showSymbol(symbol){
- if(!symbol||hidden)return;current=symbol;period=symbolSetting(symbol).period;title.textContent=symbol;status.textContent='加载行情…';error.hidden=true;renderPeriodButtons();clearTimers();
- const token=++requestToken;enqueue(async()=>{try{const rows=await getCandles(symbol,period);if(token!==requestToken||current!==symbol)return;setChartData(rows,true);scheduleRotation();scheduleRefresh()}catch(e){if(token!==requestToken)return;status.textContent='数据异常';error.textContent='行情暂不可用 · '+String(e.message||e).slice(0,48);error.hidden=false;scheduleRotation()}})
+ if(!symbol||hidden)return;root.classList.remove('vr-leave-up','vr-leave-down');current=symbol;period=symbolSetting(symbol).period;title.textContent=symbol;status.textContent='加载行情…';error.hidden=true;renderPeriodButtons();clearTimers();
+ const token=++requestToken;enqueue(async()=>{try{const rows=await getCandles(symbol,period);if(token!==requestToken||current!==symbol)return;setChartData(rows,true);root.classList.remove('vr-leave-up','vr-leave-down');root.classList.add('vr-enter-up');setTimeout(()=>root.classList.remove('vr-enter-up'),260);scheduleRotation();scheduleRefresh()}catch(e){if(token!==requestToken)return;status.textContent='数据异常';error.textContent='行情暂不可用 · '+String(e.message||e).slice(0,48);error.hidden=false;scheduleRotation()}})
 }
 function scheduleRefresh(){if(refreshTimer)clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>loadCurrent(false),REFRESH_MS)}
 function loadCurrent(force){if(!current||hidden)return;const symbol=current,p=period,token=++requestToken;enqueue(async()=>{try{const rows=await getCandles(symbol,p);if(token!==requestToken||current!==symbol||period!==p)return;setChartData(rows,true)}catch(e){if(token===requestToken){status.textContent='数据异常';error.textContent='行情暂不可用 · '+String(e.message||e).slice(0,48);error.hidden=false}}finally{if(!hidden&&current===symbol)scheduleRefresh()}})}
@@ -91,6 +91,9 @@ function restoreLatest(){
  returnFrame=requestAnimationFrame(step);
 }
 ['pointerdown','touchstart','wheel'].forEach(type=>host.addEventListener(type,pauseForInteraction,{passive:true}));
+let swipeStart=null;
+host.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(t)swipeStart={x:t.clientX,y:t.clientY,at:performance.now()}},{passive:true});
+host.addEventListener('touchend',e=>{if(!swipeStart)return;const t=e.changedTouches&&e.changedTouches[0];if(!t){swipeStart=null;return}const dy=t.clientY-swipeStart.y,dx=t.clientX-swipeStart.x,dt=performance.now()-swipeStart.at;swipeStart=null;if(Math.abs(dy)>58&&Math.abs(dy)>Math.abs(dx)*1.2&&dt<650&&queue.length>1){if(interactionTimer)clearTimeout(interactionTimer);paused=false;clearTimers();advance(dy<0?1:-1)}},{passive:true});
 window.addEventListener('pointerup',()=>{if(paused){if(interactionTimer)clearTimeout(interactionTimer);interactionTimer=setTimeout(restoreLatest,1800)}},{passive:true});
 window.addEventListener('pointercancel',()=>{if(paused){if(interactionTimer)clearTimeout(interactionTimer);interactionTimer=setTimeout(restoreLatest,1800)}},{passive:true});
 function syncBoundary(){const left=document.querySelector('#market-cards-layer .mc-columns');if(!left)return;const apply=()=>{root.style.left=Math.round(left.getBoundingClientRect().right)+'px'};apply();if(window.ResizeObserver){const ro=new ResizeObserver(apply);ro.observe(left);ro.observe(document.documentElement)}window.addEventListener('resize',apply,{passive:true})}
