@@ -354,14 +354,19 @@ async function loadMarketData(){
 }
 /* html/body 已使用 touch-action:manipulation，交由浏览器原生手势处理。
    不再全局取消第二次 touchend，避免误吞品种卡片的点击。 */
+let lastFormalSignature=null;
 window.VegasApplyFormalSignals=function(){
- const formal=new Set((window.VegasFormalSignalSymbols||[]).map(s=>String(s||'').toUpperCase()));
+ const symbols=[...new Set((window.VegasFormalSignalSymbols||[]).map(s=>String(s||'').trim().toUpperCase()).filter(Boolean))];
+ const signature=symbols.join('|');
+ if(signature===lastFormalSignature)return;
+ lastFormalSignature=signature;
+ const formal=new Set(symbols);
  document.querySelectorAll('#market-cards-layer .mc-card[data-symbol]').forEach(card=>{
   const active=formal.has(String(card.dataset.symbol||'').toUpperCase());
-  if(active)card.setAttribute('data-formal-signal','true');
-  else card.removeAttribute('data-formal-signal');
+  if(active){if(card.getAttribute('data-formal-signal')!=='true')card.setAttribute('data-formal-signal','true');}
+  else if(card.hasAttribute('data-formal-signal'))card.removeAttribute('data-formal-signal');
  });
- if(typeof window.VegasLayer5SetAutoQueue==='function')window.VegasLayer5SetAutoQueue(Array.from(formal));
+ if(typeof window.VegasLayer5SetAutoQueue==='function')window.VegasLayer5SetAutoQueue(symbols);
 };
 window.VegasApplyFormalSignals();
 loadMarketData();scheduleMarketRefresh();
