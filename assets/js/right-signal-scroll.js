@@ -28,7 +28,7 @@ const layers=[0,1].map(index=>{
  return el;
 });
 
-let queue=[],currentIndex=0,period='4H',periodSettings={};
+let queue=[],currentIndex=0,period='4H',periodSettings={},manualSymbol='';
 let activeLayer=0,cycleTimer=0,transitioning=false,paused=false;
 let cycleToken=0,hidden=document.hidden,refreshTimer=0;
 let stockMap=null,stockMapAt=0,cache=new Map();
@@ -39,7 +39,7 @@ try{
   .filter(([,v])=>PERIODS.includes(v?.period))
   .map(([symbol,v])=>[symbol,{period:v.period}]));
 }catch{}
-const currentSymbol=()=>queue[currentIndex]||'';
+const currentSymbol=()=>manualSymbol||queue[currentIndex]||'';
 const periodFor=s=>PERIODS.includes(periodSettings[s]?.period)?periodSettings[s].period:'4H';
 function savePeriods(){try{localStorage.setItem(PERIOD_KEY,JSON.stringify(periodSettings))}catch{}}
 function renderPeriods(){
@@ -201,19 +201,19 @@ function scheduleRefresh(){
  },15000);
 }
 function preloadNext(){
- if(queue.length<2||hidden)return;
+ if(manualSymbol||queue.length<2||hidden)return;
  const nextIndex=(currentIndex+1)%queue.length;
  const symbol=queue[nextIndex];
  loadLayer(1-activeLayer,symbol,periodFor(symbol));
 }
 function scheduleCycle(delay=CLEAR_MS){
  clearTimeout(cycleTimer);
- if(hidden||paused||queue.length<2)return;
+ if(manualSymbol||hidden||paused||queue.length<2)return;
  const token=++cycleToken;
  cycleTimer=setTimeout(()=>{if(token===cycleToken&&!hidden&&!paused)beginTransition()},delay);
 }
 async function beginTransition(){
- if(transitioning||queue.length<2||hidden||paused)return;
+ if(manualSymbol||transitioning||queue.length<2||hidden||paused)return;
  transitioning=true;
  const nextIndex=(currentIndex+1)%queue.length;
  const nextSymbol=queue[nextIndex];
@@ -273,6 +273,26 @@ window.addEventListener('pointercancel',resumeAfterInteraction,{capture:true,pas
 window.addEventListener('blur',()=>{
  if(activePointers.size){activePointers.clear();resumeAfterInteraction()}
 },{passive:true});
+function showManualSymbol(value){
+ const symbol=String(value||'').trim().toUpperCase();
+ if(!/^[A-Z0-9.]+$/.test(symbol))return false;
+ manualSymbol=symbol;
+ ++cycleToken;clearTimeout(cycleTimer);transitioning=false;paused=false;
+ root.hidden=false;
+ layers.forEach((layer,index)=>{
+  layer.style.transition='none';
+  layer.style.opacity=index===activeLayer?'1':'0';
+  layer.style.filter=index===activeLayer?'blur(0px)':'blur(12px)';
+  layer.classList.toggle('is-active',index===activeLayer);
+  layer.style.pointerEvents=index===activeLayer?'auto':'none';
+  layer.getBoundingClientRect();layer.style.transition='';
+ });
+ period=periodFor(symbol);
+ setActive(activeLayer);
+ scheduleRefresh();
+ return true;
+}
+window.VegasLayer5ShowSymbol=showManualSymbol;
 function reconcile(symbols){
  ++cycleToken;clearTimeout(cycleTimer);transitioning=false;
  layers.forEach((layer,index)=>{
@@ -285,7 +305,7 @@ function reconcile(symbols){
  const next=[...new Set((symbols||[]).map(value=>String(value||'').trim().toUpperCase()).filter(value=>/^[A-Z0-9.]+$/.test(value)))];
  const previous=currentSymbol();
  queue=next;
- if(!next.length){
+ if(!next.length&&!manualSymbol){
   ++cycleToken;clearTimers();transitioning=false;paused=false;
   root.hidden=true;currentIndex=0;
   views.forEach(view=>{view.request++;view.symbol='';});
@@ -296,8 +316,10 @@ function reconcile(symbols){
  if(currentIndex>=queue.length)currentIndex=0;
  period=periodFor(currentSymbol());
  setActive(activeLayer);
- if(queue.length>1)preloadNext();
- scheduleCycle(CLEAR_MS);
+ if(!manualSymbol){
+  if(queue.length>1)preloadNext();
+  scheduleCycle(CLEAR_MS);
+ }else loadLayer(activeLayer,currentSymbol(),periodFor(currentSymbol()));
  scheduleRefresh();
 }
 document.addEventListener('visibilitychange',()=>{
