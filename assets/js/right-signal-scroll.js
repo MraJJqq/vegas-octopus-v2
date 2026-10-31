@@ -216,6 +216,15 @@ function createChart(layer){
  return{layer,host,chart,candle,lines,symbol:'',period:'4H',request:0,hasData:false,dataAt:0};
 }
 const views=layers.map(createChart);
+/* 全局只共享横向视窗跨度与缩放参数；各品种价格轴仍独立自动适配。 */
+let sharedVisibleBars=null,sharedBarSpacing=5,sharedRightOffset=3,applyingSyncedRange=false;
+views.forEach((view,index)=>view.chart.timeScale().subscribeVisibleLogicalRangeChange(range=>{
+ if(index!==activeLayer||applyingSyncedRange||!range||!Number.isFinite(range.from)||!Number.isFinite(range.to))return;
+ const options=view.chart.timeScale().options();
+ sharedVisibleBars=Math.max(1,range.to-range.from);
+ sharedBarSpacing=options.barSpacing??sharedBarSpacing;
+ sharedRightOffset=options.rightOffset??sharedRightOffset;
+}));
 function setData(view,rows,preserveRange=false){
  /* 渐变期间不向正在显示的两个图层写入新K线；只保留每层最新一份数据，交接结束后统一应用。 */
  if(fadeState==='transitioning'){
@@ -226,6 +235,7 @@ function setData(view,rows,preserveRange=false){
  const visibleRange=preserveRange?timeScale.getVisibleRange():null;
  view.candle.setData(rows);
  view.lines.forEach((series,index)=>series.setData(ema(rows,EMAS[index])));
+ view.rows=rows;
  if(visibleRange){
   try{timeScale.setVisibleRange(visibleRange)}catch{}
  }
@@ -248,27 +258,36 @@ function resetDefaultVisibleRange(view,rows){
  /* 切换品种/周期时重新启用该图层自己的纵向自动适配；不复制另一品种的价格范围。 */
  view.chart.applyOptions({rightPriceScale:{autoScale:true,scaleMargins:{top:.10,bottom:.10}}});
  const timeScale=view.chart.timeScale();
- const barSpacing=5,rightOffset=3;
- timeScale.applyOptions({barSpacing,rightOffset});
  const width=Math.max(1,view.host.clientWidth||window.innerWidth||1);
- const visibleBars=Math.max(30,Math.floor(width/barSpacing));
- const to=rows.length-1;
- const from=Math.max(0,to-visibleBars+1);
- timeScale.setVisibleLogicalRange({from,to});
+ const barSpacing=sharedBarSpacing,rightOffset=sharedRightOffset;
+ timeScale.applyOptions({barSpacing,rightOffset});
+ const visibleBars=sharedVisibleBars||Math.max(30,Math.floor(width/barSpacing));
+ if(sharedVisibleBars===null)sharedVisibleBars=visibleBars;
+ const to=rows.length-1+rightOffset;
+ const from=Math.max(0,to-visibleBars);
+ applyingSyncedRange=true;
+ try{timeScale.setVisibleLogicalRange({from,to})}finally{applyingSyncedRange=false}
 }
 function syncLayerView(source,target){
  const sourceScale=source.chart.timeScale(),targetScale=target.chart.timeScale();
  try{
   const options=sourceScale.options();
-  /* 渐变前先同步当前图与下一张图的横向缩放比例（barSpacing）和右侧偏移量（rightOffset）。
-     仅应用这两个视图参数，不复制不同品种的绝对逻辑索引/可视范围，避免历史数据长度不同导致K线突然放大或缩小。
-     不修改行情数据、EMA、10秒显示循环或15秒行情刷新规则。 */
-  targetScale.applyOptions({
-   barSpacing:options.barSpacing,
-   rightOffset:options.rightOffset
-  });
+  const range=sourceScale.getVisibleLogicalRange();
+  sharedBarSpacing=options.barSpacing??sharedBarSpacing;
+  sharedRightOffset=options.rightOffset??sharedRightOffset;
+  if(range&&Number.isFinite(range.from)&&Number.isFinite(range.to))
+   sharedVisibleBars=Math.max(1,range.to-range.from);
+  targetScale.applyOptions({barSpacing:sharedBarSpacing,rightOffset:sharedRightOffset});
+  /* 按目标品种最后一根K线重新定位，复制视窗跨度而非源品种的绝对索引。 */
+  const rows=target.rows;
+  if(range&&rows?.length){
+   const to=rows.length-1+(range.to-(source.rows?.length-1??range.to));
+   const from=to-(range.to-range.from);
+   applyingSyncedRange=true;
+   try{targetScale.setVisibleLogicalRange({from,to})}finally{applyingSyncedRange=false}
+  }
  }catch(error){
-  console.warn('[Vegas] K线缩放同步失败',error);
+  console.warn('[Vegas] K线视窗同步失败',error);
  }
 }
 function updateLayerStatus(index,symbol,rows){
