@@ -297,7 +297,7 @@ views.forEach(view=>{
 const VIEWPORT_KEY='vegas-layer5-viewport-v2';
 const PERIOD_SECONDS={'1H':3600,'4H':14400,'1D':86400};
 let viewport={barSpacing:5,rightOffset:3,visibleBars:null,rightEdgeOffset:-3,period:'4H'};
-let applyingViewport=false,viewportApplyToken=0,viewportSaveTimer=0;
+let viewportSaveTimer=0;
 try{
  const saved=JSON.parse(localStorage.getItem(VIEWPORT_KEY)||'null');
  if(saved&&typeof saved==='object'){
@@ -337,11 +337,12 @@ function applyViewport(view,rows,targetPeriod,commitState=(views.indexOf(view)==
  scale.applyOptions({barSpacing:viewport.barSpacing,rightOffset:viewport.rightOffset});
  const to=rows.length-1-rightEdgeOffset;
  const from=to-visibleBars;
- const applyToken=++viewportApplyToken;
- applyingViewport=true;
+ const applyToken=(view.viewportApplyToken||0)+1;
+ view.viewportApplyToken=applyToken;
+ view.applyingViewport=true;
  try{scale.setVisibleLogicalRange({from,to})}
  catch(error){console.warn('[Vegas] 应用视窗状态失败',error)}
- finally{requestAnimationFrame(()=>{if(applyToken===viewportApplyToken)applyingViewport=false})}
+ finally{requestAnimationFrame(()=>{if(applyToken===view.viewportApplyToken)view.applyingViewport=false})}
  /* 隐藏预加载图层只套用状态，不得抢先改写当前品种的全局记忆。 */
  if(commitState){
   viewport.visibleBars=visibleBars;
@@ -351,7 +352,7 @@ function applyViewport(view,rows,targetPeriod,commitState=(views.indexOf(view)==
  }
 }
 views.forEach((view,index)=>view.chart.timeScale().subscribeVisibleLogicalRangeChange(()=>{
- if(index!==activeLayer||applyingViewport)return;
+ if(index!==activeLayer||view.applyingViewport)return;
  captureViewport(view);
 }));
 window.addEventListener('pagehide',()=>{
@@ -410,6 +411,8 @@ async function loadLayer(index,symbol,timeframe){
  if(!symbol)return false;
  const view=views[index],token=++view.request;
  const identityChanged=view.symbol!==symbol||view.period!==timeframe;
+ /* 活动图层切换品种或周期前，先保存用户最后看到的逻辑视窗。 */
+ if(identityChanged&&index===activeLayer&&view.rows?.length)captureViewport(view);
  if(identityChanged){view.hasData=false;view.dataAt=0;}
  view.symbol=symbol;view.period=timeframe;
  try{
