@@ -33,6 +33,7 @@
 <script src="./assets/js/market-card-view.js?v=20261031-1"></script>
 <script src="./assets/js/market-card-scroll.js?v=20261031-10"></script>
 <script src="./assets/js/market-cards.js?v=20261031-44"></script>
+<script src="./assets/js/kline-data.js?v=20261031-1"></script>
 <script>
 (function(){
  const sources=[
@@ -42,7 +43,7 @@
  function loadSource(index){
   if(index>=sources.length){console.error('[Vegas Right Scroll] chart library failed to load');return;}
   const script=document.createElement('script');script.src=sources[index];
-  script.onload=function(){const app=document.createElement('script');app.src='./assets/js/right-signal-scroll.js?v=20261031-72';app.onerror=function(){console.error('[Vegas Right Scroll] K-line module failed to load');};document.body.appendChild(app);};
+  script.onload=function(){const chart=document.createElement('script');chart.src='./assets/js/kline-chart.js?v=20261031-1';chart.onload=function(){const app=document.createElement('script');app.src='./assets/js/right-signal-scroll.js?v=20261031-73';app.onerror=function(){console.error('[Vegas Layer 5] controller failed to load');};document.body.appendChild(app);};chart.onerror=function(){console.error('[Vegas Layer 5] chart engine failed to load');};document.body.appendChild(chart);};
   script.onerror=function(){script.remove();loadSource(index+1);};document.head.appendChild(script);
  }
  loadSource(0);
