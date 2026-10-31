@@ -2,7 +2,7 @@
    统一样式入口：背景、最新事件、品种行情卡片。 */
 :root{color-scheme:dark;--text:#e8f5ff;--cyan:#31d9ff}
 *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
-html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:#02040a;color:var(--text);font:13px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;touch-action:manipulation;background:#02040a;color:var(--text);font:13px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
 body{position:fixed;inset:0;background:#02040a}
 body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:#02040a}
 .app{position:relative;z-index:3;width:100%;height:100dvh;min-height:0;padding:0;background:transparent;overflow:hidden;overscroll-behavior:none;pointer-events:none}
@@ -36,11 +36,8 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 #market-cards-layer .mc-chart{display:block;width:100%;height:80px;min-height:80px;position:relative;z-index:2}
 #market-cards-layer .mc-tag{position:relative;z-index:2;margin-top:12px;text-align:right;font-size:10px;line-height:1;color:#7d86a8;opacity:.7;letter-spacing:.6px}
 #market-cards-layer .mc-card[data-formal-signal="true"]{box-shadow:0 12px 30px -12px color-mix(in srgb,var(--mc-color) 70%,transparent),inset 0 1px 0 rgba(255,255,255,.22)}
-@media(prefers-reduced-motion:reduce){#market-cards-layer .mc-card::before{animation:none}}
 /* 其它页面节点。 */
 #v9-signal-source[hidden]{display:none!important}
-html,body{touch-action:manipulation}
-
 /* 小屏幕仅调整容器宽度；卡片内部尺寸严格沿用原始模板。 */
 @media(max-width:380px){
  #market-cards-layer .mc-columns{width:100vw}
