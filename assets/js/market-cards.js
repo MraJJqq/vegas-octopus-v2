@@ -215,6 +215,7 @@ async function loadMarketData(){
    if(!REALITY_STOCKS.has(d.s))return;
    if(!spots||!realitySymbols){if(!d.ready)d.dom.price.textContent='行情暂不可用';return}
    const symbol=realitySymbols.get(d.s),ticker=symbol&&spots.get(symbol.toUpperCase());
+   if(symbol){d.api=symbol;}
    if(!ticker){if(!d.ready)d.dom.price.textContent='暂无行情';return}
    const last=Number(ticker.lastPrice),open=Number(ticker.openPrice24h);
    if(!(last>0&&open>0)){if(!d.ready)d.dom.price.textContent='数据无效';return}
