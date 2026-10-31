@@ -389,13 +389,16 @@ function clearTransitionWork(){
  clearTimeout(transitionTimer);transitionTimer=0;
  if(transitionRaf){cancelAnimationFrame(transitionRaf);transitionRaf=0;}
 }
-function applyLayerState(active=activeLayer){
+function applyLayerState(active=activeLayer,restoreTransition=false,forceLayout=false){
  layers.forEach((layer,index)=>{
+  const isActive=index===active;
   layer.style.transition='none';
-  layer.style.opacity=index===active?'1':'0';
-  layer.style.filter=index===active?'brightness(1)':'brightness(0.25)';
-  layer.classList.toggle('is-active',index===active);
-  layer.style.pointerEvents=index===active?'auto':'none';
+  layer.style.opacity=isActive?'1':'0';
+  layer.style.filter=isActive?'brightness(1)':'brightness(0.25)';
+  layer.classList.toggle('is-active',isActive);
+  layer.style.pointerEvents=isActive?'auto':'none';
+  if(forceLayout)layer.getBoundingClientRect();
+  if(restoreTransition)layer.style.transition='';
  });
 }
 function settleTransition(){
@@ -511,14 +514,7 @@ function showManualSymbol(value){
  ++cycleToken;clearTimeout(cycleTimer);cycleTimer=0;clearTransitionWork();transitioning=false;paused=false;
  settleTransition();
  root.hidden=false;
- layers.forEach((layer,index)=>{
-  layer.style.transition='none';
-  layer.style.opacity=index===activeLayer?'1':'0';
-  layer.style.filter=index===activeLayer?'brightness(1)':'brightness(0.25)';
-  layer.classList.toggle('is-active',index===activeLayer);
-  layer.style.pointerEvents=index===activeLayer?'auto':'none';
-  layer.style.transition='';
- });
+ applyLayerState(activeLayer,true,false);
  /* 先更新界面反馈，再发起行情请求；不在点击路径中强制同步布局。 */
  title.textContent=symbol;
  status.textContent='正在切换行情…';
@@ -552,13 +548,7 @@ function reconcile(symbols){
  queueInitialized=true;
  ++cycleToken;clearTimeout(cycleTimer);cycleTimer=0;clearTransitionWork();transitioning=false;
  settleTransition();
- layers.forEach((layer,index)=>{
-  layer.style.transition='none';
-  layer.style.opacity=index===activeLayer?'1':'0';
-  layer.style.filter=index===activeLayer?'brightness(1)':'brightness(0.25)';
-  layer.classList.toggle('is-active',index===activeLayer);
-  layer.getBoundingClientRect();layer.style.transition='';
- });
+ applyLayerState(activeLayer,true,true);
  const previous=currentSymbol();
  queue=next;
  if(!next.length&&!manualSymbol){
