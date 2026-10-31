@@ -76,8 +76,12 @@ if('ResizeObserver' in window){
  });
  S.forEach(d=>{if(d.dom&&d.dom.chart)chartResizeObserver.observe(d.dom.chart);});
 }
-let chartWindowResizeFrame=0;
+/* ResizeObserver负责容器尺寸变化；窗口事件只补偿DPR变化，避免同一次旋转重复绘制27张迷你图。 */
+let chartWindowResizeFrame=0,lastChartDpr=Math.min(2,window.devicePixelRatio||1);
 window.addEventListener('resize',()=>{
+ const nextDpr=Math.min(2,window.devicePixelRatio||1);
+ if(nextDpr===lastChartDpr)return;
+ lastChartDpr=nextDpr;
  if(chartWindowResizeFrame)return;
  chartWindowResizeFrame=requestAnimationFrame(()=>{
   chartWindowResizeFrame=0;
