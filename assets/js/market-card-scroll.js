@@ -208,7 +208,7 @@ left.addEventListener('touchstart',e=>{
 left.addEventListener('touchmove',e=>{
  const touch=e.touches[0];if(!touch||!touchActive)return;
  const now=performance.now(),y=touch.clientY,delta=touchLastY-y,dt=Math.max(1,now-touchLastTime);
- if(!touchDragging&&Math.abs(y-touchStartY)<3){touchLastY=y;touchLastTime=now;return}
+ if(!touchDragging&&Math.abs(y-touchStartY)<8){touchLastY=y;touchLastTime=now;return}
  touchDragging=true;e.preventDefault();
  if(Math.abs(delta)>.05){
   /* 拖动阶段不做追赶缓动：一帧内完成与手指等量位移。 */
