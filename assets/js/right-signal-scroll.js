@@ -281,7 +281,7 @@ function syncLayerView(source,target){
   /* 按目标品种最后一根K线重新定位，复制视窗跨度而非源品种的绝对索引。 */
   const rows=target.rows;
   if(range&&rows?.length){
-   const to=rows.length-1+(range.to-(source.rows?.length-1??range.to));
+   const to=rows.length-1+(range.to-(source.rows?.length ? source.rows.length-1 : range.to));
    const from=to-(range.to-range.from);
    applyingSyncedRange=true;
    try{targetScale.setVisibleLogicalRange({from,to})}finally{applyingSyncedRange=false}
