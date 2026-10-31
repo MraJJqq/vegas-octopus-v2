@@ -25,7 +25,7 @@ function setPeriodButtons(){
 }
 function clearTimer(){if(timer){clearTimeout(timer);timer=0;}}
 function clearRefresh(){if(refreshTimer){clearTimeout(refreshTimer);refreshTimer=0;}}
-function clearTransition(){}
+
 function savePeriods(){try{localStorage.setItem('vegas-right-track-v1',JSON.stringify(Object.fromEntries(Object.entries(periodSettings).map(([s,p])=>[s,{period:p}]))));}catch{}}
 function setLayerStyles(index,transition=false){
  layers.forEach((layer,i)=>{
@@ -135,7 +135,7 @@ function beginReveal(){
 function selectSymbol(value){
  const symbol=String(value||'').trim().toUpperCase();
  if(!/^[A-Z0-9.]+$/.test(symbol))return false;
- manualSymbol=symbol;++token;clearTimer();clearRefresh();clearTransition();state='manual';
+ manualSymbol=symbol;++token;clearTimer();clearRefresh();state='manual';
  showRoot();setLayerStyles(active,false);title.textContent=symbol;error.hidden=true;
  period=periodFor(symbol);setPeriodButtons();
  loadLayer(active,symbol,period).then(loaded=>{
@@ -159,7 +159,7 @@ function changePeriod(value){
  chart.capture(views[active]);period=value;periodSettings[symbol]=value;savePeriods();setPeriodButtons();
  ++token;clearTimer();state=manualSymbol?'manual':'paused';
  loadLayer(active,symbol,value).then(ok=>{
-  if(!ok)return;
+  if(!ok){state=manualSymbol?'manual':'idle';if(!manualSymbol)scheduleCycle(CLEAR_MS);return;}
   state=manualSymbol?'manual':'idle';
   if(manualSymbol)armManualReturn(symbol);else scheduleCycle(CLEAR_MS);
   scheduleRefresh();
@@ -167,14 +167,17 @@ function changePeriod(value){
 }
 function pause(){
  if(state==='paused'||state==='hidden')return;
+ ++token;clearTimer();
  const frozen=layers.map(layer=>({opacity:getComputedStyle(layer).opacity,filter:getComputedStyle(layer).filter}));
  layers.forEach((layer,i)=>{layer.style.transition='none';layer.style.opacity=frozen[i].opacity;layer.style.filter=frozen[i].filter;});
  state='paused';
 }
 function resume(){
  if(state!=='paused')return;
+ setLayerStyles(active,false);
  layers.forEach(layer=>{layer.style.transition='';layer.style.willChange='auto';});
  state=manualSymbol?'manual':'idle';
+ applyDeferredRefresh();
  if(manualSymbol)armManualReturn(manualSymbol);else scheduleCycle(CLEAR_MS);
 }
 function hide(){
@@ -184,7 +187,10 @@ function hide(){
 function setQueue(values){
  const next=[...new Set((values||[]).map(x=>String(x||'').trim().toUpperCase()).filter(x=>/^[A-Z0-9.]+$/.test(x)))];
  if(next.length===queue.length&&next.every((s,i)=>s===queue[i]))return;
- const previous=current();queue=next;currentIndex=Math.max(0,queue.indexOf(previous));if(currentIndex>=queue.length)currentIndex=0;
+ const previous=current();++token;clearTimer();
+ views.forEach(view=>{view.pendingRows=null;});
+ setLayerStyles(active,false);state='idle';
+ queue=next;currentIndex=Math.max(0,queue.indexOf(previous));if(currentIndex>=queue.length)currentIndex=0;
  if(!queue.length&&!manualSymbol){hide();return;}
  showRoot();const symbol=current();
  activate(active,symbol).then(ok=>{
@@ -197,7 +203,7 @@ function setQueue(values){
 function visibility(){
  if(document.hidden){++token;clearTimer();clearRefresh();state='hidden';return;}
  const symbol=current();if(!symbol)return;
- showRoot();loadLayer(active,symbol,periodFor(symbol)).then(ok=>{
+ setLayerStyles(active,false);showRoot();loadLayer(active,symbol,periodFor(symbol)).then(ok=>{
   if(!ok)return;
   state=manualSymbol?'manual':'idle';
   if(!initialShown&&!manualSymbol)beginReveal();
