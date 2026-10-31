@@ -8,8 +8,8 @@ window.VegasMarketCardScrollInit=function(left,initialFocusSlots){
  if(!left||!Array.isArray(initialFocusSlots)){console.error('[Vegas Scroll] invalid initializer arguments');return;}
 /* 统一滚动控制器：自动、滚轮、触屏共用唯一位移与循环校正入口。
    卡片 DOM、悬浮层结构、尺寸和视觉样式保持不变。 */
-let cachedCardStep=0,cachedCardGap=null;
-function invalidateCardGeometry(){cachedCardStep=0;cachedCardGap=null;}
+let cachedCardStep=0,cachedCardGap=null,cachedScaleMax=null;
+function invalidateCardGeometry(){cachedCardStep=0;cachedCardGap=null;cachedScaleMax=null;}
 function cardGap(){
  if(cachedCardGap!==null)return cachedCardGap;
  const value=parseFloat(getComputedStyle(left).rowGap);
@@ -32,19 +32,29 @@ function updateFocusScale(){
  const height=left.clientHeight,scrollTop=left.scrollTop,center=scrollTop+height/2,range=Math.max(1,height*.58),fadeRange=Math.max(1,height*.50);
  const first=focusSlots[0],step=cardStep();
  if(!first||!step)return;
- const visibleBottom=scrollTop+height,firstCard=first.querySelector('.mc-card');
- const cardWidth=Math.max(1,firstCard?.offsetWidth||first.clientWidth);
- const firstStyle=getComputedStyle(first),padX=(parseFloat(firstStyle.paddingLeft)||0)+(parseFloat(firstStyle.paddingRight)||0);
- /* 以槽位内容区为缩放边界，并预留8px安全边距。 */
- const available=Math.max(1,first.clientWidth-padX-8);
- const scaleMax=Math.min(1.16,available/cardWidth);
+ if(cachedScaleMax===null){
+  const firstCard=first.querySelector('.mc-card'),cardWidth=Math.max(1,firstCard?.offsetWidth||first.clientWidth);
+  const firstStyle=getComputedStyle(first),padX=(parseFloat(firstStyle.paddingLeft)||0)+(parseFloat(firstStyle.paddingRight)||0);
+  const available=Math.max(1,first.clientWidth-padX-8);
+  cachedScaleMax=Math.min(1.16,available/cardWidth);
+ }
+ const scaleMax=cachedScaleMax;
+ const firstIndex=Math.max(0,Math.floor(scrollTop/step)-2);
+ const lastIndex=Math.min(focusSlots.length,Math.ceil((scrollTop+height)/step)+3);
  for(let index=0;index<focusSlots.length;index++){
-  const slot=focusSlots[index],top=slot.offsetTop,slotHeight=slot.offsetHeight,bottom=top+slotHeight,distance=Math.abs((top+slotHeight/2)-center),t=Math.min(1,distance/range),ease=t*t*(3-2*t),fadeT=Math.min(1,distance/fadeRange),fadeEase=fadeT*fadeT*(3-2*fadeT);
-  const visible=Math.max(0,Math.min(bottom,visibleBottom)-Math.max(top,scrollTop)),ratio=Math.min(1,visible/Math.max(1,slotHeight)),focused=distance<height*.23&&ratio>=.98;
-  const scale=1+(scaleMax-1)*(1-ease),opacity=focused?1:(1-.72*fadeEase)*Math.min(1,ratio*1.8);
-  const scaleText=scale.toFixed(3),opacityText=Math.max(.025,opacity).toFixed(3);
+  const slot=focusSlots[index];
   let previous=focusStyleCache.get(slot);
   if(!previous){previous={scale:'',opacity:''};focusStyleCache.set(slot,previous)}
+  if(index<firstIndex||index>=lastIndex){
+   if(previous.scale!=='1.000'){slot.style.setProperty('--mc-focus-scale','1.000');previous.scale='1.000'}
+   if(previous.opacity!=='0.025'){slot.style.setProperty('--mc-page-opacity','0.025');previous.opacity='0.025'}
+   continue;
+  }
+  const top=slot.offsetTop,slotHeight=slot.offsetHeight,bottom=top+slotHeight,distance=Math.abs((top+slotHeight/2)-center);
+  const t=Math.min(1,distance/range),ease=t*t*(3-2*t),fadeT=Math.min(1,distance/fadeRange),fadeEase=fadeT*fadeT*(3-2*fadeT);
+  const visible=Math.max(0,Math.min(bottom,scrollTop+height)-Math.max(top,scrollTop)),ratio=Math.min(1,visible/Math.max(1,slotHeight)),focused=distance<height*.23&&ratio>=.98;
+  const scale=1+(scaleMax-1)*(1-ease),opacity=focused?1:(1-.72*fadeEase)*Math.min(1,ratio*1.8);
+  const scaleText=scale.toFixed(3),opacityText=Math.max(.025,opacity).toFixed(3);
   if(previous.scale!==scaleText){slot.style.setProperty('--mc-focus-scale',scaleText);previous.scale=scaleText}
   if(previous.opacity!==opacityText){slot.style.setProperty('--mc-page-opacity',opacityText);previous.opacity=opacityText}
  }
