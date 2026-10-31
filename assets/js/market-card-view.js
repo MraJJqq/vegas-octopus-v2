@@ -78,9 +78,10 @@ function mount(root,instruments,onSelect){
  }
  function resetTilt(event){
   const card=event.target instanceof Element?event.target.closest('.mc-card'):null;
-  if(card){card.style.setProperty('--rx','0deg');card.style.setProperty('--ry','0deg');}
+  if(card&&(!event.relatedTarget||!card.contains(event.relatedTarget))){card.style.setProperty('--rx','0deg');card.style.setProperty('--ry','0deg');}
  }
  root.addEventListener('pointermove',onPointerMove,{passive:true});
+ root.addEventListener('pointerout',resetTilt,{passive:true});
  ['pointerleave','pointerup','pointercancel'].forEach(type=>root.addEventListener(type,resetTilt,{passive:true}));
  function update(snapshot){
   items.forEach(item=>{
@@ -110,7 +111,7 @@ function mount(root,instruments,onSelect){
   root.removeEventListener('touchstart',onTouchStart,true);
   root.removeEventListener('touchend',onTouchEnd,true);
   root.removeEventListener('touchcancel',onTouchCancel,true);
-  root.removeEventListener('pointermove',onPointerMove);
+  root.removeEventListener('pointermove',onPointerMove);root.removeEventListener('pointerout',resetTilt);
   ['pointerleave','pointerup','pointercancel'].forEach(type=>root.removeEventListener(type,resetTilt));
   if(pointerRaf)cancelAnimationFrame(pointerRaf);
  }
