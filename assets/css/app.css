@@ -145,6 +145,6 @@ html,body{touch-action:manipulation;}
 #market-cards-layer .mc-card.up .mc-price{color:var(--up);text-shadow:0 0 12px color-mix(in srgb,var(--up) 50%,transparent)}
 #market-cards-layer .mc-card.dn .mc-price{color:var(--dn);text-shadow:0 0 12px color-mix(in srgb,var(--dn) 50%,transparent)}
 #market-cards-layer .mc-card .mc-gl{z-index:1}
-#market-cards-layer .mc-card .mc-bg{z-index:0}
+#market-cards-layer .mc-card .mc-bg{position:absolute;inset:0;z-index:0;border-radius:inherit;pointer-events:none}
 @media(max-width:700px){#market-cards-layer .mc-card{padding:5px;gap:1px}#market-cards-layer .mc-card-head{gap:4px}#market-cards-layer .mc-card-head .mc-coin{flex-basis:18px;width:18px;height:18px;font-size:8px}#market-cards-layer .mc-card-head .mc-sym{font-size:9px}#market-cards-layer .mc-card-head .mc-pct{font-size:8px;padding:1px 4px}#market-cards-layer .mc-card-market .mc-price{font-size:clamp(11px,3vw,15px)}#market-cards-layer .mc-chart{height:22px;min-width:20px}#market-cards-layer .mc-card-tag{font-size:6px}}
 @media(prefers-reduced-motion:reduce){#market-cards-layer .mc-card::before{animation:none}}
