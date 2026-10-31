@@ -86,7 +86,9 @@ function mount(root,instruments,onSelect){
  function update(snapshot){
   items.forEach(item=>{
    const data=snapshot.get(item.symbol);if(!data)return;
-   item.price=data.price||item.price;item.open=data.open||item.open;item.candles=data.candles||item.candles;
+   item.price=data.price||item.price;item.open=data.open||item.open;
+   const candlesChanged=!!data.candles&&data.candles!==item.candles;
+   if(candlesChanged)item.candles=data.candles;
    if(item.price>0&&item.open>0){
     const up=item.price>=item.open,n=price(item.price),pct=(up?'+':'')+((item.price/item.open-1)*100).toFixed(2)+'%';
     item.nodes.card.classList.toggle('up',up);item.nodes.card.classList.toggle('dn',!up);
@@ -94,7 +96,7 @@ function mount(root,instruments,onSelect){
     if(item.nodes.price.textContent!==n)item.nodes.price.textContent=n;
     if(item.nodes.change.textContent!==pct)item.nodes.change.textContent=pct;
    }
-   if(item.candles.length)draw(item);
+   if(candlesChanged&&item.candles.length)draw(item);
   });
  }
  function setSignals(symbols){
