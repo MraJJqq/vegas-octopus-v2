@@ -154,7 +154,7 @@ async function loadMiniCandles(){
    }catch(error){console.warn('[Vegas Octopus] mini K-line failed:',d.s,error);}
   }
  }
- try{await Promise.all(Array.from({length:5},()=>worker()));}
+ try{await Promise.all(Array.from({length:3},()=>worker()));}
  finally{miniKlineInFlight=false;}
 }
 
@@ -275,7 +275,7 @@ document.querySelectorAll('#market-cards-layer .mc-slot').forEach(el=>{
  let pointerFrame=0,pendingX=0,pendingY=0,hasPending=false;
  const off=()=>{hasPending=false;if(pointerFrame){cancelAnimationFrame(pointerFrame);pointerFrame=0}c.style.setProperty('--rx','0deg');c.style.setProperty('--ry','0deg')};
  const applyPointer=()=>{pointerFrame=0;if(!hasPending)return;hasPending=false;const r=el.getBoundingClientRect(),x=(pendingX-r.left)/Math.max(1,r.width),y=(pendingY-r.top)/Math.max(1,r.height);c.style.setProperty('--ry',((x-.5)*24)+'deg');c.style.setProperty('--rx',((.5-y)*20)+'deg')};
- el.addEventListener('pointermove',e=>{pendingX=e.clientX;pendingY=e.clientY;hasPending=true;if(!pointerFrame)pointerFrame=requestAnimationFrame(applyPointer)},{passive:true});
+ el.addEventListener('pointermove',e=>{if(e.pointerType==='touch')return;pendingX=e.clientX;pendingY=e.clientY;hasPending=true;if(!pointerFrame)pointerFrame=requestAnimationFrame(applyPointer)},{passive:true});
  ['pointerleave','pointerup','pointercancel'].forEach(t=>el.addEventListener(t,off,{passive:true}));
 });
 })();
