@@ -196,6 +196,7 @@ function ema(rows,length){
 /* 每个品种独立自动纵向缩放；上下各留5%空间，手动缩放仍由图表交互接管。 */
 function createChart(layer){
  const host=document.createElement('div');host.className='vr-chart';layer.append(host);
+ const gesture=document.createElement('div');gesture.className='vr-gesture-layer';gesture.setAttribute('aria-label','K线视窗手势控制');
  const chart=LWC.createChart(host,{
   autoSize:true,attributionLogo:false,
   layout:{background:{type:LWC.ColorType.Solid,color:'rgba(0,0,0,0)'},textColor:'rgba(210,232,255,.72)',fontSize:11},
@@ -204,8 +205,9 @@ function createChart(layer){
   leftPriceScale:{visible:false,borderVisible:false},
   timeScale:{visible:false,borderVisible:false,rightOffset:3,barSpacing:5,minBarSpacing:.5,shiftVisibleRangeOnNewBar:false},
   crosshair:{vertLine:{visible:false},horzLine:{visible:false}},
-  handleScroll:{mouseWheel:false,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
-  handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true}
+  /* 所有手势由上层独立控制层接管，图表本身只负责绘制。 */
+  handleScroll:{mouseWheel:false,pressedMouseMove:false,horzTouchDrag:false,vertTouchDrag:false},
+  handleScale:{mouseWheel:false,pinch:false,axisPressedMouseMove:false}
  });
  const candle=chart.addSeries(LWC.CandlestickSeries,{
   upColor:'rgba(0,0,0,0)',downColor:'#ff5c7c',borderUpColor:'#2ee6a6',borderDownColor:'#ff5c7c',
@@ -214,9 +216,85 @@ function createChart(layer){
  const lines=EMAS.map((length,index)=>chart.addSeries(LWC.LineSeries,{
   color:EMA_COLORS[index],lineWidth:index?2:1,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false
  }));
- return{layer,host,chart,candle,lines,symbol:'',period:'4H',request:0,hasData:false,dataAt:0};
+ layer.append(gesture);
+ return{layer,host,gesture,chart,candle,lines,symbol:'',period:'4H',request:0,hasData:false,dataAt:0};
 }
 const views=layers.map(createChart);
+/* 独立手势控制层：K线画布不再直接处理拖动/缩放，避免外层滚动与图表手势互相抢占。 */
+const gesturePointers=new Map();
+let gestureBase=null;
+function readGestureRange(view){
+ const range=view.chart.timeScale().getVisibleLogicalRange();
+ if(!range||!Number.isFinite(range.from)||!Number.isFinite(range.to)||range.to<=range.from)return null;
+ return{from:range.from,to:range.to,width:range.to-range.from};
+}
+function applyGestureRange(view,from,to){
+ if(!Number.isFinite(from)||!Number.isFinite(to)||to<=from)return;
+ try{view.chart.timeScale().setVisibleLogicalRange({from,to})}catch{}
+}
+function pointerDistance(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+function startGesture(event){
+ const view=views[activeLayer];
+ if(!view?.rows?.length)return;
+ event.preventDefault();
+ try{view.gesture.setPointerCapture(event.pointerId)}catch{}
+ gesturePointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
+ const range=readGestureRange(view);
+ if(!range)return;
+ if(gesturePointers.size===1){
+  gestureBase={type:'drag',view,range,startX:event.clientX,barSpacing:Math.max(.5,view.chart.timeScale().options().barSpacing||5)};
+ }else if(gesturePointers.size===2){
+  const points=[...gesturePointers.values()];
+  gestureBase={type:'pinch',view,range,distance:Math.max(1,pointerDistance(points[0],points[1])),centerX:(points[0].x+points[1].x)/2};
+ }
+}
+function moveGesture(event){
+ if(!gesturePointers.has(event.pointerId)||!gestureBase)return;
+ event.preventDefault();
+ gesturePointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
+ const view=gestureBase.view;
+ if(gesturePointers.size>=2&&gestureBase.type==='pinch'){
+  const points=[...gesturePointers.values()].slice(0,2);
+  const distance=Math.max(1,pointerDistance(points[0],points[1]));
+  const centerX=(points[0].x+points[1].x)/2;
+  const rect=view.gesture.getBoundingClientRect();
+  const ratio=gestureBase.distance/distance;
+  const width=Math.max(2,Math.min(5000,gestureBase.range.width*ratio));
+  const shift=(gestureBase.centerX-centerX)/Math.max(1,rect.width)*gestureBase.range.width;
+  const center=(gestureBase.range.from+gestureBase.range.to)/2+shift;
+  applyGestureRange(view,center-width/2,center+width/2);
+ }else if(gestureBase.type==='drag'){
+  const rect=view.gesture.getBoundingClientRect();
+  const dx=event.clientX-gestureBase.startX;
+  const shift=-dx/Math.max(.5,gestureBase.barSpacing);
+  applyGestureRange(view,gestureBase.range.from+shift,gestureBase.range.to+shift);
+ }
+}
+function endGesture(event){
+ if(!gesturePointers.has(event.pointerId))return;
+ gesturePointers.delete(event.pointerId);
+ if(gesturePointers.size===1){
+  const [id,point]=[...gesturePointers.entries()][0];
+  const view=views[activeLayer],range=readGestureRange(view);
+  if(range)gestureBase={type:'drag',view,range,startX:point.x,barSpacing:Math.max(.5,view.chart.timeScale().options().barSpacing||5)};
+ }else if(!gesturePointers.size){gestureBase=null}
+}
+views.forEach(view=>{
+ view.gesture.addEventListener('pointerdown',startGesture,{passive:false});
+ view.gesture.addEventListener('pointermove',moveGesture,{passive:false});
+ view.gesture.addEventListener('pointerup',endGesture,{passive:true});
+ view.gesture.addEventListener('pointercancel',endGesture,{passive:true});
+ view.gesture.addEventListener('wheel',event=>{
+  const range=readGestureRange(view);if(!range)return;
+  event.preventDefault();
+  const factor=event.deltaY>0?1.12:.89;
+  const width=Math.max(2,Math.min(5000,range.width*factor));
+  const rect=view.gesture.getBoundingClientRect();
+  const anchor=range.from+(event.clientX-rect.left)/Math.max(1,rect.width)*range.width;
+  const ratio=(anchor-range.from)/range.width;
+  applyGestureRange(view,anchor-width*ratio,anchor+width*(1-ratio));
+ },{passive:false});
+});
 /* 统一视窗状态：保存K线跨度、缩放比例和相对最新K线的位置；跨周期按真实时间跨度换算。 */
 const VIEWPORT_KEY='vegas-layer5-viewport-v2';
 const PERIOD_SECONDS={'1H':3600,'4H':14400,'1D':86400};
