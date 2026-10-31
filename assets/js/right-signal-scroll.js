@@ -10,7 +10,7 @@ const layers=[0,1].map(index=>{
  const layer=document.createElement('div');layer.className='vr-fade-layer'+(index===0?' is-active':'');layer.dataset.layer=String(index);single.prepend(layer);return layer;
 });
 const CLEAR_MS=5000,TRANSITION_MS=5000,REVEAL_MS=1000,INITIAL_HOLD_MS=4000,REFRESH_MS=15000,MANUAL_HOLD_MS=5000;
-let queue=[],currentIndex=0,manualSymbol='',active=0,period='4H',state='hidden',timer=0,refreshTimer=0,transitionFrame=0,token=0,initialShown=false,refreshPending=false;
+let queue=[],currentIndex=0,manualSymbol='',active=0,period='4H',state='hidden',timer=0,refreshTimer=0,token=0,initialShown=false,refreshPending=false;
 const periodSettings=(()=>{try{const saved=JSON.parse(localStorage.getItem('vegas-right-track-v1')||'{}');return Object.fromEntries(Object.entries(saved).filter(([,v])=>data.periods.includes(v?.period)).map(([s,v])=>[s,v.period]));}catch{return{};}})();
 const chart=window.VegasKlineChart.create(root,layers,LWC,()=>active);
 const views=chart.views;
@@ -25,7 +25,7 @@ function setPeriodButtons(){
 }
 function clearTimer(){if(timer){clearTimeout(timer);timer=0;}}
 function clearRefresh(){if(refreshTimer){clearTimeout(refreshTimer);refreshTimer=0;}}
-function clearTransition(){if(transitionFrame){cancelAnimationFrame(transitionFrame);transitionFrame=0;}}
+function clearTransition(){}
 function savePeriods(){try{localStorage.setItem('vegas-right-track-v1',JSON.stringify(Object.fromEntries(Object.entries(periodSettings).map(([s,p])=>[s,{period:p}]))));}catch{}}
 function setLayerStyles(index,transition=false){
  layers.forEach((layer,i)=>{
@@ -54,11 +54,11 @@ async function loadLayer(index,symbol,timeframe){
   if(view.requestId!==requestId)return false;
   chart.setData(index,first,symbol,timeframe,!changed);
   view.symbol=symbol;view.period=timeframe;view.hasData=true;view.dataAt=Date.now();
-  if(changed)chart.setData(index,first,symbol,timeframe,false);
   if(index===active&&symbol===current())updateHeader(symbol,first);
   if(first.length<1200){
    data.complete(symbol,timeframe,first).then(rows=>{
     if(view.requestId!==requestId||view.symbol!==symbol||view.period!==timeframe)return;
+    if(state==='transitioning'){view.pendingRows=rows;return;}
     chart.setData(index,rows,symbol,timeframe,true);
     if(index===active&&symbol===current())updateHeader(symbol,rows);
    }).catch(exception=>{
@@ -84,11 +84,14 @@ function scheduleRefresh(delay=REFRESH_MS){
  clearRefresh();if(document.hidden||!current()||state==='hidden')return;
  refreshTimer=setTimeout(async()=>{
   refreshTimer=0;
-  if(state==='preparing'||state==='transitioning'){refreshPending=true;return;}
+  if(state==='preparing'||state==='transitioning'||state==='paused'){refreshPending=true;return;}
   const symbol=current();await loadLayer(active,symbol,periodFor(symbol));scheduleRefresh();
  },delay);
 }
-function applyDeferredRefresh(){if(refreshPending){refreshPending=false;scheduleRefresh(0);}}
+function applyDeferredRefresh(){
+ views.forEach((view,index)=>{if(view.pendingRows){const rows=view.pendingRows;view.pendingRows=null;chart.setData(index,rows,view.symbol,view.period,true);if(index===active&&view.symbol===current())updateHeader(view.symbol,rows);}});
+ if(refreshPending){refreshPending=false;scheduleRefresh(0);}
+}
 function scheduleCycle(delay=CLEAR_MS){
  clearTimer();if(document.hidden||manualSymbol||queue.length<2||state==='paused'||state==='hidden')return;
  state='clear';const id=++token;
@@ -107,7 +110,6 @@ function transition(){
   setLayerStyles(active,false);layers[nextLayer].style.opacity='0';layers[nextLayer].style.filter='brightness(.25)';
   layers[nextLayer].getBoundingClientRect();setLayerStyles(nextLayer,true);
   currentIndex=nextIndex;active=nextLayer;period=periodFor(symbol);setPeriodButtons();updateHeader(symbol,views[nextLayer].rows);
-  transitionFrame=requestAnimationFrame(()=>{transitionFrame=0;if(id!==token||state!=='transitioning')return;});
   timer=setTimeout(()=>{
    timer=0;if(id!==token||state!=='transitioning')return;
    layers.forEach(layer=>{layer.style.transition='';layer.style.willChange='auto';});
@@ -165,7 +167,6 @@ function changePeriod(value){
 }
 function pause(){
  if(state==='paused'||state==='hidden')return;
- ++token;clearTimer();clearTransition();
  const frozen=layers.map(layer=>({opacity:getComputedStyle(layer).opacity,filter:getComputedStyle(layer).filter}));
  layers.forEach((layer,i)=>{layer.style.transition='none';layer.style.opacity=frozen[i].opacity;layer.style.filter=frozen[i].filter;});
  state='paused';
@@ -177,7 +178,7 @@ function resume(){
  if(manualSymbol)armManualReturn(manualSymbol);else scheduleCycle(CLEAR_MS);
 }
 function hide(){
- ++token;clearTimer();clearRefresh();clearTransition();state='hidden';root.hidden=true;
+ ++token;clearTimer();clearRefresh();state='hidden';root.hidden=true;
  views.forEach(view=>{view.requestId=(view.requestId||0)+1;view.hasData=false;view.symbol='';});
 }
 function setQueue(values){
@@ -194,7 +195,7 @@ function setQueue(values){
  });
 }
 function visibility(){
- if(document.hidden){++token;clearTimer();clearRefresh();clearTransition();state='hidden';return;}
+ if(document.hidden){++token;clearTimer();clearRefresh();state='hidden';return;}
  const symbol=current();if(!symbol)return;
  showRoot();loadLayer(active,symbol,periodFor(symbol)).then(ok=>{
   if(!ok)return;
