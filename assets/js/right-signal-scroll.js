@@ -29,7 +29,7 @@ const layers=[0,1].map(index=>{
 });
 
 let queue=[],currentIndex=0,period='4H',periodSettings={},manualSymbol='',queueInitialized=false;
-let activeLayer=0,cycleTimer=0,transitionTimer=0,transitionRaf=0,transitioning=false,paused=false,refreshDeferred=false;
+let activeLayer=0,cycleTimer=0,transitionTimer=0,transitionRaf=0,transitioning=false,paused=false,refreshDeferred=false,manualReturnTimer=0;
 let cycleToken=0,hidden=document.hidden,refreshTimer=0,fadeState='idle',initialRevealDone=false,initialRevealTimer=0;
 let stockMap=null,stockMapAt=0,cache=new Map(),backfills=new Map(),candleRequests=new Map();
 
@@ -473,7 +473,9 @@ function setActive(index){
  const view=views[index];
  if(view.symbol===symbol&&view.period===period&&view.hasData){
   status.textContent='';error.hidden=true;
- }else loadLayer(index,symbol,period);
+  return Promise.resolve(true);
+ }
+ return loadLayer(index,symbol,period);
 }
 function clearTimers(){
  clearTimeout(cycleTimer);clearTimeout(refreshTimer);
@@ -621,6 +623,7 @@ window.addEventListener('blur',()=>{
 function showManualSymbol(value){
  const symbol=String(value||'').trim().toUpperCase();
  if(!/^[A-Z0-9.]+$/.test(symbol))return false;
+ clearTimeout(manualReturnTimer);manualReturnTimer=0;
  manualSymbol=symbol;
  ++cycleToken;clearTimeout(cycleTimer);cycleTimer=0;clearTransitionWork();transitioning=false;paused=false;
  settleTransition();
@@ -631,7 +634,21 @@ function showManualSymbol(value){
  status.textContent='正在切换行情…';
  error.hidden=true;
  period=periodFor(symbol);
- setActive(activeLayer);
+ Promise.resolve(setActive(activeLayer)).then(loaded=>{
+  if(!loaded||manualSymbol!==symbol||hidden)return;
+  /* 手动品种完整展示一个常规停留周期（5秒），随后回到正式信号队列并立即继续轮播。 */
+  manualReturnTimer=setTimeout(()=>{
+   manualReturnTimer=0;
+   if(manualSymbol!==symbol)return;
+   manualSymbol='';
+   const next=currentSymbol();
+   if(!next){root.hidden=true;return;}
+   period=periodFor(next);
+   setActive(activeLayer);
+   scheduleCycle(0);
+   scheduleRefresh();
+  },CLEAR_MS);
+ });
  scheduleRefresh();
 
  return true;
