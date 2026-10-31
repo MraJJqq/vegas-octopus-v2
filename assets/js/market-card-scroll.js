@@ -16,7 +16,7 @@ function mount(root,slots){
   stride=ordered[0]?ordered[0].offsetHeight+gap:0;
   totalHeight=ordered.reduce((sum,node)=>sum+node.offsetHeight+gap,0);
   const first=ordered[0],card=first?.querySelector('.mc-card');
-  if(first&&card){const cs=getComputedStyle(first),pad=(parseFloat(cs.paddingLeft)||0)+(parseFloat(cs.paddingRight)||0);scaleMax=Math.min(1.16,(first.clientWidth-pad-8)/Math.max(1,card.offsetWidth));}
+  if(first&&card){const cs=getComputedStyle(first),pad=(parseFloat(cs.paddingLeft)||0)+(parseFloat(cs.paddingRight)||0);scaleMax=Math.min(1.16,Math.max(1,(first.clientWidth-pad-8)/Math.max(1,card.offsetWidth)));}
   geometryDirty=false;
  }
  function normalize(direction){
@@ -34,7 +34,7 @@ function mount(root,slots){
     root.insertBefore(last,root.firstElementChild);ordered.unshift(last);top+=distance;shift+=distance;
    }
   }
-  if(shift){root.scrollTop=top;state.lastScroll=top;if(state.mode==='wheel')state.wheelTarget+=shift;}
+  if(shift){root.scrollTop=top;state.lastScroll=top;lastFocusRange='';if(state.mode==='wheel')state.wheelTarget+=shift;}
   state.looping=false;
  }
  function setStyle(node,scale,opacity){
