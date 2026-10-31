@@ -8,12 +8,20 @@ window.VegasMarketCardScrollInit=function(left,initialFocusSlots){
  if(!left||!Array.isArray(initialFocusSlots)){console.error('[Vegas Scroll] invalid initializer arguments');return;}
 /* 统一滚动控制器：自动、滚轮、触屏共用唯一位移与循环校正入口。
    卡片 DOM、悬浮层结构、尺寸和视觉样式保持不变。 */
-let cachedCardStep=0;
+let cachedCardStep=0,cachedCardGap=null;
+function invalidateCardGeometry(){cachedCardStep=0;cachedCardGap=null;}
+function cardGap(){
+ if(cachedCardGap!==null)return cachedCardGap;
+ const value=parseFloat(getComputedStyle(left).rowGap);
+ cachedCardGap=Number.isFinite(value)?Math.max(0,value):0;
+ return cachedCardGap;
+}
+function slotStride(slot){
+ return slot?Math.max(1,slot.offsetHeight+cardGap()):0;
+}
 function cardStep(){
  if(cachedCardStep>0)return cachedCardStep;
- const first=left.firstElementChild,second=first?.nextElementSibling;
- if(!first||!second)return 0;
- cachedCardStep=Math.max(0,second.offsetTop-first.offsetTop);
+ cachedCardStep=slotStride(left.firstElementChild);
  return cachedCardStep;
 }
 let focusSlots=initialFocusSlots;
@@ -24,10 +32,12 @@ function updateFocusScale(){
  const height=left.clientHeight,scrollTop=left.scrollTop,center=scrollTop+height/2,range=Math.max(1,height*.58),fadeRange=Math.max(1,height*.50),available=Math.max(1,left.clientWidth-8);
  const first=focusSlots[0],step=cardStep();
  if(!first||!step)return;
- const baseTop=first.offsetTop,slotHeight=first.offsetHeight,slotWidth=Math.max(1,first.offsetWidth),visibleBottom=scrollTop+height;
- const scaleMax=Math.min(1.34,available/slotWidth);
+ const visibleBottom=scrollTop+height,firstCard=first.querySelector('.mc-card');
+ const cardWidth=Math.max(1,firstCard?.getBoundingClientRect().width||first.clientWidth);
+ /* 按新卡片本体宽度计算放大上限，避免把槽位内边距误算成卡片宽度。 */
+ const scaleMax=Math.min(1.16,available/cardWidth);
  for(let index=0;index<focusSlots.length;index++){
-  const slot=focusSlots[index],top=baseTop+index*step,bottom=top+slotHeight,distance=Math.abs((top+slotHeight/2)-center),t=Math.min(1,distance/range),ease=t*t*(3-2*t),fadeT=Math.min(1,distance/fadeRange),fadeEase=fadeT*fadeT*(3-2*fadeT);
+  const slot=focusSlots[index],top=slot.offsetTop,slotHeight=slot.offsetHeight,bottom=top+slotHeight,distance=Math.abs((top+slotHeight/2)-center),t=Math.min(1,distance/range),ease=t*t*(3-2*t),fadeT=Math.min(1,distance/fadeRange),fadeEase=fadeT*fadeT*(3-2*fadeT);
   const visible=Math.max(0,Math.min(bottom,visibleBottom)-Math.max(top,scrollTop)),ratio=Math.min(1,visible/Math.max(1,slotHeight)),focused=distance<height*.23&&ratio>=.98;
   const scale=1+(scaleMax-1)*(1-ease),opacity=focused?1:(1-.72*fadeEase)*Math.min(1,ratio*1.8);
   const scaleText=scale.toFixed(3),opacityText=Math.max(.025,opacity).toFixed(3);
@@ -50,13 +60,17 @@ function normalizeLoopPosition(direction){
  let top=left.scrollTop,shift=0,guard=0;
  if(direction<0){
   while(top<=0&&guard++<focusSlots.length){
-   const last=focusSlots.pop();left.insertBefore(last,left.firstElementChild);focusSlots.unshift(last);
-   top+=step;shift+=step;
+   const last=focusSlots[focusSlots.length-1],distance=slotStride(last);
+   if(!last||distance<1)break;
+   focusSlots.pop();left.insertBefore(last,left.firstElementChild);focusSlots.unshift(last);
+   top+=distance;shift+=distance;
   }
  }else{
-  while(top>=step&&guard++<focusSlots.length){
-   const first=focusSlots.shift();left.appendChild(first);focusSlots.push(first);
-   top-=step;shift-=step;
+  while(guard++<focusSlots.length){
+   const first=focusSlots[0],distance=slotStride(first);
+   if(!first||distance<1||top<distance)break;
+   focusSlots.shift();left.appendChild(first);focusSlots.push(first);
+   top-=distance;shift-=distance;
   }
  }
  if(Math.abs(top-left.scrollTop)>.1)left.scrollTop=top;
@@ -227,13 +241,13 @@ document.addEventListener('visibilitychange',()=>{
  }
 },{passive:true});
 window.addEventListener('resize',()=>{
- cachedCardStep=0;queueFocusScale();
+ invalidateCardGeometry();queueFocusScale();
 },{passive:true});
 left.style.scrollBehavior='auto';
 if('ResizeObserver' in window){
- const stepObserver=new ResizeObserver(()=>{cachedCardStep=0;queueFocusScale()});
+ const stepObserver=new ResizeObserver(()=>{invalidateCardGeometry();queueFocusScale()});
  stepObserver.observe(left);
- if(left.firstElementChild)stepObserver.observe(left.firstElementChild);
+ focusSlots.forEach(slot=>stepObserver.observe(slot));
 }
 queueFocusScale();
 scheduleAutoScroll();
