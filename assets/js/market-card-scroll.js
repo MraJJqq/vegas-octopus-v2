@@ -29,12 +29,14 @@ let focusFrame=0;
 const focusStyleCache=new WeakMap();
 function updateFocusScale(){
  focusFrame=0;
- const height=left.clientHeight,scrollTop=left.scrollTop,center=scrollTop+height/2,range=Math.max(1,height*.58),fadeRange=Math.max(1,height*.50),available=Math.max(1,left.clientWidth-8);
+ const height=left.clientHeight,scrollTop=left.scrollTop,center=scrollTop+height/2,range=Math.max(1,height*.58),fadeRange=Math.max(1,height*.50);
  const first=focusSlots[0],step=cardStep();
  if(!first||!step)return;
  const visibleBottom=scrollTop+height,firstCard=first.querySelector('.mc-card');
  const cardWidth=Math.max(1,firstCard?.offsetWidth||first.clientWidth);
- /* 按新卡片本体宽度计算放大上限，避免把槽位内边距误算成卡片宽度。 */
+ const firstStyle=getComputedStyle(first),padX=(parseFloat(firstStyle.paddingLeft)||0)+(parseFloat(firstStyle.paddingRight)||0);
+ /* 以槽位内容区为缩放边界，并预留8px安全边距。 */
+ const available=Math.max(1,first.clientWidth-padX-8);
  const scaleMax=Math.min(1.16,available/cardWidth);
  for(let index=0;index<focusSlots.length;index++){
   const slot=focusSlots[index],top=slot.offsetTop,slotHeight=slot.offsetHeight,bottom=top+slotHeight,distance=Math.abs((top+slotHeight/2)-center),t=Math.min(1,distance/range),ease=t*t*(3-2*t),fadeT=Math.min(1,distance/fadeRange),fadeEase=fadeT*fadeT*(3-2*fadeT);
