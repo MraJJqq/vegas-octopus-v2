@@ -54,6 +54,7 @@ function renderPeriods(){
   button.classList.toggle('active',value===period);
   button.addEventListener('click',()=>{
    if(value===period)return;
+   captureViewport(views[activeLayer]);
    period=value;
    const symbol=currentSymbol();
    if(symbol){periodSettings[symbol]={period};savePeriods()}
@@ -216,15 +217,70 @@ function createChart(layer){
  return{layer,host,chart,candle,lines,symbol:'',period:'4H',request:0,hasData:false,dataAt:0};
 }
 const views=layers.map(createChart);
-/* 全局只共享横向视窗跨度与缩放参数；各品种价格轴仍独立自动适配。 */
-let sharedVisibleBars=null,sharedBarSpacing=5,sharedRightOffset=3,applyingSyncedRange=false;
-views.forEach((view,index)=>view.chart.timeScale().subscribeVisibleLogicalRangeChange(range=>{
- if(index!==activeLayer||applyingSyncedRange||!range||!Number.isFinite(range.from)||!Number.isFinite(range.to))return;
- const options=view.chart.timeScale().options();
- sharedVisibleBars=Math.max(1,range.to-range.from);
- sharedBarSpacing=options.barSpacing??sharedBarSpacing;
- sharedRightOffset=options.rightOffset??sharedRightOffset;
+/* 统一视窗状态：保存K线跨度、缩放比例和相对最新K线的位置；跨周期按真实时间跨度换算。 */
+const VIEWPORT_KEY='vegas-layer5-viewport-v2';
+const PERIOD_SECONDS={'1H':3600,'4H':14400,'1D':86400};
+let viewport={barSpacing:5,rightOffset:3,visibleBars:null,rightEdgeOffset:-3,period:'4H'};
+let applyingViewport=false,viewportSaveTimer=0;
+try{
+ const saved=JSON.parse(localStorage.getItem(VIEWPORT_KEY)||'null');
+ if(saved&&typeof saved==='object'){
+  if(Number.isFinite(saved.barSpacing))viewport.barSpacing=Math.max(.5,Math.min(30,saved.barSpacing));
+  if(Number.isFinite(saved.rightOffset))viewport.rightOffset=Math.max(-50,Math.min(100,saved.rightOffset));
+  if(Number.isFinite(saved.visibleBars)&&saved.visibleBars>0)viewport.visibleBars=Math.max(1,Math.min(5000,saved.visibleBars));
+  if(Number.isFinite(saved.rightEdgeOffset))viewport.rightEdgeOffset=Math.max(-5000,Math.min(50000,saved.rightEdgeOffset));
+  if(PERIODS.includes(saved.period))viewport.period=saved.period;
+ }
+}catch{}
+function saveViewport(){try{localStorage.setItem(VIEWPORT_KEY,JSON.stringify(viewport))}catch{}}
+function scheduleViewportSave(){
+ if(viewportSaveTimer)clearTimeout(viewportSaveTimer);
+ viewportSaveTimer=setTimeout(()=>{viewportSaveTimer=0;saveViewport()},180);
+}
+function captureViewport(view){
+ if(!view?.rows?.length)return;
+ const scale=view.chart.timeScale(),range=scale.getVisibleLogicalRange();
+ if(!range||!Number.isFinite(range.from)||!Number.isFinite(range.to)||range.to<=range.from)return;
+ const options=scale.options();
+ viewport.visibleBars=Math.max(1,range.to-range.from);
+ viewport.barSpacing=Number.isFinite(options.barSpacing)?options.barSpacing:viewport.barSpacing;
+ viewport.rightOffset=Number.isFinite(options.rightOffset)?options.rightOffset:viewport.rightOffset;
+ viewport.rightEdgeOffset=(view.rows.length-1)-range.to;
+ viewport.period=view.period||viewport.period;
+ scheduleViewportSave();
+}
+function applyViewport(view,rows,targetPeriod,commitState=(views.indexOf(view)===activeLayer)){
+ if(!rows?.length)return;
+ const oldSeconds=PERIOD_SECONDS[viewport.period]||PERIOD_SECONDS['4H'];
+ const newSeconds=PERIOD_SECONDS[targetPeriod]||oldSeconds;
+ const ratio=oldSeconds/newSeconds;
+ const width=Math.max(1,view.host.clientWidth||window.innerWidth||1);
+ const visibleBars=viewport.visibleBars===null?Math.max(30,Math.floor(width/viewport.barSpacing)):Math.max(1,viewport.visibleBars*ratio);
+ const rightEdgeOffset=viewport.rightEdgeOffset*ratio;
+ const scale=view.chart.timeScale();
+ scale.applyOptions({barSpacing:viewport.barSpacing,rightOffset:viewport.rightOffset});
+ const to=rows.length-1-rightEdgeOffset;
+ const from=to-visibleBars;
+ applyingViewport=true;
+ try{scale.setVisibleLogicalRange({from,to})}
+ catch(error){console.warn('[Vegas] 应用视窗状态失败',error)}
+ finally{requestAnimationFrame(()=>{applyingViewport=false})}
+ /* 隐藏预加载图层只套用状态，不得抢先改写当前品种的全局记忆。 */
+ if(commitState){
+  viewport.visibleBars=visibleBars;
+  viewport.rightEdgeOffset=rightEdgeOffset;
+  viewport.period=targetPeriod;
+  scheduleViewportSave();
+ }
+}
+views.forEach((view,index)=>view.chart.timeScale().subscribeVisibleLogicalRangeChange(()=>{
+ if(index!==activeLayer||applyingViewport)return;
+ captureViewport(view);
 }));
+window.addEventListener('pagehide',()=>{
+ if(viewportSaveTimer)clearTimeout(viewportSaveTimer);
+ viewportSaveTimer=0;captureViewport(views[activeLayer]);saveViewport();
+},{passive:true});
 function setData(view,rows,preserveRange=false){
  /* 渐变期间不向正在显示的两个图层写入新K线；只保留每层最新一份数据，交接结束后统一应用。 */
  if(fadeState==='transitioning'){
@@ -232,12 +288,14 @@ function setData(view,rows,preserveRange=false){
   return false;
  }
  const timeScale=view.chart.timeScale();
+ if(preserveRange)captureViewport(view);
  const visibleRange=preserveRange?timeScale.getVisibleRange():null;
  view.candle.setData(rows);
  view.lines.forEach((series,index)=>series.setData(ema(rows,EMAS[index])));
  view.rows=rows;
  if(visibleRange){
   try{timeScale.setVisibleRange(visibleRange)}catch{}
+  captureViewport(view);
  }
  view.hasData=true;
  view.dataAt=Date.now();
@@ -255,37 +313,14 @@ function applyPendingLayerData(){
 }
 function resetDefaultVisibleRange(view,rows){
  if(!rows.length)return;
- /* 切换品种/周期时重新启用该图层自己的纵向自动适配；不复制另一品种的价格范围。 */
+ /* 品种或周期切换只应用统一视窗状态；价格轴继续独立自动适配。 */
  view.chart.applyOptions({rightPriceScale:{autoScale:true,scaleMargins:{top:.10,bottom:.10}}});
- const timeScale=view.chart.timeScale();
- const width=Math.max(1,view.host.clientWidth||window.innerWidth||1);
- const barSpacing=sharedBarSpacing,rightOffset=sharedRightOffset;
- timeScale.applyOptions({barSpacing,rightOffset});
- const visibleBars=sharedVisibleBars||Math.max(30,Math.floor(width/barSpacing));
- if(sharedVisibleBars===null)sharedVisibleBars=visibleBars;
- const to=rows.length-1+rightOffset;
- const from=Math.max(0,to-visibleBars);
- applyingSyncedRange=true;
- try{timeScale.setVisibleLogicalRange({from,to})}finally{applyingSyncedRange=false}
+ applyViewport(view,rows,view.period);
 }
 function syncLayerView(source,target){
- const sourceScale=source.chart.timeScale(),targetScale=target.chart.timeScale();
  try{
-  const options=sourceScale.options();
-  const range=sourceScale.getVisibleLogicalRange();
-  sharedBarSpacing=options.barSpacing??sharedBarSpacing;
-  sharedRightOffset=options.rightOffset??sharedRightOffset;
-  if(range&&Number.isFinite(range.from)&&Number.isFinite(range.to))
-   sharedVisibleBars=Math.max(1,range.to-range.from);
-  targetScale.applyOptions({barSpacing:sharedBarSpacing,rightOffset:sharedRightOffset});
-  /* 按目标品种最后一根K线重新定位，复制视窗跨度而非源品种的绝对索引。 */
-  const rows=target.rows;
-  if(range&&rows?.length){
-   const to=rows.length-1+(range.to-(source.rows?.length ? source.rows.length-1 : range.to));
-   const from=to-(range.to-range.from);
-   applyingSyncedRange=true;
-   try{targetScale.setVisibleLogicalRange({from,to})}finally{applyingSyncedRange=false}
-  }
+  captureViewport(source);
+  if(target.rows?.length)applyViewport(target,target.rows,target.period,true);
  }catch(error){
   console.warn('[Vegas] K线视窗同步失败',error);
  }
