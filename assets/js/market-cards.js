@@ -46,6 +46,23 @@ function drawCardChart(d){
  ctx.strokeStyle=color;ctx.lineWidth=1.8;ctx.lineJoin='round';ctx.lineCap='round';ctx.shadowColor=color;ctx.shadowBlur=4;ctx.stroke();ctx.shadowBlur=0;
  if(pts.length===1){ctx.beginPath();ctx.arc(w/2,h/2,2.2,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();}
 }
+/* Canvas尺寸变化时重绘，覆盖屏幕旋转及容器宽度变化但行情未刷新的情况。 */
+const chartDataByCanvas=new WeakMap();
+S.forEach(d=>{if(d.dom&&d.dom.chart)chartDataByCanvas.set(d.dom.chart,d);});
+if('ResizeObserver' in window){
+ const chartResizeObserver=new ResizeObserver(entries=>{
+  entries.forEach(entry=>{const d=chartDataByCanvas.get(entry.target);if(d&&d.history.length)drawCardChart(d);});
+ });
+ S.forEach(d=>{if(d.dom&&d.dom.chart)chartResizeObserver.observe(d.dom.chart);});
+}
+let chartWindowResizeFrame=0;
+window.addEventListener('resize',()=>{
+ if(chartWindowResizeFrame)return;
+ chartWindowResizeFrame=requestAnimationFrame(()=>{
+  chartWindowResizeFrame=0;
+  S.forEach(d=>{if(d.history.length)drawCardChart(d);});
+ });
+},{passive:true});
 function paint(d){
  const el=d.dom,priceEl=el.price;
  if(!d.ready||!Number.isFinite(d.p)||d.p<=0){if(priceEl.textContent!=='加载中')priceEl.textContent='加载中';if(el.pct.textContent!=='--')el.pct.textContent='--';return}
