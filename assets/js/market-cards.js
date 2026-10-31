@@ -5,7 +5,7 @@ const P=[
 ];
 const REALITY_STOCKS=new Set(P.slice(0,23).map(x=>x[0]));
 const fmt=p=>p>=100?p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):p>=1?p.toFixed(3):p.toFixed(4);
-const S=P.map(([s,api],i)=>({s,api,i,p:0,o:0,ready:false,history:[]}));
+const S=P.map(([s,api],i)=>({s,api,i,p:0,o:0,ready:false,candles:[]}));
 const left=document.getElementById('mc-left');
 if(!left){console.warn('[Vegas Octopus] market-card root #mc-left is missing; layer 3 initialization skipped.');return;}
 S.forEach(d=>{
@@ -58,32 +58,27 @@ left.addEventListener('touchcancel',()=>{
 },{capture:true,passive:true});
 function drawCardChart(d){
  const canvas=d.dom.chart,ctx=canvas&&canvas.getContext('2d');
- if(!ctx||!d.history.length)return;
+ if(!ctx||!d.candles.length)return;
  const rect=canvas.getBoundingClientRect(),w=Math.max(1,canvas.clientWidth||canvas.offsetWidth||rect.width),h=Math.max(1,canvas.clientHeight||canvas.offsetHeight||rect.height),ratio=Math.min(2,window.devicePixelRatio||1);
  const width=Math.round(w*ratio),height=Math.round(h*ratio);
  if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
  ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,w,h);
- const values=d.history,mn=Math.min(...values),mx=Math.max(...values),span=mx-mn||1;
- const pts=values.map((v,i)=>[values.length===1?w:i/(values.length-1)*w,h-3-(v-mn)/span*(h-6)]);
- const color=getComputedStyle(d.dom.card).getPropertyValue('--mc-color').trim()||(d.p>=d.o?'#00f5a0':'#ff3b6b');
- const gradient=ctx.createLinearGradient(0,0,0,h);gradient.addColorStop(0,color+'55');gradient.addColorStop(1,color+'00');
- ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.lineTo(w,h);ctx.lineTo(0,h);ctx.closePath();ctx.fillStyle=gradient;ctx.fill();
- ctx.beginPath();
- if(pts.length===1){
-  /* 首次行情只有一个真实采样点时，先绘制可见短线；不伪造历史价格。 */
-  const y=h/2;ctx.moveTo(0,y);ctx.lineTo(w,y);
- }else{
-  pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));
- }
- ctx.strokeStyle=color;ctx.lineWidth=1.8;ctx.lineJoin='round';ctx.lineCap='round';ctx.shadowColor=color;ctx.shadowBlur=4;ctx.stroke();ctx.shadowBlur=0;
- if(pts.length===1){ctx.beginPath();ctx.arc(w/2,h/2,2.2,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();}
+ const candles=d.candles.slice(-60),lo=Math.min(...candles.map(c=>c.low)),hi=Math.max(...candles.map(c=>c.high)),span=hi-lo||Math.max(Math.abs(hi)*0.001,1e-8);
+ const y=v=>h-3-(v-lo)/span*(h-6),step=w/candles.length,bodyW=Math.max(1,Math.min(4,step*.58));
+ candles.forEach((c,i)=>{
+  const x=i*step+step/2,up=c.close>=c.open,color=up?'#00f5a0':'#ff3b6b';
+  const yo=y(c.open),yc=y(c.close),yh=y(c.high),yl=y(c.low);
+  ctx.strokeStyle=color;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,yh);ctx.lineTo(x,yl);ctx.stroke();
+  const top=Math.min(yo,yc),bodyH=Math.max(1.2,Math.abs(yc-yo));
+  ctx.fillStyle=color;ctx.fillRect(x-bodyW/2,top,bodyW,bodyH);
+ });
 }
 /* Canvas尺寸变化时重绘，覆盖屏幕旋转及容器宽度变化但行情未刷新的情况。 */
 const chartDataByCanvas=new WeakMap();
 S.forEach(d=>{if(d.dom&&d.dom.chart)chartDataByCanvas.set(d.dom.chart,d);});
 if('ResizeObserver' in window){
  const chartResizeObserver=new ResizeObserver(entries=>{
-  entries.forEach(entry=>{const d=chartDataByCanvas.get(entry.target);if(d&&d.history.length)drawCardChart(d);});
+  entries.forEach(entry=>{const d=chartDataByCanvas.get(entry.target);if(d&&d.candles.length)drawCardChart(d);});
  });
  S.forEach(d=>{if(d.dom&&d.dom.chart)chartResizeObserver.observe(d.dom.chart);});
 }
@@ -96,7 +91,7 @@ window.addEventListener('resize',()=>{
  if(chartWindowResizeFrame)return;
  chartWindowResizeFrame=requestAnimationFrame(()=>{
   chartWindowResizeFrame=0;
-  S.forEach(d=>{if(d.history.length)drawCardChart(d);});
+  S.forEach(d=>{if(d.candles.length)drawCardChart(d);});
  });
 },{passive:true});
 function paint(d){
@@ -108,10 +103,6 @@ function paint(d){
  if(priceEl.textContent!==nextPrice)priceEl.textContent=nextPrice;
  const nextPct=(up?'+':'')+((d.p/d.o-1)*100).toFixed(2)+'%';
  if(el.pct.textContent!==nextPct)el.pct.textContent=nextPct;
- const previous=d.history[d.history.length-1];
- if(!Number.isFinite(previous)||previous!==d.p){d.history.push(d.p);if(d.history.length>60)d.history.shift();}
- /* 等本帧布局完成后再绘制，避免首次排版时读取未稳定的Canvas尺寸。 */
- requestAnimationFrame(()=>drawCardChart(d));
 }
 /* 滚动行为由独立引擎负责；卡片层只提供容器和卡片节点。 */
 if(typeof window.VegasMarketCardScrollInit==='function'){
@@ -135,6 +126,38 @@ async function bitgetJson(path){
  }finally{window.clearTimeout(timeoutId)}
 }
 let marketLoadInFlight=false,marketRefreshTimer=0;
+/* 小卡片使用Bitget真实1H OHLC；首次取60根，后续每分钟增量合并最近3根。 */
+let miniKlineInFlight=false,miniKlineNextAt=0,miniKlineLoaded=false;
+async function loadMiniCandles(){
+ if(document.hidden||miniKlineInFlight||Date.now()<miniKlineNextAt)return;
+ miniKlineInFlight=true;miniKlineNextAt=Date.now()+60000;
+ const queue=S.filter(d=>!REALITY_STOCKS.has(d.s)||d.api&&d.api!=='');
+ let cursor=0;
+ async function worker(){
+  while(cursor<queue.length){
+   const d=queue[cursor++];
+   const symbol=String(d.api||'').toUpperCase();
+   if(!symbol)continue;
+   const category=REALITY_STOCKS.has(d.s)?'SPOT':'USDT-FUTURES';
+   const limit=miniKlineLoaded?'3':'60';
+   const path='/api/v3/market/candles?category='+category+'&symbol='+encodeURIComponent(symbol)+'&interval=1H&limit='+limit;
+   try{
+    const rows=await bitgetJson(path);
+    const incoming=rows.map(row=>({time:Number(row[0]),open:Number(row[1]),high:Number(row[2]),low:Number(row[3]),close:Number(row[4])}))
+     .filter(c=>Number.isFinite(c.time)&&c.open>0&&c.high>0&&c.low>0&&c.close>0&&c.high>=Math.max(c.open,c.close)&&c.low<=Math.min(c.open,c.close));
+    if(!incoming.length)continue;
+    const merged=new Map(d.candles.map(c=>[c.time,c]));
+    incoming.forEach(c=>merged.set(c.time,c));
+    const next=[...merged.values()].sort((a,b)=>a.time-b.time).slice(-60);
+    const changed=next.length!==d.candles.length||next.some((c,i)=>{const p=d.candles[i];return !p||p.time!==c.time||p.open!==c.open||p.high!==c.high||p.low!==c.low||p.close!==c.close;});
+    if(changed){d.candles=next;drawCardChart(d);}
+   }catch(error){console.warn('[Vegas Octopus] mini K-line failed:',d.s,error);}
+  }
+ }
+ try{await Promise.all(Array.from({length:5},()=>worker()));miniKlineLoaded=true;}
+ finally{miniKlineInFlight=false;}
+}
+
 let realitySymbolCache=null,realitySymbolCacheAt=0;
 let realityDirectoryPromise=null;
 function loadRealitySymbolDirectory(){
@@ -223,6 +246,7 @@ async function loadMarketData(){
    directoryDone=true;processStocks();
   }
   await Promise.allSettled(tasks);
+  await loadMiniCandles();
  }finally{
   marketLoadInFlight=false;
  }
