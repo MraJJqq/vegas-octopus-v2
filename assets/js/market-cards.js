@@ -47,7 +47,7 @@ left.addEventListener('touchend',event=>{
  const card=touchTapCard;
  touchTapCard=null;
  if(!touch||!card||!card.isConnected)return;
- if(Math.hypot(touch.clientX-touchTapX,touch.clientY-touchTapY)>8)return;
+ if(Math.hypot(touch.clientX-touchTapX,touch.clientY-touchTapY)>=8)return;
  const symbol=String(card.dataset.symbol||'').trim().toUpperCase();
  if(!symbol)return;
  lastTouchSelection={symbol,time:Date.now()};
