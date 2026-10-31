@@ -27,7 +27,7 @@ left.addEventListener('click',event=>{
 function drawCardChart(d){
  const canvas=d.dom.chart,ctx=canvas&&canvas.getContext('2d');
  if(!ctx||!d.history.length)return;
- const rect=canvas.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),ratio=Math.min(2,window.devicePixelRatio||1);
+ const rect=canvas.getBoundingClientRect(),w=Math.max(1,canvas.clientWidth||canvas.offsetWidth||rect.width),h=Math.max(1,canvas.clientHeight||canvas.offsetHeight||rect.height),ratio=Math.min(2,window.devicePixelRatio||1);
  const width=Math.round(w*ratio),height=Math.round(h*ratio);
  if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
  ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,w,h);
@@ -74,7 +74,8 @@ function paint(d){
  if(el.pct.textContent!==nextPct)el.pct.textContent=nextPct;
  const previous=d.history[d.history.length-1];
  if(!Number.isFinite(previous)||previous!==d.p){d.history.push(d.p);if(d.history.length>60)d.history.shift();}
- drawCardChart(d);
+ /* 等本帧布局完成后再绘制，避免首次排版时读取未稳定的Canvas尺寸。 */
+ requestAnimationFrame(()=>drawCardChart(d));
 }
 /* 滚动行为由独立引擎负责；卡片层只提供容器和卡片节点。 */
 if(typeof window.VegasMarketCardScrollInit==='function'){
