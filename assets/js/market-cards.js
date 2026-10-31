@@ -127,7 +127,7 @@ async function bitgetJson(path){
 }
 let marketLoadInFlight=false,marketRefreshTimer=0;
 /* 小卡片使用Bitget真实1H OHLC；首次取60根，后续每分钟增量合并最近3根。 */
-let miniKlineInFlight=false,miniKlineNextAt=0,miniKlineLoaded=false;
+let miniKlineInFlight=false,miniKlineNextAt=0;
 async function loadMiniCandles(){
  if(document.hidden||miniKlineInFlight||Date.now()<miniKlineNextAt)return;
  miniKlineInFlight=true;miniKlineNextAt=Date.now()+60000;
@@ -139,7 +139,7 @@ async function loadMiniCandles(){
    const symbol=String(d.api||'').toUpperCase();
    if(!symbol)continue;
    const category=REALITY_STOCKS.has(d.s)?'SPOT':'USDT-FUTURES';
-   const limit=miniKlineLoaded?'3':'60';
+   const limit=d.candles.length?'3':'60';
    const path='/api/v3/market/candles?category='+category+'&symbol='+encodeURIComponent(symbol)+'&interval=1H&limit='+limit;
    try{
     const rows=await bitgetJson(path);
@@ -154,7 +154,7 @@ async function loadMiniCandles(){
    }catch(error){console.warn('[Vegas Octopus] mini K-line failed:',d.s,error);}
   }
  }
- try{await Promise.all(Array.from({length:5},()=>worker()));miniKlineLoaded=true;}
+ try{await Promise.all(Array.from({length:5},()=>worker()));}
  finally{miniKlineInFlight=false;}
 }
 
