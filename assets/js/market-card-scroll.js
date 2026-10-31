@@ -25,7 +25,8 @@ function cardStep(){
  return cachedCardStep;
 }
 let focusSlots=initialFocusSlots;
-let focusFrame=0;
+let focusFrame=0,focusInitialized=false;
+let previousFocusSlots=new Set();
 const focusStyleCache=new WeakMap();
 function updateFocusScale(){
  focusFrame=0;
@@ -41,15 +42,25 @@ function updateFocusScale(){
  const scaleMax=cachedScaleMax;
  const firstIndex=Math.max(0,Math.floor(scrollTop/step)-2);
  const lastIndex=Math.min(focusSlots.length,Math.ceil((scrollTop+height)/step)+3);
- for(let index=0;index<focusSlots.length;index++){
+ if(!focusInitialized){
+  for(let index=0;index<focusSlots.length;index++){
+   if(index>=firstIndex&&index<lastIndex)continue;
+   const slot=focusSlots[index];
+   let previous=focusStyleCache.get(slot);
+   if(!previous){previous={scale:'',opacity:''};focusStyleCache.set(slot,previous)}
+   slot.style.setProperty('--mc-focus-scale','1.000');
+   slot.style.setProperty('--mc-page-opacity','0.025');
+   previous.scale='1.000';previous.opacity='0.025';
+  }
+  focusInitialized=true;
+ }
+ const currentFocusSlots=new Set();
+ for(let index=firstIndex;index<lastIndex;index++){
   const slot=focusSlots[index];
+  if(!slot)continue;
+  currentFocusSlots.add(slot);
   let previous=focusStyleCache.get(slot);
   if(!previous){previous={scale:'',opacity:''};focusStyleCache.set(slot,previous)}
-  if(index<firstIndex||index>=lastIndex){
-   if(previous.scale!=='1.000'){slot.style.setProperty('--mc-focus-scale','1.000');previous.scale='1.000'}
-   if(previous.opacity!=='0.025'){slot.style.setProperty('--mc-page-opacity','0.025');previous.opacity='0.025'}
-   continue;
-  }
   const top=slot.offsetTop,slotHeight=slot.offsetHeight,bottom=top+slotHeight,distance=Math.abs((top+slotHeight/2)-center);
   const t=Math.min(1,distance/range),ease=t*t*(3-2*t),fadeT=Math.min(1,distance/fadeRange),fadeEase=fadeT*fadeT*(3-2*fadeT);
   const visible=Math.max(0,Math.min(bottom,scrollTop+height)-Math.max(top,scrollTop)),ratio=Math.min(1,visible/Math.max(1,slotHeight)),focused=distance<height*.23&&ratio>=.98;
@@ -58,6 +69,14 @@ function updateFocusScale(){
   if(previous.scale!==scaleText){slot.style.setProperty('--mc-focus-scale',scaleText);previous.scale=scaleText}
   if(previous.opacity!==opacityText){slot.style.setProperty('--mc-page-opacity',opacityText);previous.opacity=opacityText}
  }
+ previousFocusSlots.forEach(slot=>{
+  if(currentFocusSlots.has(slot))return;
+  const previous=focusStyleCache.get(slot);
+  if(!previous)return;
+  if(previous.scale!=='1.000'){slot.style.setProperty('--mc-focus-scale','1.000');previous.scale='1.000'}
+  if(previous.opacity!=='0.025'){slot.style.setProperty('--mc-page-opacity','0.025');previous.opacity='0.025'}
+ });
+ previousFocusSlots=currentFocusSlots;
 }
 function queueFocusScale(){if(!focusFrame)focusFrame=requestAnimationFrame(updateFocusScale)}
 let manualTarget=left.scrollTop,manualVelocity=0,manualFrame=0,manualLastTime=0;
@@ -101,11 +120,8 @@ function moveLoop(delta,direction,source){
  queueFocusScale();
 }
 function scheduleAutoScroll(){
- if(document.hidden||autoFrame||autoTimer)return;
- autoTimer=window.setTimeout(()=>{
-  autoTimer=0;
-  if(!document.hidden)autoFrame=requestAnimationFrame(runAutoScroll);
- },50);
+ if(document.hidden||autoFrame)return;
+ autoFrame=requestAnimationFrame(runAutoScroll);
 }
 function runAutoScroll(now){
  autoFrame=0;
