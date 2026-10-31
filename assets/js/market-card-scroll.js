@@ -7,7 +7,7 @@ function mount(root,slots){
  const state={mode:'auto',raf:0,lastTime:0,autoDelayUntil:performance.now()+250,
   wheelTarget:root.scrollTop,wheelSpeed:0,touching:false,dragging:false,
   touchY:0,touchTime:0,touchSpeed:0,lastScroll:root.scrollTop,looping:false};
- let gap=0,stride=0,totalHeight=0,geometryDirty=true,autoFraction=0,lastFocusRange='';
+ let gap=0,stride=0,totalHeight=0,scaleMax=1,geometryDirty=true,autoFraction=0,lastFocusRange='';
  const styleCache=new WeakMap();
  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
  function measure(){
@@ -15,6 +15,8 @@ function mount(root,slots){
   gap=parseFloat(getComputedStyle(root).rowGap)||0;
   stride=ordered[0]?ordered[0].offsetHeight+gap:0;
   totalHeight=ordered.reduce((sum,node)=>sum+node.offsetHeight+gap,0);
+  const first=ordered[0],card=first?.querySelector('.mc-card');
+  if(first&&card){const cs=getComputedStyle(first),pad=(parseFloat(cs.paddingLeft)||0)+(parseFloat(cs.paddingRight)||0);scaleMax=Math.min(1.16,(first.clientWidth-pad-8)/Math.max(1,card.offsetWidth));}
   geometryDirty=false;
  }
  function normalize(direction){
@@ -46,7 +48,7 @@ function mount(root,slots){
   const height=root.clientHeight;if(!height||!stride)return;
   const top=root.scrollTop,first=clamp(Math.floor(top/Math.max(1,stride))-2,0,ordered.length-1);
   const last=clamp(Math.ceil((top+height)/Math.max(1,stride))+2,0,ordered.length);
-  const center=top+height/2,scaleMax=(()=>{const node=ordered[0],card=node?.querySelector('.mc-card');if(!node||!card)return 1;const cs=getComputedStyle(node);const pad=(parseFloat(cs.paddingLeft)||0)+(parseFloat(cs.paddingRight)||0);return Math.min(1.16,(node.clientWidth-pad-8)/Math.max(1,card.offsetWidth));})();
+  const center=top+height/2;
   const range=Math.max(1,height*.58),fadeRange=Math.max(1,height*.5);
   const key=first+':'+last+':'+Math.round(top);
   if(key===lastFocusRange)return;
@@ -163,8 +165,4 @@ function mount(root,slots){
  }};
 }
 window.VegasMarketCardScroll={mount};
-window.VegasMarketCardScrollInit=function(root,slots){
- if(window.__VEGAS_SCROLL_CONTROLLER__)return window.__VEGAS_SCROLL_CONTROLLER__;
- const controller=mount(root,slots);window.__VEGAS_SCROLL_CONTROLLER__=controller;return controller;
-};
 })();
