@@ -28,8 +28,12 @@
 </section>
 <div id="vegas-signal-ticker" aria-label="正式信号底部横向滚动播报"><div class="vst-track"><span class="vst-empty">等待正式信号</span></div></div>
 <script src="./assets/js/v9-events.js?v=20261030-5"></script>
-<script src="./assets/js/market-card-scroll.js?v=20261031-9"></script>
-<script src="./assets/js/market-cards.js?v=20261031-43"></script>
+<script src="./assets/js/market-universe.js?v=20261031-1"></script>
+<script src="./assets/js/market-data.js?v=20261031-1"></script>
+<script src="./assets/js/market-card-view.js?v=20261031-1"></script>
+<script src="./assets/js/market-card-scroll.js?v=20261031-10"></script>
+<script src="./assets/js/market-cards.js?v=20261031-44"></script>
+<script src="./assets/js/kline-data.js?v=20261031-1"></script>
 <script>
 (function(){
  const sources=[
@@ -39,7 +43,7 @@
  function loadSource(index){
   if(index>=sources.length){console.error('[Vegas Right Scroll] chart library failed to load');return;}
   const script=document.createElement('script');script.src=sources[index];
-  script.onload=function(){const app=document.createElement('script');app.src='./assets/js/right-signal-scroll.js?v=20261031-72';app.onerror=function(){console.error('[Vegas Right Scroll] K-line module failed to load');};document.body.appendChild(app);};
+  script.onload=function(){const chart=document.createElement('script');chart.src='./assets/js/kline-chart.js?v=20261031-1';chart.onload=function(){const app=document.createElement('script');app.src='./assets/js/right-signal-scroll.js?v=20261031-73';app.onerror=function(){console.error('[Vegas Layer 5] controller failed to load');};document.body.appendChild(app);};chart.onerror=function(){console.error('[Vegas Layer 5] chart engine failed to load');};document.body.appendChild(chart);};
   script.onerror=function(){script.remove();loadSource(index+1);};document.head.appendChild(script);
  }
  loadSource(0);
