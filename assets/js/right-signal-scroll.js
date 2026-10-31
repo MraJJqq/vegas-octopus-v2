@@ -620,6 +620,22 @@ window.addEventListener('pointercancel',resumeAfterInteraction,{capture:true,pas
 window.addEventListener('blur',()=>{
  if(activePointers.size){activePointers.clear();resumeAfterInteraction()}
 },{passive:true});
+function armManualReturn(symbol){
+ clearTimeout(manualReturnTimer);manualReturnTimer=0;
+ if(!symbol||manualSymbol!==symbol||hidden)return;
+ /* 手动品种完整展示一个常规停留周期（5秒），随后回到正式信号队列并立即继续轮播。 */
+ manualReturnTimer=setTimeout(()=>{
+  manualReturnTimer=0;
+  if(manualSymbol!==symbol)return;
+  manualSymbol='';
+  const next=currentSymbol();
+  if(!next){root.hidden=true;return;}
+  period=periodFor(next);
+  setActive(activeLayer);
+  scheduleCycle(0);
+  scheduleRefresh();
+ },CLEAR_MS);
+}
 function showManualSymbol(value){
  const symbol=String(value||'').trim().toUpperCase();
  if(!/^[A-Z0-9.]+$/.test(symbol))return false;
@@ -636,18 +652,7 @@ function showManualSymbol(value){
  period=periodFor(symbol);
  Promise.resolve(setActive(activeLayer)).then(loaded=>{
   if(!loaded||manualSymbol!==symbol||hidden)return;
-  /* 手动品种完整展示一个常规停留周期（5秒），随后回到正式信号队列并立即继续轮播。 */
-  manualReturnTimer=setTimeout(()=>{
-   manualReturnTimer=0;
-   if(manualSymbol!==symbol)return;
-   manualSymbol='';
-   const next=currentSymbol();
-   if(!next){root.hidden=true;return;}
-   period=periodFor(next);
-   setActive(activeLayer);
-   scheduleCycle(0);
-   scheduleRefresh();
-  },CLEAR_MS);
+  armManualReturn(symbol);
  });
  scheduleRefresh();
 
@@ -682,11 +687,15 @@ function reconcile(symbols){
 }
 document.addEventListener('visibilitychange',()=>{
  hidden=document.hidden;
- if(hidden){++cycleToken;clearTimers();clearTransitionWork();transitioning=false;fadeState='hidden';setTransitionHint(false)}
+ if(hidden){++cycleToken;clearTimers();clearTimeout(manualReturnTimer);manualReturnTimer=0;clearTransitionWork();transitioning=false;fadeState='hidden';setTransitionHint(false)}
  else{
   settleTransition();
   const symbol=currentSymbol();
-  if(symbol)loadLayer(activeLayer,symbol,periodFor(symbol));
+  if(symbol){
+   loadLayer(activeLayer,symbol,periodFor(symbol)).then(loaded=>{
+    if(loaded&&manualSymbol===symbol)armManualReturn(symbol);
+   });
+  }
   if(initialRevealDone)scheduleCycle(CLEAR_MS);
   scheduleRefresh();
  }
