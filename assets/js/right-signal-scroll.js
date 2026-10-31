@@ -36,7 +36,7 @@ function setLayerStyles(index,transition=false){
  });
 }
 function showRoot(){
- root.hidden=false;chart.resize();requestAnimationFrame(()=>chart.resize());
+ root.hidden=false;requestAnimationFrame(()=>chart.resize());
 }
 function updateHeader(symbol,rows){
  title.textContent=symbol;
