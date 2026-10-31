@@ -33,7 +33,7 @@ function updateFocusScale(){
  const first=focusSlots[0],step=cardStep();
  if(!first||!step)return;
  const visibleBottom=scrollTop+height,firstCard=first.querySelector('.mc-card');
- const cardWidth=Math.max(1,firstCard?.getBoundingClientRect().width||first.clientWidth);
+ const cardWidth=Math.max(1,firstCard?.offsetWidth||first.clientWidth);
  /* 按新卡片本体宽度计算放大上限，避免把槽位内边距误算成卡片宽度。 */
  const scaleMax=Math.min(1.16,available/cardWidth);
  for(let index=0;index<focusSlots.length;index++){
