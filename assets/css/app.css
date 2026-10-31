@@ -64,11 +64,6 @@ html,body{touch-action:manipulation}
  #market-cards-layer .mc-side{gap:clamp(2px,.35vh,4px)}
  #market-cards-layer .mc-slot{width:min(100%,clamp(126px,43vw,190px));padding:1px 2px 3px}
  #market-cards-layer .mc-card{--mc-radius:16px;height:clamp(70px,calc((100dvh - 70px)/8),86px);padding:5px;gap:1px}
- #market-cards-layer .mc-card-head{gap:4px}
- #market-cards-layer .mc-coin,#market-cards-layer .mc-card-head .mc-coin{flex-basis:18px;width:18px;height:18px;font-size:8px}
- #market-cards-layer .mc-sym,#market-cards-layer .mc-card-head .mc-sym{font-size:9px}
- #market-cards-layer .mc-card-head .mc-pct{font-size:8px;padding:1px 4px}
- #market-cards-layer .mc-card-market .mc-price{font-size:clamp(11px,3vw,15px)}
  #market-cards-layer .mc-chart{height:22px;min-width:20px}
  #market-cards-layer .mc-card-tag{font-size:6px}
 }
@@ -76,8 +71,6 @@ html,body{touch-action:manipulation}
  #market-cards-layer .mc-columns{width:46vw}
  #market-cards-layer .mc-slot{width:min(100%,clamp(116px,43vw,156px))}
  #market-cards-layer .mc-card{--mc-radius:14px;padding:5px}
- #market-cards-layer .mc-coin,#market-cards-layer .mc-card-head .mc-coin{flex-basis:18px;width:18px;height:18px;font-size:8px}
- #market-cards-layer .mc-sym,#market-cards-layer .mc-card-head .mc-sym{font-size:9px}
 }
 @media(max-height:500px) and (orientation:landscape){
  #market-cards-layer .mc-side{gap:2px}
