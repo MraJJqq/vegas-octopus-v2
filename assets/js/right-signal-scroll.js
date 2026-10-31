@@ -197,7 +197,7 @@ function createChart(layer){
  const host=document.createElement('div');host.className='vr-chart';layer.append(host);
  const gesture=document.createElement('div');gesture.className='vr-gesture-layer';gesture.setAttribute('aria-label','K线视窗手势控制');
  const chart=LWC.createChart(host,{
-  autoSize:true,attributionLogo:false,
+  autoSize:false,attributionLogo:false,
   layout:{background:{type:LWC.ColorType.Solid,color:'rgba(0,0,0,0)'},textColor:'rgba(210,232,255,.72)',fontSize:11},
   grid:{vertLines:{visible:false},horzLines:{visible:false}},
   rightPriceScale:{visible:false,borderVisible:false,mode:LWC.PriceScaleMode.Logarithmic,autoScale:true,scaleMargins:{top:.10,bottom:.10}},
@@ -219,6 +219,23 @@ function createChart(layer){
  return{layer,host,gesture,chart,candle,lines,symbol:'',period:'4H',request:0,hasData:false,dataAt:0};
 }
 const views=layers.map(createChart);
+/* 图表容器初始处于 hidden 状态；显式接管尺寸，避免 iOS 首次显示时画布仍为 0×0。 */
+let chartResizeFrame=0;
+function resizeAllCharts(){
+ if(root.hidden)return;
+ const width=Math.max(1,root.clientWidth||window.innerWidth||1);
+ const height=Math.max(1,root.clientHeight||window.innerHeight||1);
+ views.forEach(view=>{try{view.chart.resize(width,height)}catch(error){console.warn('[Vegas K-line] chart resize failed:',error)}});
+}
+function scheduleChartResize(){
+ if(root.hidden||chartResizeFrame)return;
+ chartResizeFrame=requestAnimationFrame(()=>{chartResizeFrame=0;resizeAllCharts()});
+}
+if('ResizeObserver' in window){
+ const rootResizeObserver=new ResizeObserver(scheduleChartResize);
+ rootResizeObserver.observe(root);
+}
+window.addEventListener('resize',scheduleChartResize,{passive:true});
 /* 独立手势控制层：K线画布不再直接处理拖动/缩放，避免外层滚动与图表手势互相抢占。 */
 const gesturePointers=new Map();
 let gestureBase=null;
@@ -645,6 +662,7 @@ function showManualSymbol(value){
  ++cycleToken;clearTimeout(cycleTimer);cycleTimer=0;clearTransitionWork();transitioning=false;paused=false;
  settleTransition();
  root.hidden=false;
+ scheduleChartResize();
  applyLayerState(activeLayer,true,false);
  /* 先更新界面反馈，再发起行情请求；不在点击路径中强制同步布局。 */
  title.textContent=symbol;
@@ -676,6 +694,7 @@ function reconcile(symbols){
   return;
  }
  root.hidden=false;
+ scheduleChartResize();
  currentIndex=Math.max(0,queue.indexOf(previous));
  if(currentIndex>=queue.length)currentIndex=0;
  period=periodFor(currentSymbol());
