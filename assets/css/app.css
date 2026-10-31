@@ -7,79 +7,44 @@ body{position:fixed;inset:0;background:#02040a}
 body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:#02040a}
 .app{position:relative;z-index:3;width:100%;height:100dvh;min-height:0;padding:0;background:transparent;overflow:hidden;overscroll-behavior:none;pointer-events:none}
 
-/* 第三层外壳：卡片槽位与滚动容器，交互由独立滚动引擎负责。 */
+/* 第三层外壳：保留独立滚动引擎，卡片按原始模板自然尺寸排列。 */
 #market-cards-layer{--up:#2ee6a6;--dn:#ff5c7c;--mute:#7f8db0;--ink:#e8f0ff;position:absolute;z-index:4;inset:0;min-width:0;min-height:0;pointer-events:none;overflow:visible}
-#market-cards-layer .mc-columns{position:absolute;inset:0 auto 0 0;width:clamp(150px,36vw,460px);min-width:0;min-height:0;overflow:visible;pointer-events:auto;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+#market-cards-layer .mc-columns{position:absolute;inset:0 auto 0 0;width:min(100vw,380px);min-width:0;min-height:0;overflow:visible;pointer-events:auto;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 #market-cards-layer .mc-side{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:clamp(3px,.45vh,6px);width:100%;height:100%;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;overflow-anchor:none;overscroll-behavior:none;touch-action:none;padding-block:0;scrollbar-width:none;-ms-overflow-style:none;pointer-events:auto;cursor:default;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 #market-cards-layer .mc-side::-webkit-scrollbar{display:none;width:0;height:0}
-#market-cards-layer .mc-slot{position:relative;flex:0 0 auto;perspective:900px;width:min(100%,clamp(126px,18vw,238px));min-width:0;max-width:100%;padding:2px 3px 5px;pointer-events:auto;opacity:var(--mc-page-opacity,1);filter:none;transition:opacity .22s ease;transform:translateZ(0) scale(var(--mc-focus-scale,1));transform-origin:center center;backface-visibility:hidden}
+#market-cards-layer .mc-slot{position:relative;flex:0 0 auto;perspective:900px;width:100%;min-width:0;max-width:100%;padding:12px 20px;pointer-events:auto;opacity:var(--mc-page-opacity,1);filter:none;transition:opacity .22s ease;transform:translateZ(0) scale(var(--mc-focus-scale,1));transform-origin:center center;backface-visibility:hidden}
 #market-cards-layer .mc-float{transform-style:preserve-3d;animation:mc-bob 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
 @keyframes mc-bob{0%{transform:translateY(0) rotateY(-5deg) rotateX(2deg)}100%{transform:translateY(-7px) rotateY(5deg) rotateX(-2deg)}}
 #market-cards-layer .mc-gshadow{position:absolute;left:14%;right:14%;bottom:0;height:14px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.65),transparent);filter:blur(5px);animation:mc-sh 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
 @keyframes mc-sh{0%{transform:scale(1);opacity:.9}100%{transform:scale(.82);opacity:.5}}
 
-/* 按用户确认的玻璃行情卡片模板集成：保留滚动槽位与3D交互。 */
-#market-cards-layer .mc-card{--mc-color:var(--up);--mc-radius:20px;position:relative;z-index:1;display:flex;flex-direction:column;justify-content:space-between;gap:1px;height:clamp(76px,calc((100dvh - 100px)/8),94px);min-height:0;min-width:0;padding:7px 9px 5px;overflow:hidden;border-radius:var(--mc-radius);pointer-events:auto;cursor:pointer;touch-action:pan-y;transform-style:preserve-3d;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .14s ease-out,box-shadow .3s ease;background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.02));-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:0 12px 28px -15px color-mix(in srgb,var(--mc-color) 55%,transparent),inset 0 1px 0 rgba(255,255,255,.18)}
+/* 原始行情小卡片尺寸：不再按旧卡片高度压缩，内容自然撑开。 */
+#market-cards-layer .mc-card{--mc-color:var(--up);position:relative;z-index:1;display:flex;flex-direction:column;justify-content:space-between;gap:0;width:min(340px,86vw);max-width:100%;height:auto;min-height:0;min-width:0;padding:22px 22px 16px;overflow:hidden;border-radius:28px;pointer-events:auto;cursor:pointer;touch-action:pan-y;transform-style:preserve-3d;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .14s ease-out,box-shadow .3s ease;background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.02));-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:0 12px 28px -15px color-mix(in srgb,var(--mc-color) 55%,transparent),inset 0 1px 0 rgba(255,255,255,.18)}
 #market-cards-layer .mc-card.up{--mc-color:#00f5a0}
 #market-cards-layer .mc-card.dn{--mc-color:#ff3b6b}
 #market-cards-layer .mc-card::before{content:"";position:absolute;inset:-1.5px;border-radius:inherit;padding:1.5px;background:conic-gradient(from var(--mc-border-angle,0deg),transparent 0 55%,var(--mc-color) 80%,transparent 100%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:mc-border-spin 4s linear infinite;pointer-events:none}
 @property --mc-border-angle{syntax:"<angle>";initial-value:0deg;inherits:false}
 @keyframes mc-border-spin{to{--mc-border-angle:360deg}}
-#market-cards-layer .mc-glow{position:absolute;width:130px;height:130px;right:-42px;top:-48px;border-radius:50%;background:var(--mc-color);filter:blur(48px);opacity:.25;transition:background .4s;pointer-events:none}
-#market-cards-layer .mc-row{display:flex;justify-content:space-between;align-items:center;position:relative;z-index:2;min-width:0;gap:5px}
-#market-cards-layer .mc-sym{display:flex;align-items:center;gap:6px;min-width:0;font-weight:700;font-size:clamp(11px,1vw,14px);letter-spacing:.2px}
-#market-cards-layer .mc-ico{display:grid;flex:0 0 24px;place-items:center;width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#ffb938,#ff7a00);font-size:11px;color:#fff;box-shadow:0 0 12px rgba(255,150,0,.42)}
+#market-cards-layer .mc-glow{position:absolute;width:180px;height:180px;right:-50px;top:-50px;border-radius:50%;background:var(--mc-color);filter:blur(70px);opacity:.25;transition:background .4s;pointer-events:none}
+#market-cards-layer .mc-row{display:flex;justify-content:space-between;align-items:center;position:relative;z-index:2;min-width:0;gap:10px}
+#market-cards-layer .mc-sym{display:flex;align-items:center;gap:10px;min-width:0;font-weight:700;font-size:18px;letter-spacing:.2px}
+#market-cards-layer .mc-ico{display:grid;flex:0 0 34px;place-items:center;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#ffb938,#ff7a00);font-size:18px;color:#fff;box-shadow:0 0 12px rgba(255,150,0,.42)}
 #market-cards-layer .mc-name{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#market-cards-layer .mc-name small{display:block;font-weight:500;font-size:8px;color:#7d86a8;letter-spacing:0;line-height:1.1}
-#market-cards-layer .mc-chg{flex:0 0 auto;font-weight:700;font-size:9px;padding:3px 7px;border-radius:99px;color:#04130d;background:var(--mc-color);box-shadow:0 0 12px color-mix(in srgb,var(--mc-color) 70%,transparent);white-space:nowrap}
-#market-cards-layer .mc-price{position:relative;z-index:2;margin:0;font-size:clamp(15px,1.35vw,21px);font-weight:800;line-height:1.08;letter-spacing:-.5px;font-variant-numeric:tabular-nums;color:var(--mc-color);text-shadow:0 0 18px color-mix(in srgb,var(--mc-color) 60%,transparent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .3s}
-#market-cards-layer .mc-chart{display:block;width:100%;height:22px;min-height:16px;position:relative;z-index:2}
-#market-cards-layer .mc-tag{position:relative;z-index:2;margin-top:0;text-align:right;font-size:7px;line-height:1;color:#7d86a8;opacity:.7;letter-spacing:.6px}
+#market-cards-layer .mc-name small{display:block;font-weight:500;font-size:10px;color:#7d86a8;letter-spacing:0;line-height:1.1}
+#market-cards-layer .mc-chg{flex:0 0 auto;font-weight:700;font-size:14px;padding:6px 12px;border-radius:99px;color:#04130d;background:var(--mc-color);box-shadow:0 0 12px color-mix(in srgb,var(--mc-color) 70%,transparent);white-space:nowrap}
+#market-cards-layer .mc-price{position:relative;z-index:2;margin:20px 0 4px;font-size:44px;font-weight:800;line-height:1.08;letter-spacing:-.5px;font-variant-numeric:tabular-nums;color:var(--mc-color);text-shadow:0 0 18px color-mix(in srgb,var(--mc-color) 60%,transparent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .3s}
+#market-cards-layer .mc-chart{display:block;width:100%;height:80px;min-height:80px;position:relative;z-index:2}
+#market-cards-layer .mc-tag{position:relative;z-index:2;margin-top:12px;text-align:right;font-size:10px;line-height:1;color:#7d86a8;opacity:.7;letter-spacing:.6px}
 #market-cards-layer .mc-card[data-formal-signal="true"]{box-shadow:0 12px 30px -12px color-mix(in srgb,var(--mc-color) 70%,transparent),inset 0 1px 0 rgba(255,255,255,.22)}
-@media(max-width:700px){
- #market-cards-layer .mc-card{--mc-radius:16px;padding:5px 6px 4px}
- #market-cards-layer .mc-ico{flex-basis:19px;width:19px;height:19px;font-size:9px}
- #market-cards-layer .mc-sym{gap:4px;font-size:9px}
- #market-cards-layer .mc-name small{font-size:7px}
- #market-cards-layer .mc-chg{font-size:8px;padding:2px 5px}
- #market-cards-layer .mc-price{font-size:clamp(12px,3.2vw,16px)}
- #market-cards-layer .mc-chart{height:18px;min-height:14px}
- #market-cards-layer .mc-tag{font-size:6px}
-}
-@media(max-width:360px){
- #market-cards-layer .mc-card{--mc-radius:14px;padding:4px}
- #market-cards-layer .mc-ico{flex-basis:17px;width:17px;height:17px}
- #market-cards-layer .mc-sym{font-size:8px}
- #market-cards-layer .mc-price{font-size:12px}
-}
 @media(prefers-reduced-motion:reduce){#market-cards-layer .mc-card::before{animation:none}}
-
 /* 其它页面节点。 */
 #v9-signal-source[hidden]{display:none!important}
 html,body{touch-action:manipulation}
 
-/* 手机端：一套断点规则覆盖所有卡片内部尺寸。 */
-@media(max-width:700px){
- #market-cards-layer .mc-columns{width:48vw}
- #market-cards-layer .mc-side{gap:clamp(2px,.35vh,4px)}
- #market-cards-layer .mc-slot{width:min(100%,clamp(126px,43vw,190px));padding:1px 2px 3px}
- #market-cards-layer .mc-card{--mc-radius:16px;height:clamp(70px,calc((100dvh - 70px)/8),86px);padding:5px;gap:1px}
- #market-cards-layer .mc-chart{height:22px;min-width:20px}
- #market-cards-layer .mc-card-tag{font-size:6px}
+/* 小屏幕仅调整容器宽度；卡片内部尺寸严格沿用原始模板。 */
+@media(max-width:380px){
+ #market-cards-layer .mc-columns{width:100vw}
 }
-@media(max-width:360px){
- #market-cards-layer .mc-columns{width:46vw}
- #market-cards-layer .mc-slot{width:min(100%,clamp(116px,43vw,156px))}
- #market-cards-layer .mc-card{--mc-radius:14px;padding:5px}
-}
-@media(max-height:500px) and (orientation:landscape){
- #market-cards-layer .mc-side{gap:2px}
- #market-cards-layer .mc-slot{padding-top:1px;padding-bottom:2px}
- #market-cards-layer .mc-card{height:clamp(64px,calc((100dvh - 24px)/6),76px)}
- .topbar{max-height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important}
- .v9-notification{max-height:calc(100dvh - 58px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important}
-}
-
 /* 性能与无障碍：视口外暂停装饰动画，减少动态效果偏好下的运动。 */
 #market-cards-layer .mc-slot:not(.mc-in-view) .mc-float,
 #market-cards-layer .mc-slot:not(.mc-in-view) .mc-gshadow{animation-play-state:paused!important}
