@@ -5,14 +5,14 @@ const P=[
 ];
 const REALITY_STOCKS=new Set(P.slice(0,23).map(x=>x[0]));
 const fmt=p=>p>=100?p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):p>=1?p.toFixed(3):p.toFixed(4);
-const S=P.map(([s,api],i)=>({s,api,i,p:0,o:0,flashTimer:0,ready:false,history:[]}));
+const S=P.map(([s,api],i)=>({s,api,i,p:0,o:0,ready:false,history:[]}));
 const left=document.getElementById('mc-left');
 if(!left){console.warn('[Vegas Octopus] market-card root #mc-left is missing; layer 3 initialization skipped.');return;}
 S.forEach(d=>{
  left.insertAdjacentHTML('beforeend',`<div class="mc-slot"><div class="mc-float" style="--d:${-d.i*.9}s"><div class="mc-card" id="mc-c${d.i}" data-symbol="${d.s}"><div class="mc-bg"></div><i class="mc-g1"></i><i class="mc-g2"></i><i class="mc-gl"></i><div class="mc-card-head mc-l2"><span class="mc-coin">${d.s[0]}</span><b class="mc-sym">${d.s}</b><span class="mc-pct mc-l3">--</span></div><div class="mc-card-market"><div class="mc-price mc-l4">加载中</div><canvas class="mc-chart" aria-hidden="true"></canvas></div><span class="mc-card-tag">LIVE MARKET</span></div></div><div class="mc-gshadow" style="--d:${-d.i*.9}s"></div></div>`);
  const card=left.lastElementChild?.querySelector('.mc-card');
  if(!card){console.warn('[Vegas Octopus] market card DOM creation failed:',d.s);return;}
- d.dom={card,price:card.querySelector('.mc-price'),pct:card.querySelector('.mc-pct'),symbol:card.querySelector('.mc-sym'),chart:card.querySelector('.mc-chart')};
+ d.dom={card,price:card.querySelector('.mc-price'),pct:card.querySelector('.mc-pct'),chart:card.querySelector('.mc-chart')};
 
 });
 /* 在卡片DOM创建后立即绑定委托点击，不等待行情请求完成。 */
@@ -45,10 +45,7 @@ function paint(d){
  const up=d.p>=d.o;
  el.card.classList.toggle('up',up);el.card.classList.toggle('dn',!up);
  const nextPrice=fmt(d.p);
- if(priceEl.textContent!==nextPrice){
-  if(priceEl.textContent!=='加载中'){priceEl.classList.add('flash');if(d.flashTimer)window.clearTimeout(d.flashTimer);d.flashTimer=window.setTimeout(()=>{priceEl.classList.remove('flash');d.flashTimer=0},250)}
-  priceEl.textContent=nextPrice;
- }
+ if(priceEl.textContent!==nextPrice)priceEl.textContent=nextPrice;
  const nextPct=(up?'+':'')+((d.p/d.o-1)*100).toFixed(2)+'%';
  if(el.pct.textContent!==nextPct)el.pct.textContent=nextPct;
  const previous=d.history[d.history.length-1];
