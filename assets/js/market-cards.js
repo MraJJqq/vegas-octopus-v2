@@ -15,18 +15,47 @@ S.forEach(d=>{
  d.dom={card,price:card.querySelector('.mc-price'),pct:card.querySelector('.mc-chg'),chart:card.querySelector('.mc-chart')};
 
 });
-/* 卡片选品统一使用浏览器原生 click。
-   滚动引擎独立处理 touchmove；只有浏览器确认一次点击后才切换品种。 */
+/* 鼠标使用原生 click；触屏使用 touchend 轻点兜底。
+   两条入口统一选品，并抑制同一次触摸随后产生的合成 click。 */
+function selectMarketSymbol(value){
+ const symbol=String(value||'').trim().toUpperCase();
+ if(!symbol)return;
+ if(typeof window.VegasLayer5ShowSymbol==='function')window.VegasLayer5ShowSymbol(symbol);
+ else window.__VEGAS_PENDING_LAYER5_SYMBOL=symbol;
+}
+let lastTouchSelection={symbol:'',time:0};
+let touchTapCard=null,touchTapX=0,touchTapY=0;
 function selectMarketCard(event){
  const target=event.target;
  const card=target instanceof Element?target.closest('.mc-card[data-symbol]'):null;
  if(!card||!left.contains(card))return;
  const symbol=String(card.dataset.symbol||'').trim().toUpperCase();
  if(!symbol)return;
- if(typeof window.VegasLayer5ShowSymbol==='function')window.VegasLayer5ShowSymbol(symbol);
- else window.__VEGAS_PENDING_LAYER5_SYMBOL=symbol;
+ if(lastTouchSelection.symbol===symbol&&Date.now()-lastTouchSelection.time<750)return;
+ selectMarketSymbol(symbol);
 }
 left.addEventListener('click',selectMarketCard,{capture:true});
+left.addEventListener('touchstart',event=>{
+ const touch=event.touches&&event.touches[0];
+ const target=event.target;
+ touchTapCard=target instanceof Element?target.closest('.mc-card[data-symbol]'):null;
+ if(!touchTapCard||!left.contains(touchTapCard)){touchTapCard=null;return;}
+ touchTapX=touch.clientX;touchTapY=touch.clientY;
+},{capture:true,passive:true});
+left.addEventListener('touchend',event=>{
+ const touch=event.changedTouches&&event.changedTouches[0];
+ const card=touchTapCard;
+ touchTapCard=null;
+ if(!touch||!card||!card.isConnected)return;
+ if(Math.hypot(touch.clientX-touchTapX,touch.clientY-touchTapY)>8)return;
+ const symbol=String(card.dataset.symbol||'').trim().toUpperCase();
+ if(!symbol)return;
+ lastTouchSelection={symbol,time:Date.now()};
+ selectMarketSymbol(symbol);
+},{capture:true,passive:true});
+left.addEventListener('touchcancel',()=>{
+ touchTapCard=null;
+},{capture:true,passive:true});
 function drawCardChart(d){
  const canvas=d.dom.chart,ctx=canvas&&canvas.getContext('2d');
  if(!ctx||!d.history.length)return;
