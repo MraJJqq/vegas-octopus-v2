@@ -36,8 +36,15 @@ function drawCardChart(d){
  const color=getComputedStyle(d.dom.card).getPropertyValue('--mc-color').trim()||(d.p>=d.o?'#00f5a0':'#ff3b6b');
  const gradient=ctx.createLinearGradient(0,0,0,h);gradient.addColorStop(0,color+'55');gradient.addColorStop(1,color+'00');
  ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.lineTo(w,h);ctx.lineTo(0,h);ctx.closePath();ctx.fillStyle=gradient;ctx.fill();
- ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));
- ctx.strokeStyle=color;ctx.lineWidth=1.6;ctx.lineJoin='round';ctx.shadowColor=color;ctx.shadowBlur=4;ctx.stroke();ctx.shadowBlur=0;
+ ctx.beginPath();
+ if(pts.length===1){
+  /* 首次行情只有一个真实采样点时，先绘制可见短线；不伪造历史价格。 */
+  const y=h/2;ctx.moveTo(0,y);ctx.lineTo(w,y);
+ }else{
+  pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));
+ }
+ ctx.strokeStyle=color;ctx.lineWidth=1.8;ctx.lineJoin='round';ctx.lineCap='round';ctx.shadowColor=color;ctx.shadowBlur=4;ctx.stroke();ctx.shadowBlur=0;
+ if(pts.length===1){ctx.beginPath();ctx.arc(w/2,h/2,2.2,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();}
 }
 function paint(d){
  const el=d.dom,priceEl=el.price;
