@@ -44,7 +44,7 @@ window.VegasMarketCardScrollInit=function(left,initialSlots){
   const cardWidth=Math.max(1,card?.offsetWidth||first.clientWidth);
   const style=getComputedStyle(first);
   const padding=(parseFloat(style.paddingLeft)||0)+(parseFloat(style.paddingRight)||0);
-  cachedScaleMax=Math.min(1.16,Math.max(1,(first.clientWidth-padding-8)/cardWidth));
+  cachedScaleMax=Math.min(1.16,(first.clientWidth-padding-8)/cardWidth);
   return cachedScaleMax;
  }
  function resetFocus(slot){
