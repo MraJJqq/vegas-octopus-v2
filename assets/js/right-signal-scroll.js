@@ -682,7 +682,7 @@ function reconcile(symbols){
  if(!manualSymbol){
   if(queue.length>1)preloadNext();
   if(initialRevealDone)scheduleCycle(CLEAR_MS);
- }else loadLayer(activeLayer,currentSymbol(),periodFor(currentSymbol()));
+ }
  scheduleRefresh();
 }
 document.addEventListener('visibilitychange',()=>{
