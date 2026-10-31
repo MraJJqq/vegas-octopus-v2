@@ -15,36 +15,18 @@ S.forEach(d=>{
  d.dom={card,price:card.querySelector('.mc-price'),pct:card.querySelector('.mc-chg'),chart:card.querySelector('.mc-chart')};
 
 });
-/* 使用指针按下/抬起判定卡片点选，避免自定义触摸滚动吞掉移动端 click。
-   只有同一张卡片上短距离抬起才切换品种；拖动滚动不会误触。 */
-let cardPress=null;
-function selectMarketCard(card){
+/* 卡片选品统一使用浏览器原生 click。
+   滚动引擎独立处理 touchmove；只有浏览器确认一次点击后才切换品种。 */
+function selectMarketCard(event){
+ const target=event.target;
+ const card=target instanceof Element?target.closest('.mc-card[data-symbol]'):null;
  if(!card||!left.contains(card))return;
  const symbol=String(card.dataset.symbol||'').trim().toUpperCase();
  if(!symbol)return;
  if(typeof window.VegasLayer5ShowSymbol==='function')window.VegasLayer5ShowSymbol(symbol);
  else window.__VEGAS_PENDING_LAYER5_SYMBOL=symbol;
 }
-left.addEventListener('pointerdown',event=>{
- const card=event.target.closest('.mc-card[data-symbol]');
- if(!card||!left.contains(card))return;
- cardPress={card,id:event.pointerId,x:event.clientX,y:event.clientY};
-},{capture:true,passive:true});
-left.addEventListener('pointerup',event=>{
- const press=cardPress;
- cardPress=null;
- if(!press||press.id!==event.pointerId)return;
- const released=event.target.closest('.mc-card[data-symbol]');
- if(released!==press.card)return;
- if(Math.hypot(event.clientX-press.x,event.clientY-press.y)>12)return;
- selectMarketCard(press.card);
-},{capture:true,passive:true});
-left.addEventListener('pointercancel',()=>{cardPress=null;},{capture:true,passive:true});
-/* 键盘/辅助操作触发的合成点击仍可选择品种；指针点击由 pointerup 统一处理。 */
-left.addEventListener('click',event=>{
- if(event.detail!==0)return;
- selectMarketCard(event.target.closest('.mc-card[data-symbol]'));
-});
+left.addEventListener('click',selectMarketCard,{capture:true});
 function drawCardChart(d){
  const canvas=d.dom.chart,ctx=canvas&&canvas.getContext('2d');
  if(!ctx||!d.history.length)return;
