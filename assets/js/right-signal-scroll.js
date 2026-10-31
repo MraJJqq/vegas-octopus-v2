@@ -288,17 +288,16 @@ views.forEach(view=>{
   event.preventDefault();
   const factor=event.deltaY>0?1.12:.89;
   const width=Math.max(2,Math.min(5000,range.width*factor));
-  const rect=view.gesture.getBoundingClientRect();
-  const anchor=range.from+(event.clientX-rect.left)/Math.max(1,rect.width)*range.width;
-  const ratio=(anchor-range.from)/range.width;
-  applyGestureRange(view,anchor-width*ratio,anchor+width*(1-ratio));
+  /* 固定以视窗右边界为缩放锚点，鼠标横向位置不再推动K线左右漂移。 */
+  const right=range.to;
+  applyGestureRange(view,right-width,right);
  },{passive:false});
 });
 /* 统一视窗状态：保存K线跨度、缩放比例和相对最新K线的位置；跨周期按真实时间跨度换算。 */
 const VIEWPORT_KEY='vegas-layer5-viewport-v2';
 const PERIOD_SECONDS={'1H':3600,'4H':14400,'1D':86400};
 let viewport={barSpacing:5,rightOffset:3,visibleBars:null,rightEdgeOffset:-3,period:'4H'};
-let applyingViewport=false,viewportSaveTimer=0;
+let applyingViewport=false,viewportApplyToken=0,viewportSaveTimer=0;
 try{
  const saved=JSON.parse(localStorage.getItem(VIEWPORT_KEY)||'null');
  if(saved&&typeof saved==='object'){
@@ -338,10 +337,11 @@ function applyViewport(view,rows,targetPeriod,commitState=(views.indexOf(view)==
  scale.applyOptions({barSpacing:viewport.barSpacing,rightOffset:viewport.rightOffset});
  const to=rows.length-1-rightEdgeOffset;
  const from=to-visibleBars;
+ const applyToken=++viewportApplyToken;
  applyingViewport=true;
  try{scale.setVisibleLogicalRange({from,to})}
  catch(error){console.warn('[Vegas] 应用视窗状态失败',error)}
- finally{requestAnimationFrame(()=>{applyingViewport=false})}
+ finally{requestAnimationFrame(()=>{if(applyToken===viewportApplyToken)applyingViewport=false})}
  /* 隐藏预加载图层只套用状态，不得抢先改写当前品种的全局记忆。 */
  if(commitState){
   viewport.visibleBars=visibleBars;
@@ -364,16 +364,14 @@ function setData(view,rows,preserveRange=false){
   view.pendingData={rows,preserveRange};
   return false;
  }
- const timeScale=view.chart.timeScale();
- if(preserveRange)captureViewport(view);
- const visibleRange=preserveRange?timeScale.getVisibleRange():null;
+ const isActive=views.indexOf(view)===activeLayer;
+ /* 仅从当前活动图层捕获用户视窗；数据更新后按K线跨度与右侧偏移恢复，
+    不再使用绝对时间范围，避免刷新/历史补齐时视窗被新数据挤动。 */
+ if(preserveRange&&isActive)captureViewport(view);
  view.candle.setData(rows);
  view.lines.forEach((series,index)=>series.setData(ema(rows,EMAS[index])));
  view.rows=rows;
- if(visibleRange){
-  try{timeScale.setVisibleRange(visibleRange)}catch{}
-  captureViewport(view);
- }
+ if(preserveRange)applyViewport(view,rows,view.period,isActive);
  view.hasData=true;
  view.dataAt=Date.now();
  view.pendingData=null;
