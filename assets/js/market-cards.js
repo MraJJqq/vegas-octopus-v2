@@ -131,7 +131,7 @@ let miniKlineInFlight=false,miniKlineNextAt=0,miniKlineLoaded=false;
 async function loadMiniCandles(){
  if(document.hidden||miniKlineInFlight||Date.now()<miniKlineNextAt)return;
  miniKlineInFlight=true;miniKlineNextAt=Date.now()+60000;
- const queue=S.filter(d=>!REALITY_STOCKS.has(d.s)||d.api&&d.api!=='');
+ const queue=S.filter(d=>!REALITY_STOCKS.has(d.s)||(realitySymbolCache&&d.api===realitySymbolCache.get(d.s)));
  let cursor=0;
  async function worker(){
   while(cursor<queue.length){
