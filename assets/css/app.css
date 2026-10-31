@@ -18,38 +18,41 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 #market-cards-layer .mc-gshadow{position:absolute;left:14%;right:14%;bottom:0;height:14px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.65),transparent);filter:blur(5px);animation:mc-sh 5.5s ease-in-out infinite alternate;animation-delay:var(--d)}
 @keyframes mc-sh{0%{transform:scale(1);opacity:.9}100%{transform:scale(.82);opacity:.5}}
 
-/* 新版卡片主体：单一规则集，保留 3D 变换与玻璃材质。 */
-#market-cards-layer .mc-card{--mc-radius:22px;--mc-c:var(--up);position:relative;z-index:1;display:flex;flex-direction:column;justify-content:space-between;gap:2px;height:clamp(76px,calc((100dvh - 100px)/8),94px);min-height:0;min-width:0;padding:clamp(6px,.65vw,9px);overflow:hidden;border-radius:var(--mc-radius);pointer-events:auto;cursor:pointer;touch-action:pan-y;transform-style:preserve-3d;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .14s ease-out;background:linear-gradient(160deg,rgba(255,255,255,.085),rgba(255,255,255,.018));-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:0 8px 22px -14px color-mix(in srgb,var(--mc-c) 55%,transparent),inset 0 1px 0 rgba(255,255,255,.18)}
-#market-cards-layer .mc-card.up{--mc-c:var(--up)}
-#market-cards-layer .mc-card.dn{--mc-c:var(--dn)}
-#market-cards-layer .mc-card::before{content:"";position:absolute;inset:-1px;padding:1.2px;border-radius:inherit;background:conic-gradient(from var(--mc-border-angle,0deg),transparent 0 55%,var(--mc-c) 80%,transparent 100%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:mc-border-spin 4s linear infinite;pointer-events:none}
+/* 按用户确认的玻璃行情卡片模板集成：保留滚动槽位与3D交互。 */
+#market-cards-layer .mc-card{--mc-color:var(--up);--mc-radius:20px;position:relative;z-index:1;display:flex;flex-direction:column;justify-content:space-between;gap:1px;height:clamp(76px,calc((100dvh - 100px)/8),94px);min-height:0;min-width:0;padding:7px 9px 5px;overflow:hidden;border-radius:var(--mc-radius);pointer-events:auto;cursor:pointer;touch-action:pan-y;transform-style:preserve-3d;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .14s ease-out,box-shadow .3s ease;background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.02));-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:0 12px 28px -15px color-mix(in srgb,var(--mc-color) 55%,transparent),inset 0 1px 0 rgba(255,255,255,.18)}
+#market-cards-layer .mc-card.up{--mc-color:#00f5a0}
+#market-cards-layer .mc-card.dn{--mc-color:#ff3b6b}
+#market-cards-layer .mc-card::before{content:"";position:absolute;inset:-1.5px;border-radius:inherit;padding:1.5px;background:conic-gradient(from var(--mc-border-angle,0deg),transparent 0 55%,var(--mc-color) 80%,transparent 100%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:mc-border-spin 4s linear infinite;pointer-events:none}
 @property --mc-border-angle{syntax:"<angle>";initial-value:0deg;inherits:false}
 @keyframes mc-border-spin{to{--mc-border-angle:360deg}}
-#market-cards-layer .mc-bg{position:absolute;inset:0;z-index:0;border-radius:inherit;pointer-events:none;background:linear-gradient(135deg,rgba(30,65,91,.34),rgba(7,16,35,.82) 42%,rgba(17,39,63,.58)),rgba(8,14,32,.76);border:1px solid rgba(133,211,244,.48);box-shadow:0 0 12px -7px rgba(111,211,255,.52),inset 0 1px 0 rgba(226,249,255,.20),inset 0 0 18px -11px rgba(111,211,255,.46);transition:border-color .32s ease,box-shadow .32s ease,background .32s ease}
-#market-cards-layer .mc-bg::after{content:"";position:absolute;inset:4px;border:1px solid rgba(155,221,247,.20);border-radius:calc(var(--mc-radius,22px) - 4px);pointer-events:none;background:linear-gradient(rgba(190,237,255,.78),rgba(190,237,255,.78)) left top/15px 1px no-repeat,linear-gradient(rgba(190,237,255,.78),rgba(190,237,255,.78)) left top/1px 15px no-repeat,linear-gradient(rgba(190,237,255,.78),rgba(190,237,255,.78)) right top/15px 1px no-repeat,linear-gradient(rgba(190,237,255,.78),rgba(190,237,255,.78)) right top/1px 15px no-repeat,linear-gradient(rgba(190,237,255,.78),rgba(190,237,255,.78)) left bottom/15px 1px no-repeat,linear-gradient(rgba(190,237,255,.78),rgba(190,237,255,.78)) left bottom/1px 15px no-repeat,linear-gradient(rgba(190,237,255,.78),rgba(190,237,255,.78)) right bottom/15px 1px no-repeat,linear-gradient(rgba(190,237,255,.78),rgba(190,237,255,.78)) right bottom/1px 15px no-repeat;opacity:.86}
-#market-cards-layer .mc-card[data-formal-signal="true"] .mc-bg{border-color:rgba(157,232,255,.88);box-shadow:0 0 18px -7px rgba(111,220,255,.78),inset 0 1px 0 rgba(235,251,255,.30),inset 0 0 20px -10px rgba(111,220,255,.58)}
-#market-cards-layer .mc-g1,#market-cards-layer .mc-g2{position:absolute;inset:0;border:1.5px solid var(--mc-c);border-radius:inherit;pointer-events:none;transition:border-color .4s}
-#market-cards-layer .mc-g1{transform:translateZ(-22px);opacity:.62}
-#market-cards-layer .mc-g2{transform:translateZ(-44px);opacity:.34}
-#market-cards-layer .mc-gl{position:absolute;z-index:1;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transform:translateZ(52px);background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(225,248,255,.38),rgba(125,210,245,.08) 27%,transparent 58%);transition:opacity .18s ease}
-#market-cards-layer .mc-card.hot .mc-gl{opacity:1}
-#market-cards-layer .mc-l2,#market-cards-layer .mc-l3,#market-cards-layer .mc-l4{position:relative}
-#market-cards-layer .mc-l2{transform:translateZ(33px)}
-#market-cards-layer .mc-l3{transform:translateZ(43px)}
-#market-cards-layer .mc-l4{transform:translateZ(54px)}
-
-/* 卡片内部内容结构。 */
-#market-cards-layer .mc-card-head{position:relative;z-index:2;display:flex;align-items:center;gap:6px;min-width:0}
-#market-cards-layer .mc-coin{display:grid;flex:0 0 22px;place-items:center;width:22px;height:22px;border-radius:50%;font-size:10px;font-weight:700;color:#07101f;background:var(--mc-c);box-shadow:0 0 16px -2px var(--mc-c);transition:background .4s}
-#market-cards-layer .mc-sym{flex:1;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:clamp(12px,1vw,15px);font-weight:700}
-#market-cards-layer .mc-card-head .mc-pct{flex:0 0 auto;margin-left:auto;padding:2px 6px;font-size:9px;white-space:nowrap}
-#market-cards-layer .mc-pct{display:inline-block;padding:1px 6px;border-radius:99px;font-size:10px;font-weight:700;color:#07101f;background:var(--mc-c);transition:background .4s}
-#market-cards-layer .mc-card-market{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:5px;min-width:0}
-#market-cards-layer .mc-price{flex:0 1 auto;min-width:0;margin:0;font-size:clamp(13px,1.2vw,19px);font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap;transition:color .3s}
-#market-cards-layer .mc-card.up .mc-price{color:var(--up);text-shadow:0 0 12px color-mix(in srgb,var(--up) 50%,transparent)}
-#market-cards-layer .mc-card.dn .mc-price{color:var(--dn);text-shadow:0 0 12px color-mix(in srgb,var(--dn) 50%,transparent)}
-#market-cards-layer .mc-chart{position:relative;z-index:2;display:block;flex:1 1 42%;width:42%;min-width:24px;height:27px}
-#market-cards-layer .mc-card-tag{position:relative;z-index:2;align-self:flex-end;font-size:7px;line-height:1;letter-spacing:1px;color:rgba(185,211,235,.55)}
+#market-cards-layer .mc-glow{position:absolute;width:130px;height:130px;right:-42px;top:-48px;border-radius:50%;background:var(--mc-color);filter:blur(48px);opacity:.25;transition:background .4s;pointer-events:none}
+#market-cards-layer .mc-row{display:flex;justify-content:space-between;align-items:center;position:relative;z-index:2;min-width:0;gap:5px}
+#market-cards-layer .mc-sym{display:flex;align-items:center;gap:6px;min-width:0;font-weight:700;font-size:clamp(11px,1vw,14px);letter-spacing:.2px}
+#market-cards-layer .mc-ico{display:grid;flex:0 0 24px;place-items:center;width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#ffb938,#ff7a00);font-size:11px;color:#fff;box-shadow:0 0 12px rgba(255,150,0,.42)}
+#market-cards-layer .mc-name{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#market-cards-layer .mc-name small{display:block;font-weight:500;font-size:8px;color:#7d86a8;letter-spacing:0;line-height:1.1}
+#market-cards-layer .mc-chg{flex:0 0 auto;font-weight:700;font-size:9px;padding:3px 7px;border-radius:99px;color:#04130d;background:var(--mc-color);box-shadow:0 0 12px color-mix(in srgb,var(--mc-color) 70%,transparent);white-space:nowrap}
+#market-cards-layer .mc-price{position:relative;z-index:2;margin:0;font-size:clamp(15px,1.35vw,21px);font-weight:800;line-height:1.08;letter-spacing:-.5px;font-variant-numeric:tabular-nums;color:var(--mc-color);text-shadow:0 0 18px color-mix(in srgb,var(--mc-color) 60%,transparent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .3s}
+#market-cards-layer .mc-chart{display:block;width:100%;height:22px;min-height:16px;position:relative;z-index:2}
+#market-cards-layer .mc-tag{position:relative;z-index:2;margin-top:0;text-align:right;font-size:7px;line-height:1;color:#7d86a8;opacity:.7;letter-spacing:.6px}
+#market-cards-layer .mc-card[data-formal-signal="true"]{box-shadow:0 12px 30px -12px color-mix(in srgb,var(--mc-color) 70%,transparent),inset 0 1px 0 rgba(255,255,255,.22)}
+@media(max-width:700px){
+ #market-cards-layer .mc-card{--mc-radius:16px;padding:5px 6px 4px}
+ #market-cards-layer .mc-ico{flex-basis:19px;width:19px;height:19px;font-size:9px}
+ #market-cards-layer .mc-sym{gap:4px;font-size:9px}
+ #market-cards-layer .mc-name small{font-size:7px}
+ #market-cards-layer .mc-chg{font-size:8px;padding:2px 5px}
+ #market-cards-layer .mc-price{font-size:clamp(12px,3.2vw,16px)}
+ #market-cards-layer .mc-chart{height:18px;min-height:14px}
+ #market-cards-layer .mc-tag{font-size:6px}
+}
+@media(max-width:360px){
+ #market-cards-layer .mc-card{--mc-radius:14px;padding:4px}
+ #market-cards-layer .mc-ico{flex-basis:17px;width:17px;height:17px}
+ #market-cards-layer .mc-sym{font-size:8px}
+ #market-cards-layer .mc-price{font-size:12px}
+}
+@media(prefers-reduced-motion:reduce){#market-cards-layer .mc-card::before{animation:none}}
 
 /* 其它页面节点。 */
 #v9-signal-source[hidden]{display:none!important}
