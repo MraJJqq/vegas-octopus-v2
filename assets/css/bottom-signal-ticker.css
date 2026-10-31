@@ -3,7 +3,6 @@
 #vegas-signal-ticker[hidden]{display:none}
 #vegas-signal-ticker .vst-track{height:100%;display:flex;width:max-content;align-items:center;white-space:nowrap;will-change:transform;animation:vst-marquee var(--vst-duration,28s) linear infinite}
 #vegas-signal-ticker[data-active="false"] .vst-track{width:100%;justify-content:center;animation:none}
-#vegas-signal-ticker .vst-group{display:flex;flex:0 0 auto;align-items:center;gap:clamp(14px,2vw,28px);padding-right:clamp(14px,2vw,28px)}
 #vegas-signal-ticker .vst-item{font:600 11px/1.2 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.08em;color:#a9eaff;text-shadow:0 0 8px rgba(49,217,255,.35)}
 #vegas-signal-ticker .vst-sep{font-size:7px;color:rgba(75,201,255,.55)}
 #vegas-signal-ticker .vst-empty{font-size:10px;letter-spacing:.12em;color:rgba(150,180,205,.65)}
