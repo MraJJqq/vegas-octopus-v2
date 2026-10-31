@@ -29,8 +29,10 @@ const layers=[0,1].map(index=>{
 });
 
 let queue=[],currentIndex=0,period='4H',periodSettings={},manualSymbol='',queueInitialized=false;
-let activeLayer=0,cycleTimer=0,transitionTimer=0,transitionRaf=0,transitioning=false,paused=false,refreshDeferred=false,manualReturnTimer=0;
-let cycleToken=0,hidden=document.hidden,refreshTimer=0,fadeState='idle',initialRevealDone=false,initialRevealTimer=0;
+let activeLayer=0,stateTimer=0,transitionRaf=0,refreshTimer=0,rotationState='idle',refreshDeferred=false;
+let cycleToken=0,initialRevealDone=false;
+const isPaused=()=>rotationState==='paused';
+const isTransitioning=()=>rotationState==='preparing'||rotationState==='transitioning';
 let stockMap=null,stockMapAt=0,cache=new Map(),backfills=new Map(),candleRequests=new Map();
 
 try{
@@ -378,7 +380,7 @@ window.addEventListener('pagehide',()=>{
 },{passive:true});
 function setData(view,rows,preserveRange=false){
  /* 渐变期间不向正在显示的两个图层写入新K线；只保留每层最新一份数据，交接结束后统一应用。 */
- if(fadeState==='transitioning'){
+ if(rotationState==='transitioning'){
   view.pendingData={rows,preserveRange};
   return false;
  }
@@ -439,16 +441,17 @@ async function loadLayer(index,symbol,timeframe){
   setData(view,firstRows,!identityChanged);
   if(identityChanged)resetDefaultVisibleRange(view,firstRows);
   updateLayerStatus(index,symbol,firstRows);
-  if(index===activeLayer&&!initialRevealDone&&!hidden){
-   initialRevealDone=true;fadeState='initial-reveal';
+  if(index===activeLayer&&!initialRevealDone&&!document.hidden){
+   initialRevealDone=true;rotationState='reveal';
    const layer=layers[index];
    layer.style.transition='none';layer.style.opacity='1';layer.style.filter='brightness(0.25)';
    layer.getBoundingClientRect();
    layer.style.transition=`filter ${INITIAL_REVEAL_MS}ms ease-out`;
-   requestAnimationFrame(()=>{if(!hidden&&!paused&&index===activeLayer)layer.style.filter='brightness(1)'});
-   clearTimeout(initialRevealTimer);
-   initialRevealTimer=setTimeout(()=>{
-    initialRevealTimer=0;layer.style.transition='';layer.style.filter='brightness(1)';
+   requestAnimationFrame(()=>{if(!document.hidden&&rotationState==='reveal'&&index===activeLayer)layer.style.filter='brightness(1)'});
+   clearStateTimer();
+   stateTimer=setTimeout(()=>{
+    stateTimer=0;layer.style.transition='';layer.style.filter='brightness(1)';
+    rotationState=manualSymbol?'manual':'idle';
     if(!manualSymbol)scheduleCycle(INITIAL_CLEAR_MS);
    },INITIAL_REVEAL_MS);
   }
@@ -495,30 +498,33 @@ function setActive(index){
  }
  return loadLayer(index,symbol,period);
 }
+function clearStateTimer(){
+ if(stateTimer){clearTimeout(stateTimer);stateTimer=0;}
+}
 function clearTimers(){
- clearTimeout(cycleTimer);clearTimeout(refreshTimer);
- cycleTimer=refreshTimer=0;
+ clearStateTimer();
+ if(refreshTimer){clearTimeout(refreshTimer);refreshTimer=0;}
 }
 function scheduleRefresh(delay=15000){
- clearTimeout(refreshTimer);
- if(hidden||!currentSymbol())return;
+ if(refreshTimer){clearTimeout(refreshTimer);refreshTimer=0;}
+ if(document.hidden||!currentSymbol())return;
  refreshTimer=setTimeout(async()=>{
-  /* 15秒刷新时刻若落在渐变中，延后到交接结束后立即执行，不在渐变帧中重绘K线。 */
-  if(transitioning){refreshDeferred=true;return;}
+  refreshTimer=0;
+  if(isTransitioning()){refreshDeferred=true;return;}
   const symbol=currentSymbol();
   if(symbol)await loadLayer(activeLayer,symbol,periodFor(symbol));
   scheduleRefresh();
  },delay);
 }
 function preloadNext(){
- if(manualSymbol||queue.length<2||hidden)return;
+ if(manualSymbol||queue.length<2||document.hidden)return;
  const nextIndex=(currentIndex+1)%queue.length;
  const symbol=queue[nextIndex],timeframe=periodFor(symbol),view=views[1-activeLayer];
  if(view.symbol===symbol&&view.period===timeframe&&view.hasData&&Date.now()-view.dataAt<15000)return;
  loadLayer(1-activeLayer,symbol,timeframe);
 }
 function clearTransitionWork(){
- clearTimeout(transitionTimer);transitionTimer=0;
+ clearStateTimer();
  if(transitionRaf){cancelAnimationFrame(transitionRaf);transitionRaf=0;}
 }
 function applyLayerState(active=activeLayer,restoreTransition=false,forceLayout=false){
@@ -537,47 +543,41 @@ function settleTransition(){
  clearTransitionWork();
  applyLayerState(activeLayer);
  setTransitionHint(false);
- transitioning=false;
- fadeState=paused?'paused':'idle';
- /* 先结束渐变状态，再提交渐变期间积压的行情/历史补齐数据。 */
+ rotationState=manualSymbol?'manual':'idle';
  applyPendingLayerData();
- if(refreshDeferred&&!paused&&!hidden){refreshDeferred=false;scheduleRefresh(0);}
+ if(refreshDeferred&&!isPaused()&&!document.hidden){refreshDeferred=false;scheduleRefresh(0);}
 }
 function scheduleCycle(delay=CLEAR_MS){
- clearTimeout(cycleTimer);
- if(manualSymbol||hidden||paused||queue.length<2)return;
- fadeState='clear';
+ clearStateTimer();
+ if(manualSymbol||document.hidden||isPaused()||queue.length<2)return;
+ rotationState='clear';
  const token=++cycleToken;
- cycleTimer=setTimeout(()=>{if(token===cycleToken&&!hidden&&!paused)beginTransition()},delay);
+ stateTimer=setTimeout(()=>{
+  stateTimer=0;
+  if(token===cycleToken&&rotationState==='clear'&&!document.hidden)beginTransition();
+ },delay);
 }
 async function beginTransition(){
- if(manualSymbol||transitioning||queue.length<2||hidden||paused)return;
- transitioning=true;fadeState='preparing';
+ if(manualSymbol||isTransitioning()||queue.length<2||document.hidden||isPaused())return;
+ rotationState='preparing';
  const nextIndex=(currentIndex+1)%queue.length;
- const nextSymbol=queue[nextIndex];
- const nextLayer=1-activeLayer;
- const nextPeriod=periodFor(nextSymbol);
- const token=++cycleToken;
- const outgoing=layers[activeLayer],incoming=layers[nextLayer];
- incoming.style.transition='none';
- incoming.style.opacity='0';incoming.style.filter='brightness(0.25)';
+ const nextSymbol=queue[nextIndex],nextLayer=1-activeLayer,nextPeriod=periodFor(nextSymbol);
+ const token=++cycleToken,outgoing=layers[activeLayer],incoming=layers[nextLayer];
+ incoming.style.transition='none';incoming.style.opacity='0';incoming.style.filter='brightness(0.25)';
  incoming.classList.remove('is-active');
  const nextView=views[nextLayer];
  const preloaded=nextView.symbol===nextSymbol&&nextView.period===nextPeriod&&nextView.hasData&&Date.now()-nextView.dataAt<15000;
  let loaded=false;
  try{loaded=preloaded||await loadLayer(nextLayer,nextSymbol,nextPeriod)}catch{}
- if(token!==cycleToken||hidden||paused){transitioning=false;fadeState=paused?'paused':'idle';return}
+ if(token!==cycleToken||document.hidden||isPaused())return;
  if(!loaded||!views[nextLayer].hasData){
   incoming.style.transition='none';incoming.style.opacity='0';incoming.style.filter='brightness(0.25)';
-  transitioning=false;fadeState='idle';
-  /* 下一品种加载失败时，不能丢弃渐变期间延后的当前品种刷新。 */
-  if(refreshDeferred&&!paused&&!hidden){refreshDeferred=false;scheduleRefresh(0);}
+  rotationState='idle';
+  if(refreshDeferred&&!document.hidden){refreshDeferred=false;scheduleRefresh(0);}
   scheduleCycle(1000);return;
  }
- /* 切换规则：渐变开始前，将当前图的 barSpacing 与 rightOffset 同步到下一张图。
-    只同步缩放比例和右侧偏移，不复制 visible/logical range，避免不同品种历史长度差异造成K线异常放大。 */
  syncLayerView(views[activeLayer],views[nextLayer]);
- fadeState='transitioning';
+ rotationState='transitioning';
  setTransitionHint(true);
  incoming.style.pointerEvents='none';
  incoming.style.transition='none';outgoing.style.transition='none';
@@ -589,15 +589,15 @@ async function beginTransition(){
  incoming.classList.add('is-active');outgoing.classList.remove('is-active');
  transitionRaf=requestAnimationFrame(()=>{
   transitionRaf=0;
-  if(token!==cycleToken||hidden||paused)return;
+  if(token!==cycleToken||rotationState!=='transitioning'||document.hidden)return;
   incoming.style.opacity='1';incoming.style.filter='brightness(1)';
   outgoing.style.opacity='0';outgoing.style.filter='brightness(0.25)';
  });
  currentIndex=nextIndex;
  setActive(nextLayer);
- transitionTimer=setTimeout(()=>{
-  transitionTimer=0;
-  if(token!==cycleToken||hidden||paused)return;
+ stateTimer=setTimeout(()=>{
+  stateTimer=0;
+  if(token!==cycleToken||rotationState!=='transitioning'||document.hidden)return;
   settleTransition();
   preloadNext();
   scheduleCycle(CLEAR_MS);
@@ -609,45 +609,42 @@ function setTransitionHint(enabled){
 const activePointers=new Set();
 function pauseForInteraction(event){
  if(event?.pointerId!==undefined)activePointers.add(event.pointerId);
- if(paused)return;
- paused=true;++cycleToken;clearTimeout(cycleTimer);cycleTimer=0;
- clearTimeout(initialRevealTimer);initialRevealTimer=0;initialRevealDone=true;
- clearTransitionWork();
- /* 先读取浏览器当前插值结果，再关闭 transition，确保按下时真正冻结在当前帧。 */
+ if(isPaused())return;
+ rotationState='paused';++cycleToken;clearStateTimer();
+ initialRevealDone=true;
+ if(transitionRaf){cancelAnimationFrame(transitionRaf);transitionRaf=0;}
  const frozen=layers.map(layer=>{
   const style=getComputedStyle(layer);
   return{opacity:style.opacity,filter:style.filter};
  });
  layers.forEach((layer,index)=>{
-  layer.style.transition='none';
-  layer.style.opacity=frozen[index].opacity;
-  layer.style.filter=frozen[index].filter;
+  layer.style.transition='none';layer.style.opacity=frozen[index].opacity;layer.style.filter=frozen[index].filter;
  });
  setTransitionHint(false);
- paused=true;fadeState='paused';
 }
 function resumeAfterInteraction(event){
  if(event?.pointerId!==undefined)activePointers.delete(event.pointerId);
- if(activePointers.size>0||!paused)return;
- paused=false;settleTransition();
- scheduleCycle(CLEAR_MS);
+ if(activePointers.size>0||!isPaused())return;
+ settleTransition();
+ if(manualSymbol)armManualReturn(manualSymbol);
+ else scheduleCycle(CLEAR_MS);
 }
 root.addEventListener('pointerdown',pauseForInteraction,{capture:true,passive:true});
 window.addEventListener('pointerup',resumeAfterInteraction,{capture:true,passive:true});
 window.addEventListener('pointercancel',resumeAfterInteraction,{capture:true,passive:true});
 window.addEventListener('blur',()=>{
- if(activePointers.size){activePointers.clear();resumeAfterInteraction()}
+ if(activePointers.size){activePointers.clear();resumeAfterInteraction();}
 },{passive:true});
 function armManualReturn(symbol){
- clearTimeout(manualReturnTimer);manualReturnTimer=0;
- if(!symbol||manualSymbol!==symbol||hidden)return;
- /* 手动品种完整展示一个常规停留周期（5秒），随后回到正式信号队列并立即继续轮播。 */
- manualReturnTimer=setTimeout(()=>{
-  manualReturnTimer=0;
+ clearStateTimer();
+ if(!symbol||manualSymbol!==symbol||document.hidden)return;
+ rotationState='manual';
+ stateTimer=setTimeout(()=>{
+  stateTimer=0;
   if(manualSymbol!==symbol)return;
   manualSymbol='';
   const next=currentSymbol();
-  if(!next){root.hidden=true;return;}
+  if(!next){root.hidden=true;rotationState='hidden';return;}
   period=periodFor(next);
   setActive(activeLayer);
   scheduleCycle(0);
@@ -657,24 +654,18 @@ function armManualReturn(symbol){
 function showManualSymbol(value){
  const symbol=String(value||'').trim().toUpperCase();
  if(!/^[A-Z0-9.]+$/.test(symbol))return false;
- clearTimeout(manualReturnTimer);manualReturnTimer=0;
  manualSymbol=symbol;
- ++cycleToken;clearTimeout(cycleTimer);cycleTimer=0;clearTransitionWork();transitioning=false;paused=false;
+ ++cycleToken;clearTransitionWork();rotationState='manual';
  settleTransition();
- root.hidden=false;
- scheduleChartResize();
+ root.hidden=false;scheduleChartResize();
  applyLayerState(activeLayer,true,false);
- /* 先更新界面反馈，再发起行情请求；不在点击路径中强制同步布局。 */
- title.textContent=symbol;
- status.textContent='正在切换行情…';
- error.hidden=true;
+ title.textContent=symbol;status.textContent='正在切换行情…';error.hidden=true;
  period=periodFor(symbol);
  Promise.resolve(setActive(activeLayer)).then(loaded=>{
-  if(!loaded||manualSymbol!==symbol||hidden)return;
+  if(!loaded||manualSymbol!==symbol||document.hidden)return;
   armManualReturn(symbol);
  });
  scheduleRefresh();
-
  return true;
 }
 window.VegasLayer5ShowSymbol=showManualSymbol;
@@ -682,19 +673,18 @@ function reconcile(symbols){
  const next=[...new Set((symbols||[]).map(value=>String(value||'').trim().toUpperCase()).filter(value=>/^[A-Z0-9.]+$/.test(value)))];
  if(queueInitialized&&next.length===queue.length&&next.every((symbol,index)=>symbol===queue[index]))return;
  queueInitialized=true;
- ++cycleToken;clearTimeout(cycleTimer);cycleTimer=0;clearTransitionWork();transitioning=false;
+ ++cycleToken;clearTransitionWork();
+ const previous=currentSymbol();
  settleTransition();
  applyLayerState(activeLayer,true,true);
- const previous=currentSymbol();
  queue=next;
  if(!next.length&&!manualSymbol){
-  ++cycleToken;clearTimers();transitioning=false;paused=false;
+  ++cycleToken;clearTimers();rotationState='hidden';
   root.hidden=true;currentIndex=0;
-  views.forEach(view=>{view.request++;view.symbol='';});
+  views.forEach(view=>{view.request++;view.symbol='';view.hasData=false;});
   return;
  }
- root.hidden=false;
- scheduleChartResize();
+ root.hidden=false;scheduleChartResize();
  currentIndex=Math.max(0,queue.indexOf(previous));
  if(currentIndex>=queue.length)currentIndex=0;
  period=periodFor(currentSymbol());
@@ -706,9 +696,9 @@ function reconcile(symbols){
  scheduleRefresh();
 }
 document.addEventListener('visibilitychange',()=>{
- hidden=document.hidden;
- if(hidden){++cycleToken;clearTimers();clearTimeout(manualReturnTimer);manualReturnTimer=0;clearTransitionWork();transitioning=false;fadeState='hidden';setTransitionHint(false)}
- else{
+ if(document.hidden){
+  ++cycleToken;clearTimers();clearTransitionWork();rotationState='hidden';setTransitionHint(false);
+ }else{
   settleTransition();
   const symbol=currentSymbol();
   if(symbol){
@@ -716,13 +706,16 @@ document.addEventListener('visibilitychange',()=>{
     if(loaded&&manualSymbol===symbol)armManualReturn(symbol);
    });
   }
-  if(initialRevealDone)scheduleCycle(CLEAR_MS);
+  if(initialRevealDone&&!manualSymbol)scheduleCycle(CLEAR_MS);
   scheduleRefresh();
  }
 },{passive:true});
 window.VegasLayer5SetAutoQueue=reconcile;
 reconcile(window.VegasFormalSignalSymbols||[]);
-/* 提前预热股票代码映射，避免首次点击美股卡片时才等待映射接口。 */
 getStockMap().catch(()=>{});
-if(window.__VEGAS_PENDING_LAYER5_SYMBOL){const pending=window.__VEGAS_PENDING_LAYER5_SYMBOL;delete window.__VEGAS_PENDING_LAYER5_SYMBOL;showManualSymbol(pending);}
+if(window.__VEGAS_PENDING_LAYER5_SYMBOL){
+ const pending=window.__VEGAS_PENDING_LAYER5_SYMBOL;
+ delete window.__VEGAS_PENDING_LAYER5_SYMBOL;
+ showManualSymbol(pending);
+}
 })();
