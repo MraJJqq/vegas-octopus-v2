@@ -11,6 +11,7 @@ const layers=[0,1].map(index=>{
 });
 const CLEAR_MS=5000,TRANSITION_MS=5000,REVEAL_MS=1000,INITIAL_HOLD_MS=4000,REFRESH_MS=15000,MANUAL_HOLD_MS=5000;
 let queue=[],currentIndex=0,manualSymbol='',active=0,period='4H',state='hidden',timer=0,refreshTimer=0,token=0,initialShown=false,refreshPending=false;
+const activePointers=new Set();
 const periodSettings=(()=>{try{const saved=JSON.parse(localStorage.getItem('vegas-right-track-v1')||'{}');return Object.fromEntries(Object.entries(saved).filter(([,v])=>data.periods.includes(v?.period)).map(([s,v])=>[s,v.period]));}catch{return{};}})();
 const chart=window.VegasKlineChart.create(root,layers,LWC,()=>active);
 const views=chart.views;
@@ -165,15 +166,17 @@ function changePeriod(value){
   scheduleRefresh();
  });
 }
-function pause(){
+function pause(event){
+ if(event?.pointerId!==undefined)activePointers.add(event.pointerId);
  if(state==='paused'||state==='hidden')return;
  ++token;clearTimer();
  const frozen=layers.map(layer=>({opacity:getComputedStyle(layer).opacity,filter:getComputedStyle(layer).filter}));
  layers.forEach((layer,i)=>{layer.style.transition='none';layer.style.opacity=frozen[i].opacity;layer.style.filter=frozen[i].filter;});
  state='paused';
 }
-function resume(){
- if(state!=='paused')return;
+function resume(event){
+ if(event?.pointerId!==undefined)activePointers.delete(event.pointerId);
+ if(activePointers.size||state!=='paused')return;
  setLayerStyles(active,false);
  layers.forEach(layer=>{layer.style.transition='';layer.style.willChange='auto';});
  state=manualSymbol?'manual':'idle';
@@ -215,6 +218,7 @@ function visibility(){
 root.addEventListener('pointerdown',pause,{capture:true,passive:true});
 window.addEventListener('pointerup',resume,{capture:true,passive:true});
 window.addEventListener('pointercancel',resume,{capture:true,passive:true});
+window.addEventListener('blur',()=>{if(activePointers.size){activePointers.clear();resume();}},{passive:true});
 document.addEventListener('visibilitychange',visibility,{passive:true});
 window.VegasLayer5ShowSymbol=selectSymbol;
 window.VegasLayer5SetAutoQueue=setQueue;
