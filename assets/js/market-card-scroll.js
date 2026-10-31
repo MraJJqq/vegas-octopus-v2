@@ -237,6 +237,9 @@ document.addEventListener('visibilitychange',()=>{
   pauseAutoScroll();
   if(manualFrame){cancelAnimationFrame(manualFrame);manualFrame=0}
   manualLastTime=0;manualVelocity=0;manualTarget=left.scrollTop;
+  /* 页面切后台时可能收不到 touchend；强制释放触摸门控，避免恢复后自动滚动永久暂停。 */
+  touchActive=false;touchDragging=false;touchVelocity=0;
+  touchStartY=touchLastY=0;touchLastTime=0;
  }else{
   autoLastTime=0;autoEngageLastTime=0;autoResumeAt=performance.now()+250;
   scheduleAutoScroll();
