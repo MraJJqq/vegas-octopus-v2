@@ -187,7 +187,7 @@ function hide(){
 function setQueue(values){
  const next=[...new Set((values||[]).map(x=>String(x||'').trim().toUpperCase()).filter(x=>/^[A-Z0-9.]+$/.test(x)))];
  if(next.length===queue.length&&next.every((s,i)=>s===queue[i]))return;
- const previous=current();++token;clearTimer();
+ const previous=current();++token;clearTimer();clearRefresh();
  views.forEach(view=>{view.pendingRows=null;});
  setLayerStyles(active,false);state='idle';
  queue=next;currentIndex=Math.max(0,queue.indexOf(previous));if(currentIndex>=queue.length)currentIndex=0;
@@ -201,7 +201,7 @@ function setQueue(values){
  });
 }
 function visibility(){
- if(document.hidden){++token;clearTimer();clearRefresh();state='hidden';return;}
+ if(document.hidden){++token;clearTimer();clearRefresh();views.forEach(view=>{view.requestId=(view.requestId||0)+1;});state='hidden';return;}
  const symbol=current();if(!symbol)return;
  setLayerStyles(active,false);showRoot();loadLayer(active,symbol,periodFor(symbol)).then(ok=>{
   if(!ok)return;
